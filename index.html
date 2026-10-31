@@ -5002,6 +5002,17 @@ function renderTable(){
   </div>`;
 }
 
+async function tblClear(k){
+  const a=(CO.list||[]).filter(o=>tkey(o.tbl)===tkey(k)&&(o.status==='new'||o.status==='accepted'));if(!a.length){closeModal();return}
+  const unp=a.filter(o=>o.pst!==2),tot=unp.reduce((x,o)=>x+o.total,0);
+  if(unp.length&&!can('pos')){toast('Ada pesanan belum dibayar, minta kasir');return}
+  const msg=unp.length?'Meja '+k+' dikosongkan.\n\n'+unp.length+' pesanan BELUM DIBAYAR ('+money(tot)+') akan dibatalkan dan tidak masuk penjualan. Lanjutkan?':'Pelanggan di meja '+k+' sudah pergi? Pesanan ditandai selesai dan meja jadi kosong.';
+  if(!confirm(msg))return;
+  let ok=true;for(const o of a){const r=await coAct(o.id,o.pst===2?'done':'cancel');if(!r)ok=false}
+  closeModal();toast(ok?'Meja '+k+' dikosongkan':'Sebagian pesanan gagal diubah');
+  try{const x=await (await api('/api/co?rev=0')).json();if(!x.unchanged){CO.rev=x.rev;coApply(x)}}catch(e){}
+  if(S.view==='table')renderTable();
+}
 function tblOpen(k){
   const a=(CO.list||[]).filter(o=>tkey(o.tbl)===tkey(k)&&(o.status==='new'||o.status==='accepted')),tm=t=>new Date(t).toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
   const sl=o=>o.status==='new'?'Menunggu diterima':'Sedang diproses',pay=o=>o.pst===2?'Sudah bayar':'Belum bayar';
@@ -5010,6 +5021,7 @@ function tblOpen(k){
     <div class="tbl">${o.lines.map(l=>`<div><span>${l.qty}× ${esc(l.name)}</span><span>${money(l.price*l.qty)}</span></div>`).join('')}</div>
     ${o.note?`<small>Catatan: ${esc(o.note)}</small>`:''}<div class="tbt"><span>Total</span><b>${money(o.total)}</b></div>
     <button class="btn sec" onclick="closeModal();coDet(${o.id})">Detail pesanan</button></div>`).join(''):'<p class="hint">Meja ini kosong, belum ada pesanan aktif.</p>')
+  +(a.length&&can('co')?(a.every(o=>o.pst===2)||can('pos')?`<button class="btn sec" onclick="tblClear('${esc(k).replace(/'/g,"\\'")}')"><i class="ic" data-ic="check"></i>Kosongkan Meja ${esc(k)}</button>`:'<p class="hint">Ada pesanan belum dibayar. Hanya kasir yang bisa mengosongkan meja ini.</p>'):'')
   +(can('co')?`<button class="btn" onclick="closeModal();noOpen('${esc(k).replace(/'/g,"\\'")}')">+ Ambil Pesanan di Meja ${esc(k)}</button>`:'')+`<button class="btn sec" onclick="closeModal()">Tutup</button>`);
 }
 /* ---------- Notifikasi ---------- */
