@@ -40,3 +40,8 @@ Anda hanya butuh **akun GitHub**; Supabase cukup dimasuki dengan tombol "Continu
 - Cadangan: Supabase gratis tidak punya cadangan otomatis, tetapi aplikasi menyimpan 30 snapshot harian di database dan menu **Ekspor** mengunduh JSON. Unduh berkala.
 - Karyawan yang login tetap menerima data modal/riwayat di perangkatnya (disembunyikan di tampilan, perubahan terlarang ditolak server). Beri akun hanya kepada orang tepercaya.
 - Lupa sandi owner: jalankan lagi `select pos.admin_owner('owner','SANDI-BARU');` di SQL Editor.
+
+## File .ipa (iPhone)
+1. Di GitHub buka **Actions → Build iOS (Ordela) → Run workflow**. Tunggu ±10 menit.
+2. Buka hasil build yang selesai, unduh artifact **Ordela-ipa** (ZIP berisi `Ordela.ipa`).
+3. File ini **belum bertanda tangan Apple**. Pasang lewat **Sideloadly** atau **AltStore** memakai Apple ID kamu (akun gratis: aplikasi berlaku 7 hari lalu dipasang ulang; akun Apple Developer berbayar: setahun). Untuk TestFlight/App Store perlu akun Developer berbayar dan penandatanganan resmi.

@@ -47,6 +47,10 @@ jobs:
           npx cap add ios
           npx cap sync ios
 
+      - name: Pasang ikon Ordela
+        run: |
+          cp ios-icon-1024.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+
       - name: Kompilasi iOS tanpa tanda tangan
         run: |
           xcodebuild -workspace ios/App/App.xcworkspace \
@@ -57,6 +61,23 @@ jobs:
             -archivePath "$RUNNER_TEMP/Ordela.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
             archive
+
+      - name: Buat file .ipa (belum bertanda tangan)
+        run: |
+          APP=$(find "$RUNNER_TEMP/Ordela.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' | head -n 1)
+          test -n "$APP"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$APP" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$GITHUB_WORKSPACE/Ordela.ipa" Payload)
+          ls -lh Ordela.ipa
+
+      - name: Unggah Ordela.ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ordela-ipa
+          path: Ordela.ipa
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Simpan hasil build untuk diperiksa
         if: always()
