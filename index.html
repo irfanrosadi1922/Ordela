@@ -772,6 +772,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 .tbt{border-top:1px dashed var(--ln);margin-top:4px;padding-top:6px}
 .nol{max-height:46vh;overflow:auto;margin:8px 0 10px;padding:4px 2px;--cd:3;--gd:8px;--pd:4px;--radd:16px}
 .nol.grid.fd{grid-template-columns:repeat(3,minmax(0,1fr))!important;margin-top:8px}.nol .p{padding:8px 4px 8px;box-shadow:0 3px 10px rgba(0,0,0,.07)}.nol .p .im{width:74%;box-shadow:0 4px 10px rgba(17,17,17,.15)}.nol .nm{margin:6px 2px 0;min-height:2.5em}.nol .row{margin:3px 2px 0;justify-content:center}.nol .p.out{opacity:.85}
+.nol.grid.list{gap:8px;grid-template-columns:1fr!important}.nol.grid.list .p{padding:8px 10px 8px 8px;column-gap:12px;row-gap:1px;box-shadow:0 2px 8px rgba(0,0,0,.07)}.nol.grid.list .im{width:58px;height:58px;font-size:28px;box-shadow:0 3px 8px rgba(17,17,17,.15)}.nol.grid.list .nm{font-size:14px;margin:0;min-height:0}.nol.grid.list .sub{font-size:11px}.nol.grid.list .stk{font-size:11px}.nol.grid.list .pr{font-size:14px;margin-top:0}.nol.grid.list .qty{padding:4px 3px}.nol.grid.list .qty button{width:28px;height:28px;font-size:18px}.nol.grid.list .qty span{font-size:14px}.nol.grid.list .qov{font-size:22px}.nol.grid.list .sold{font-size:10px}
 .nof{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
 </style>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-ordela-dark.svg"><link rel="icon" href="icon-ordela-dark.svg">
@@ -3262,7 +3263,8 @@ async function coAutoPrint(){
 
 /* ---------- Ambil Pesanan (server/pelayan): pesanan dibuat dari akun masing-masing, masuk ke antrean Pesanan Online yang sama,
    lalu dicetak otomatis oleh perangkat printer (layar Pesanan Online yang terbuka + printer terhubung) ---------- */
-const NO={q:{},s:'',busy:false,key:''};
+const NO={q:{},s:'',busy:false,key:'',v:(()=>{try{return localStorage.getItem('pos_nov')==='grid'?'grid':'list'}catch(e){return'list'}})()};
+function noView(v){NO.v=v;try{localStorage.setItem('pos_nov',v)}catch(e){}noList()}
 function noOpen(tbl){
   if(!can('co')){toast('Tidak punya izin Pesanan Online');return}
   NO.q={};NO.s='';NO.busy=false;NO.key='n'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
@@ -3271,7 +3273,8 @@ function noOpen(tbl){
   <div><label class="fl">Meja</label><input class="fi" id="noT" maxlength="12" autocomplete="off" value="${esc(tbl||'')}"></div></div>
   <div class="two"><div><label class="fl">Tipe</label><select class="fi" id="noTy"><option>Dine In</option><option>Takeaway</option></select></div>
   <div><label class="fl">Cari menu</label><input class="fi" id="noS" placeholder="Cari…" oninput="NO.s=this.value;noList()"></div></div>
-  <div id="noL" class="nol grid fd"></div>
+  <div class="gtool"><span class="lb">Tampilan</span><button type="button" class="chip" id="noVl" onclick="noView('list')">Daftar</button><button type="button" class="chip" id="noVg" onclick="noView('grid')">Grid</button></div>
+  <div id="noL" class="nol grid"></div>
   <label class="fl">Catatan</label><input class="fi" id="noC" maxlength="200" placeholder="Mis. tanpa pedas">
   <div class="nof"><b id="noTot"></b><button class="btn" id="noGo" onclick="noSend()">Kirim ke Printer</button></div>
   <button class="btn sec" onclick="closeModal()">Batal</button>`);
@@ -3279,10 +3282,11 @@ function noOpen(tbl){
 }
 function noList(){
   const q=NO.s.trim().toLowerCase(),l=$('#noL');if(!l)return;
+  l.className='nol grid '+(NO.v==='list'?'list':'fd');{const a=$('#noVl'),b=$('#noVg');if(a)a.classList.toggle('on',NO.v==='list');if(b)b.classList.toggle('on',NO.v!=='list')}
   const its=db.items.filter(i=>!i.ns&&(!q||i.name.toLowerCase().includes(q)||(i.cat||'').toLowerCase().includes(q)));
   l.innerHTML=its.map(i=>{const n=NO.q[i.id]||0,out=i.stock<=0;
     return`<div class="p ${out?'out':''}"><div class="im tap${n?' has':''}" onclick="noQ('${i.id}',1)">${thumb(i)}${out?'<div class="sold">HABIS</div>':''}${n?`<div class="qov">${n}</div>`:''}</div>
-    <div class="nm">${esc(i.name)}</div>
+    <div class="nm">${esc(i.name)}</div>${NO.v==='list'?`<div class="sub">${esc(i.cat)}</div><div class="stk ${i.stock<=i.min?'low':''}">Stok: ${i.stock}</div>`:''}
     <div class="row"><span class="pr">${money(i.price)}</span><span class="qty"><button type="button" onclick="noQ('${i.id}',-1)" ${n?'':'disabled'}>−</button><span>${n}</span><button type="button" onclick="noQ('${i.id}',1)" ${out||n>=(+i.stock||0)?'disabled':''}>+</button></span></div></div>`}).join('')||'<div class="empty">Menu tidak ditemukan.</div>';
   noTot();
 }
