@@ -1025,11 +1025,12 @@ function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.items)
 const RC_DEF={logo:'',showLogo:true,logoW:160,align:'center',font:'normal',divider:'dashed',itemLayout:'two',showAddr:true,line1:'',showNo:true,showDate:true,showType:true,showCust:true,showCashier:false,cashierAuto:true,cashier:'',showDisc:true,showTax:true,showPay:true,showFooter:true,line2:'',showQr:false,qrText:'Scan untuk memesan',bigTotal:true,showTable:true,tableSize:'xl',feed:3};
 const LOG_MAX=1000;
 const PRN_DEF={mode:'browser',auto:false,autoNew:true,cut:true,drawer:false,baud:9600,chunk:100,delay:15,uuid:'',autoConn:true};
-const DEF_LOGO='https://raw.githubusercontent.com/irfanrosadi1922/Ordela/main/icon-ordela-dark.svg';
+const DEF_LOGO='icon-192.png';   // file lokal (ikut terbawa di aplikasi iOS/Android, tidak bergantung internet)
 const GV_DEF={mode:'grid',colsD:0,colsM:2,stock:true,cats:true,tap:'add'};
 function fixDb(d){d.set=d.set||{};if(d.set.fsAuto==null)d.set.fsAuto=true;if(d.set.logoApp==null)d.set.logoApp=true;if(d.set.rc&&d.set.rc.logo&&!d.set.logo){d.set.logo=d.set.rc.logo;d.set.rc.logo=''}d.set.logo=d.set.logo||'';d.set.gv={...GV_DEF,...(d.set.gv||{})};delete d.set.gv.size;d.set.lang=d.set.lang||'id';if(d.set.dec==null)d.set.dec=0;d.set.loc=d.set.loc||'id-ID';d.set.curPos=d.set.curPos||'before';d.set.cur=d.set.cur||'Rp';d.set.curCode=d.set.curCode||(d.set.cur==='Rp'?'IDR':'CUSTOM');d.set.rc={...RC_DEF,...(d.set.rc||{})};d.set.pay={on:false,qris:'',name:'',note:'',...(d.set.pay&&typeof d.set.pay==='object'?d.set.pay:{})};delete d.set.pay.qr;d.set.prn={...PRN_DEF,...(d.set.prn||{})};d.set.att={on:false,tz:'',lat:'',lng:'',radius:100,strict:false,shifts:[],assign:{},...(d.set.att&&typeof d.set.att==='object'?d.set.att:{})};d.set.paper=d.set.paper||'80';d.log=d.log||[];d.orders=d.orders||[];d.cats=d.cats||[];
   if(d.set.store==='Sushi POS'||d.set.store==='Octocat')d.set.store='Ordela';
   if(d.set.logo&&((d.set.logo.length===9895&&d.set.logo.slice(0,40)==='data:image/jpeg;base64,/9j/4AAQSkZJRgABA')||(d.set.logo.length===22538&&d.set.logo.slice(-24)==='YWBpBFcIAAAAAElFTkSuQmCC')))d.set.logo=DEF_LOGO; /* ganti logo bawaan lama */
+  if(/^https?:\/\/raw\.githubusercontent\.com\/[^?#]*\/(icon|brand)[^?#]*$/i.test(String(d.set.logo||'')))d.set.logo=DEF_LOGO;   // logo bawaan lama di alamat luar -> file lokal
   if(!d.set.logo){d.set.logo=DEF_LOGO;if(!d.set.logoInit)d.set.rc.showLogo=false}
   d.set.logoInit=true;
   delete d.set.map;if(d.set.rc){delete d.set.rc.showMapQr;delete d.set.rc.mapQrText}
@@ -2354,12 +2355,14 @@ function resetRc(){
 }
 
 /* ---------- halaman printer ---------- */
+const IOSN=()=>!!(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform()==='ios');
 function renderPrn(){
   const p=db.set.prn;
+  if(IOSN()&&(p.mode==='serial'||p.mode==='rawbt')){p.mode='ble';save()}   // iPhone tidak mendukung Bluetooth klasik/RawBT
   const ck=(k,l)=>`<label class="tgl"><input type="checkbox" ${p[k]?'checked':''} onchange="setOpt('prn','${k}',this.checked)"><span>${l}</span></label>`;
   const help={
     browser:'Memakai dialog cetak bawaan browser. Cocok untuk printer USB / Wi-Fi / yang sudah terpasang di komputer atau HP. Pilih ukuran kertas yang sama dengan printer.',
-    ble:'Untuk printer thermal Bluetooth BLE (Bluetooth 4.0+). Klik Cari &amp; Hubungkan lalu pilih printer. Perlu Chrome (Android/Windows/Mac) atau Bluefy di iPhone; Safari tidak mendukung. Buka halaman ini sebagai file atau lewat https.',
+    ble:IOSN()?'Untuk printer thermal Bluetooth BLE (Bluetooth 4.0+). Nyalakan printer, tekan Cari & Hubungkan, lalu pilih printer. iPhone tidak bisa memakai printer Bluetooth klasik (SPP); pakai printer yang mendukung BLE.':'Untuk printer thermal Bluetooth BLE (Bluetooth 4.0+). Klik Cari &amp; Hubungkan lalu pilih printer. Perlu Chrome (Android/Windows/Mac) atau Bluefy di iPhone; Safari tidak mendukung. Buka halaman ini sebagai file atau lewat https.',
     serial:'Untuk printer Bluetooth klasik (SPP) yang sudah di-pair di komputer (muncul sebagai port COM) atau printer USB. Hanya Chrome/Edge desktop. Atur baud rate sesuai printer (umumnya 9600 atau 115200).',
     rawbt:'Untuk HP Android dengan printer Bluetooth klasik: pasang aplikasi gratis RawBT dari Play Store, pair printer di RawBT, lalu cetak dari sini. Struk dikirim ke RawBT.'
   }[p.mode];
@@ -2368,7 +2371,7 @@ function renderPrn(){
   <div class="panel"><h3>Koneksi</h3>
     <label class="fl">Mode cetak</label>
     <select class="fi" onchange="setOpt('prn','mode',this.value)">
-      ${o('browser','Dialog browser (USB / Wi-Fi / driver)')}${o('ble','Bluetooth BLE (Web Bluetooth)')}${o('serial','Bluetooth klasik / USB (Web Serial, desktop)')}${o('rawbt','Android: aplikasi RawBT')}
+      ${o('browser',IOSN()?'AirPrint / dialog cetak iPhone':'Dialog browser (USB / Wi-Fi / driver)')}${o('ble',IOSN()?'Bluetooth BLE':'Bluetooth BLE (Web Bluetooth)')}${IOSN()?'':o('serial','Bluetooth klasik / USB (Web Serial, desktop)')+o('rawbt','Android: aplikasi RawBT')}
     </select>
     <div class="tgls" style="margin-top:8px">${ck('autoConn','Sambung otomatis ke printer sebelumnya')}</div>
     <div class="chg" id="prnStat"></div>
@@ -3946,7 +3949,7 @@ function renderAccAbout(){
   const st=accStore(m),own=m.role==='owner';
   const row=(ic,l,v)=>`<div class="pfrow">${pfi(ic,20)}<div class="tx"><small>${l}</small><b>${v}</b></div></div>`;
   box.innerHTML=`${pfSub('Tentang Ordela',"go('accset')")}<div class="pfw">
-    <div class="pfhero"><img src="icon-ordela-dark.svg" alt="" width="84" height="84" style="border-radius:22px;box-shadow:0 8px 20px rgba(0,0,0,.12)"><b class="pfn">Ordela</b><small class="pfr">Aplikasi kasir dan pesanan untuk toko Anda</small></div>
+    <div class="pfhero"><img src="icon-192.png" alt="" width="84" height="84" style="border-radius:22px;box-shadow:0 8px 20px rgba(0,0,0,.12)"><b class="pfn">Ordela</b><small class="pfr">Aplikasi kasir dan pesanan untuk toko Anda</small></div>
     <div class="pfcard">
       ${row('info','Versi aplikasi',esc(APP_VER))}${row('globe','Situs','ordela.my.id')}
       ${st.name?row('store','Toko',esc(st.name)):''}${own&&st.code?row('id','Kode toko',`<code>${esc(st.code)}</code>`):''}
