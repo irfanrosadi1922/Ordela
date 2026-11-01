@@ -150,3 +150,24 @@
     }
   });
 })();
+
+/* iOS: saat aplikasi pertama kali dibuka, minta izin fitur yang dipakai (kamera, lokasi, notifikasi, Bluetooth) satu per satu.
+   Teks penjelasan izin ada di Info.plist (dibuat oleh workflow Build iOS). Hanya sekali; sisanya bisa diatur di Pengaturan iPhone. */
+(function(){
+  var C=window.Capacitor;
+  if(!C||!C.getPlatform||C.getPlatform()!=='ios')return;
+  var K='pos_perm_ios';try{if(localStorage.getItem(K))return}catch(e){}
+  function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+  function plug(n){try{return (C.Plugins&&C.Plugins[n])||(C.registerPlugin&&C.registerPlugin(n))||null}catch(e){return null}}
+  (async function(){
+    await sleep(1800);
+    try{var s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});s.getTracks().forEach(function(t){t.stop()})}catch(e){}
+    await sleep(500);
+    try{await new Promise(function(res){navigator.geolocation.getCurrentPosition(res,res,{timeout:20000})})}catch(e){}
+    await sleep(500);
+    try{var LN=plug('LocalNotifications');if(LN)await LN.requestPermissions()}catch(e){}
+    await sleep(500);
+    try{var BLE=plug('BluetoothLe');if(BLE)await BLE.initialize()}catch(e){}
+    try{localStorage.setItem(K,'1')}catch(e){}
+  })();
+})();

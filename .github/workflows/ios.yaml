@@ -31,7 +31,7 @@ jobs:
             "webDir": "www",
             "backgroundColor": "#ffffff",
             "ios": {
-              "contentInset": "automatic"
+              "contentInset": "never"
             }
           }
           EOF
@@ -46,6 +46,20 @@ jobs:
         run: |
           npx cap add ios
           npx cap sync ios
+
+      - name: Izin iOS (Info.plist)
+        run: |
+          PL=ios/App/App/Info.plist
+          add() { /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$PL" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :$1 $2" "$PL"; }
+          add NSCameraUsageDescription "Ordela memakai kamera untuk foto absensi dan foto menu."
+          add NSPhotoLibraryUsageDescription "Ordela membutuhkan akses foto untuk memilih gambar menu, logo, dan foto profil."
+          add NSPhotoLibraryAddUsageDescription "Ordela menyimpan foto dan struk ke galeri bila Anda memintanya."
+          add NSLocationWhenInUseUsageDescription "Ordela memakai lokasi untuk mencatat tempat absen masuk dan pulang."
+          add NSBluetoothAlwaysUsageDescription "Ordela memakai Bluetooth untuk menyambungkan printer struk."
+          add NSBluetoothPeripheralUsageDescription "Ordela memakai Bluetooth untuk menyambungkan printer struk."
+          add NSMicrophoneUsageDescription "Mikrofon dipakai bila kamera merekam video."
+          plutil -lint "$PL"
+          grep -A1 "UsageDescription" "$PL" | head -30
 
       - name: Pasang ikon Ordela
         run: |
