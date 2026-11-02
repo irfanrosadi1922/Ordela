@@ -893,6 +893,29 @@ begin
     perform pos.audit(me.id, me.username, 'buat-cabang', v_name);
     return pos.r(200, jsonb_build_object('id', v_id, 'name', v_name, 'code', v_code));
   end if;
+  if u = '/api/branches/delete' and m = 'POST' then
+    if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
+    v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
+    if not exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id) then return pos.r(403, '{"error":"Hanya owner pusat yang boleh menghapus cabang"}'); end if;
+    if not pos.rate('delbr', 5, interval '10 minutes') then return pos.r(429, '{"error":"Terlalu banyak percobaan. Coba lagi nanti."}'); end if;
+    if not pos.pw_ok(me, coalesce(b ->> 'password', '')) then return pos.r(403, '{"error":"Sandi salah"}'); end if;
+    v_id := nullif(b ->> 'id', '')::bigint;
+    if v_id is null or v_id = v_hq or not exists (select 1 from pos.stores x where x.id = v_id and x.grp = v_hq) then return pos.r(404, '{"error":"Cabang tidak ditemukan (toko pusat tidak bisa dihapus di sini)"}'); end if;
+    delete from pos.sessions where uid in (select id from pos.t_users where store_id = v_id);
+    update pos.sessions set act_sid = null where act_sid = v_id;
+    delete from pos.t_push_tokens where store_id = v_id;
+    delete from pos.t_att where store_id = v_id;
+    delete from pos.t_co where store_id = v_id;
+    delete from pos.t_snapshots where store_id = v_id;
+    delete from pos.t_doc where store_id = v_id;
+    delete from pos.t_meta where store_id = v_id;
+    delete from pos.t_audit where store_id = v_id;
+    delete from pos.t_users where store_id = v_id;
+    delete from pos.stores where id = v_id;
+    perform set_config('pos.sid', v_hq::text, true);
+    perform pos.audit(me.id, me.username, 'hapus-cabang', v_id::text);
+    return pos.r(200, jsonb_build_object('ok', true, 'active', (select coalesce(ss.act_sid, v_hq) from pos.sessions ss where ss.th = encode(extensions.digest(t, 'sha256'), 'hex'))));
+  end if;
   if u = '/api/branches/switch' and m = 'POST' then
     if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
     v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
