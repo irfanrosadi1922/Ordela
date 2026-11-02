@@ -108,6 +108,8 @@ create table if not exists pos.stores(
   code text not null unique,                 -- kode publik toko (untuk tautan/QR pemesanan online)
   name text not null, owner_id bigint, created_at timestamptz not null default now());
 alter table pos.stores enable row level security;
+alter table pos.stores add column if not exists grp bigint;   -- toko pusat (grup cabang); null = toko mandiri/pusat
+alter table pos.sessions add column if not exists act_sid bigint;   -- cabang yang sedang dibuka sesi owner
 alter table pos.t_users add column if not exists store_id bigint references pos.stores(id);
 alter table pos.t_audit add column if not exists store_id bigint;
 alter table pos.t_doc add column if not exists store_id bigint;
@@ -674,7 +676,7 @@ end $$;
 
 create or replace function pos.route(m text, u text, q jsonb, b jsonb, t text) returns jsonb language plpgsql as $$
 declare me pos.users; v_auth uuid; mt text[]; r pos.co; tu pos.users; own boolean; nrole text; act boolean; nm text; nperms jsonb; un text; nsingle boolean;
-  d pos.doc; gerr text; nv int; cnt int; rv bigint; wt numeric; ms bigint; x jsonb; v_proof text;
+  d pos.doc; gerr text; nv int; cnt int; rv bigint; wt numeric; ms bigint; x jsonb; v_proof text; v_act bigint; v_hq bigint; v_id bigint; v_name text; v_code text; v_tz text;
 begin
   if u = '/api/health' then return pos.r(200, '{"ok":true,"pos":true,"sb":true}'); end if;
   if u = '/api/login' and m = 'POST' then return pos.login(b); end if;
@@ -728,6 +730,12 @@ begin
 
   me := pos.auth(t);
   if me.id is null then return pos.r(401, case when pos.kicked(t) then '{"error":"kicked"}'::jsonb when pos.expired(t) then '{"error":"expired"}'::jsonb else '{"error":"unauthorized"}'::jsonb end); end if;
+  if me.role = 'owner' and me.store_id is not null then
+    select ss.act_sid into v_act from pos.sessions ss where ss.th = encode(extensions.digest(t, 'sha256'), 'hex');
+    if v_act is not null and v_act <> me.store_id and exists (select 1 from pos.stores x where x.id = v_act and x.grp = coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id)) then
+      me.store_id := v_act;
+    end if;
+  end if;
   perform set_config('pos.sid', coalesce(me.store_id, 0)::text, true);
   own := me.role = 'owner';
   if me.role = 'new' and not (u in ('/api/me', '/api/logout', '/api/me/password', '/api/store/setup')) then
@@ -855,6 +863,40 @@ begin
     return pos.r(200, pos.me_self(me));
   end if;
 
+  if u = '/api/branches' and m = 'GET' then
+    if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
+    v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
+    return pos.r(200, jsonb_build_object('active', me.store_id, 'hq', v_hq, 'canAdd', exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id),
+      'list', coalesce((select jsonb_agg(jsonb_build_object('id', x.id, 'name', x.name, 'code', x.code) order by (x.id = v_hq) desc, x.id)
+        from pos.stores x where x.id = v_hq or x.grp = v_hq), '[]')));
+  end if;
+  if u = '/api/branches' and m = 'POST' then
+    if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
+    v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
+    if not exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id) then return pos.r(403, '{"error":"Hanya owner pusat yang boleh menambah cabang"}'); end if;
+    if (select count(*) from pos.stores x where x.grp = v_hq) >= 20 then return pos.r(400, '{"error":"Maksimal 20 cabang"}'); end if;
+    v_name := pos.clean(b ->> 'name', 60);
+    if length(v_name) < 2 then return pos.r(400, '{"error":"Nama cabang wajib diisi (min. 2 karakter)"}'); end if;
+    for i in 1..8 loop
+      v_code := (select string_agg(substr('abcdefghjkmnpqrstuvwxyz23456789', 1 + get_byte(extensions.gen_random_bytes(1), 0) % 31, 1), '') from generate_series(1, 8));
+      exit when not exists (select 1 from pos.stores where stores.code = v_code);
+    end loop;
+    v_tz := coalesce((select mm.v #>> '{}' from pos.t_meta mm where mm.store_id = v_hq and mm.k = 'tz'), 'Asia/Jakarta');
+    insert into pos.stores(code, name, owner_id, grp) values (v_code, v_name, me.id, v_hq) returning id into v_id;
+    insert into pos.t_doc(store_id, id, json, version) values (v_id, 1, null, 0);
+    insert into pos.t_meta(store_id, k, v) values (v_id, 'rev', to_jsonb((extract(epoch from now()) * 1000)::bigint)), (v_id, 'tz', to_jsonb(v_tz));
+    update pos.sessions set act_sid = v_id where th = encode(extensions.digest(t, 'sha256'), 'hex');
+    perform pos.audit(me.id, me.username, 'buat-cabang', v_name);
+    return pos.r(200, jsonb_build_object('id', v_id, 'name', v_name, 'code', v_code));
+  end if;
+  if u = '/api/branches/switch' and m = 'POST' then
+    if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
+    v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
+    select x.id, x.name, x.code into v_id, v_name, v_code from pos.stores x where x.id = nullif(b ->> 'id', '')::bigint and (x.id = v_hq or x.grp = v_hq);
+    if v_id is null then return pos.r(404, '{"error":"Cabang tidak ditemukan"}'); end if;
+    update pos.sessions set act_sid = v_id where th = encode(extensions.digest(t, 'sha256'), 'hex');
+    return pos.r(200, jsonb_build_object('id', v_id, 'name', v_name, 'code', v_code));
+  end if;
   if u = '/api/users' and m = 'GET' then
     if not own then return pos.r(403, '{"error":"Anda tidak punya akses untuk ini"}'); end if;
     return pos.r(200, jsonb_build_object('perms', '["pos","co","inv","hist","prn","set","att"]'::jsonb,

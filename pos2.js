@@ -283,16 +283,20 @@ window.promoDel=function(id){const p=db.promos.find(x=>x.id===id);if(!p||!confir
 const KS={0:'Baru',1:'Dimasak',2:'Siap'};
 V.kds=function(){
   const el=$('#v-kds');if(!el)return;
-  const act=(typeof CO!=='undefined'&&CO.list?CO.list:[]).filter(o=>o.status==='new'||o.status==='accepted').sort((a,b)=>a.id-b.id);
-  const col=k=>act.filter(o=>(o.kds||0)===k);
-  const card=o=>{const mins=Math.floor((Date.now()-new Date(o.t))/60000);return`<div class="kdc ${mins>=15?'late':mins>=8?'warn':''}"><div class="kdh"><b>${o.tbl?'Meja '+esc(o.tbl):esc(o.num)}</b><span>${esc(o.name)}</span><small>${mins} mnt</small></div>
-    <ul>${o.lines.map(l=>`<li><b>${l.qty}×</b> ${esc(l.name)}</li>`).join('')}</ul>${o.note?`<div class="nt">${esc(o.note)}</div>`:''}<small class="hint">${o.by?'Server: '+esc(o.by):'Pesanan pelanggan'}</small>
-    <div class="acts" style="margin-top:8px">${(o.kds||0)===0?`<button class="btn sm" onclick="kdsSet(${o.id},'cook')">Mulai masak</button>`:''}${(o.kds||0)===1?`<button class="btn sm" onclick="kdsSet(${o.id},'ready')">Siap saji</button>`:''}${(o.kds||0)===2?`<button class="btn sm sec" onclick="kdsSet(${o.id},'unready')">Batal siap</button>`:''}</div></div>`};
-  el.innerHTML=bar('<i class="ic" data-ic="list"></i>Layar Dapur')+`<div class="kdg">${[0,1,2].map(k=>`<div class="kdcol"><h3>${KS[k]} <b>${col(k).length}</b></h3>${col(k).map(card).join('')||'<p class="hint">Kosong</p>'}</div>`).join('')}</div>`;
+  const on=(typeof CO!=='undefined'&&CO.list?CO.list:[]).filter(o=>o.status==='new'||o.status==='accepted').map(o=>({src:'co',id:o.id,k:o.kds||0,t:o.t,title:o.tbl?'Meja '+o.tbl:o.num,sub:o.name,lines:o.lines,note:o.note,from:o.by?'Server: '+o.by:'Pesanan pelanggan'}));
+  const lo=live(db.kds).filter(k=>(k.st||0)<3).map(k=>({src:'loc',id:k.id,k:k.st||0,t:k.t,title:k.tbl?'Meja '+k.tbl:k.no,sub:k.cust||'',lines:k.lines,note:k.note,from:'Kasir'}));
+  const act=on.concat(lo).sort((a,b)=>a.t<b.t?-1:1);
+  const col=k=>act.filter(o=>o.k===k);
+  const q=o=>`'${o.src}','${String(o.id).replace(/'/g,"")}'`;
+  const card=o=>{const mins=Math.max(0,Math.floor((Date.now()-new Date(o.t))/60000));return`<div class="kdc ${mins>=15?'late':mins>=8?'warn':''}"><div class="kdh"><b>${esc(o.title)}</b><span>${esc(o.sub)}</span><small>${mins} mnt</small></div>
+    <ul>${o.lines.map(l=>`<li><b>${l.qty}×</b> ${esc(l.name)}</li>`).join('')}</ul>${o.note?`<div class="nt">${esc(o.note)}</div>`:''}<small class="hint">${esc(o.from)}</small>
+    <div class="acts" style="margin-top:8px">${o.k===0?`<button class="btn sm" onclick="kdsSet(${q(o)},1)">Mulai masak</button>`:''}${o.k===1?`<button class="btn sm" onclick="kdsSet(${q(o)},2)">Siap saji</button>`:''}${o.k===2?`<button class="btn sm sec" onclick="kdsSet(${q(o)},0)">Batal siap</button>${o.src==='loc'?`<button class="btn sm" onclick="kdsSet(${q(o)},3)">Selesai</button>`:''}`:''}</div></div>`};
+  const own=isOwner();
+  el.innerHTML=bar('<i class="ic" data-ic="list"></i>Layar Dapur')+(own?`<div class="panel" style="margin-bottom:10px"><label class="tgl"><input type="checkbox" ${db.set.kdsOn?'checked':''} onchange="db.set.kdsOn=this.checked;save()"><span>Kirim pesanan kasir ke dapur<small>Setiap transaksi di kasir otomatis muncul di layar ini.</small></span></label></div>`:'')+`<div class="kdg">${[0,1,2].map(k=>`<div class="kdcol"><h3>${KS[k]} <b>${col(k).length}</b></h3>${col(k).map(card).join('')||'<p class="hint">Kosong</p>'}</div>`).join('')}</div>`;
 };
-P2.t={get shiftStats(){return shiftStats},get debtOf(){return debtOf},get BP(){return BP}};
-window.kdsSet=async function(id,action){
-  try{const r=await api('/api/co/'+id,{method:'POST',body:JSON.stringify({action})});if(!r.ok)throw 0;
+window.kdsSet=async function(src,id,st){
+  if(src==='loc'){const k=db.kds.find(x=>x.id===id);if(k){k.st=st;k.u=Date.now();save()}V.kds();return}
+  try{const r=await api('/api/co/'+id,{method:'POST',body:JSON.stringify({action:st===1?'cook':st===2?'ready':'unready'})});if(!r.ok)throw 0;
     const x=await (await api('/api/co?rev=0')).json();if(!x.unchanged){CO.rev=x.rev;coApply(x)}if(S.view==='kds')V.kds()}catch(e){toast('Gagal mengubah status')}
 };
 setInterval(()=>{if(!document.hidden&&S.view==='kds')V.kds()},20000);
