@@ -177,11 +177,11 @@ function buySupOpts(){const e=$('#bySup');if(!e)return;const cur=e.value;e.inner
 window.byPayUI=function(){$('#byDpW').hidden=BP.pay!=='dp'};
 window.BP_add=function(){BP.lines.push({id:'',q:1,c:0});BP_render()};
 window.BP_del=function(i){BP.lines.splice(i,1);if(!BP.lines.length)BP.lines.push({id:'',q:1,c:0});BP_render()};
-window.BP_set=function(i,f,v){const l=BP.lines[i];if(f==='id'){l.id=v;const it=find(v);if(it&&!l.c)l.c=it.cost||0;BP_render()}else{l[f]=num(v);BP_tot()}};
+window.BP_set=function(i,f,v){const l=BP.lines[i];if(f==='pu'){l.pu=v==='1';BP_render();return}if(f==='id'){l.id=v;l.pu=false;const it=find(v);if(it&&!l.c)l.c=it.cost||0;BP_render()}else{l[f]=num(v);BP_tot()}};
 function BP_render(){
   const e=$('#byRows');if(!e)return;
   e.innerHTML=BP.lines.map((l,i)=>`<div class="bpr"><select class="fi" onchange="BP_set(${i},'id',this.value)"><option value="">Pilih barang…</option>${buyItems().map(x=>`<option value="${esc(x.id)}" ${x.id===l.id?'selected':''}>${esc(x.name)}${x.ns?' (bahan)':''}</option>`).join('')}</select>
-  <input class="fi" type="number" min="0" step="1" value="${l.q}" aria-label="Jumlah" oninput="BP_set(${i},'q',this.value)"><input class="fi" type="number" min="0" step="any" value="${l.c||''}" placeholder="Harga satuan" aria-label="Harga satuan" oninput="BP_set(${i},'c',this.value)"><button type="button" class="mini" onclick="BP_del(${i})">✕</button></div>`).join('');
+  ${(find(l.id)||{}).pu?`<select class="fi" aria-label="Satuan" onchange="BP_set(${i},'pu',this.value)" style="width:auto;flex:none"><option value="0">satuan</option><option value="1" ${l.pu?'selected':''}>${esc(find(l.id).pu.n)}</option></select>`:''}<input class="fi" type="number" min="0" step="any" value="${l.q}" aria-label="Jumlah" oninput="BP_set(${i},'q',this.value)"><input class="fi" type="number" min="0" step="any" value="${l.c||''}" placeholder="Harga satuan" aria-label="Harga satuan" oninput="BP_set(${i},'c',this.value)"><button type="button" class="mini" onclick="BP_del(${i})">✕</button></div>`).join('');
   BP_tot();
 }
 function BP_tot(){const t=rnd(BP.lines.reduce((a,l)=>a+(+l.q||0)*(+l.c||0),0));const e=$('#byTot');if(e)e.textContent=money(t);return t}
@@ -191,14 +191,14 @@ window.buySave=function(){
   if(pay==='lunas'||pay==='kas')paid=total;else if(pay==='dp')paid=Math.min(total,num($('#byDp').value));
   if(pay==='kas'&&!cur){toast('Buka shift dulu untuk membayar dari kas laci');return}
   const sup=$('#bySup').value,now=nowIso(),id='b'+uid();
-  const b={id,t:now,by:myName(),sup,lines:ls.map(l=>({id:l.id,name:(find(l.id)||{}).name||'',q:Math.floor(l.q),c:l.c})),total,note:($('#byNote').value||'').trim(),pays:[],u:Date.now()};
+  const b={id,t:now,by:myName(),sup,lines:ls.map(l=>({id:l.id,name:(find(l.id)||{}).name||'',q:l.q,c:l.c,un:(l.pu&&(find(l.id)||{}).pu)?find(l.id).pu.n:'',bq:Math.round(l.q*((l.pu&&(find(l.id)||{}).pu)?find(l.id).pu.f:1)*1000)/1000})),total,note:($('#byNote').value||'').trim(),pays:[],u:Date.now()};
   if(paid>0)b.pays.push({t:now,amt:paid,src:pay==='kas'?'kas':'lain',sh:pay==='kas'&&cur?cur.id:null});
-  ls.forEach(l=>{const it=find(l.id);if(!it)return;const q=Math.floor(l.q);it.stock=(+it.stock||0)+q;logAdd(it.name,q,'Pembelian '+supName(sup),it.stock,now);if(isOwner()&&l.c>0)it.cost=l.c});
+  ls.forEach(l=>{const it=find(l.id);if(!it)return;const f=(l.pu&&it.pu)?it.pu.f:1,q=Math.round(l.q*f*1000)/1000;it.stock=Math.round(((+it.stock||0)+q)*1000)/1000;logAdd(it.name,q,'Pembelian '+supName(sup)+(f>1?' ('+l.q+' '+it.pu.n+')':''),it.stock,now);if(isOwner()&&l.c>0)it.cost=Math.round(l.c/f*100)/100});
   db.buys.unshift(b);db.log=db.log.slice(0,LOG_MAX);save();closeModal();toast('Pembelian dicatat, stok bertambah');V.buy();
 };
 window.buyDetail=function(id){
   const b=db.buys.find(x=>x.id===id);if(!b)return;const d=debtOf(b);
-  openModal(`<h3>${esc(supName(b.sup))}</h3><p class="hint" style="margin:0 0 6px">${esc(dstr(b.t))} · oleh ${esc(b.by||'')}</p><table class="dl">${(b.lines||[]).map(l=>`<tr><td>${l.q}× ${esc(l.name)}<br><small>${money(l.c)}</small></td><td>${money(l.q*l.c)}</td></tr>`).join('')}<tr class="tt"><td>Total</td><td>${money(b.total)}</td></tr></table>
+  openModal(`<h3>${esc(supName(b.sup))}</h3><p class="hint" style="margin:0 0 6px">${esc(dstr(b.t))} · oleh ${esc(b.by||'')}</p><table class="dl">${(b.lines||[]).map(l=>`<tr><td>${l.q}${l.un?' '+esc(l.un):'×'} ${esc(l.name)}<br><small>${money(l.c)}</small></td><td>${money(l.q*l.c)}</td></tr>`).join('')}<tr class="tt"><td>Total</td><td>${money(b.total)}</td></tr></table>
   ${(b.pays||[]).length?`<table class="dl">${b.pays.map(p=>`<tr><td>Bayar ${esc(dstr(p.t))}${p.src==='kas'?' (kas laci)':''}</td><td>${money(p.amt)}</td></tr>`).join('')}</table>`:''}
   ${d?`<div class="chg neg"><span>Sisa hutang</span><span>${money(d)}</span></div><label class="fl">Bayar hutang</label><input class="fi" id="dbAmt" type="number" min="0" step="any" value="${d}"><select class="fi" id="dbSrc"><option value="lain">Transfer / sumber lain</option>${shiftCur()?'<option value="kas">Kas laci</option>':''}</select><button class="btn" onclick="debtPay('${b.id}')">Bayar</button>`:'<div class="chg"><span>Lunas</span><span></span></div>'}
   ${b.note?`<div class="nt">${esc(b.note)}</div>`:''}<button class="btn sec" onclick="closeModal()">Tutup</button>`);
@@ -281,18 +281,24 @@ window.promoDel=function(id){const p=db.promos.find(x=>x.id===id);if(!p||!confir
 
 /* ================= LAYAR DAPUR ================= */
 const KS={0:'Baru',1:'Dimasak',2:'Siap'};
+const KF={s:''};
+P2.kdsStn=s=>{KF.s=s;V.kds()};
 V.kds=function(){
   const el=$('#v-kds');if(!el)return;
   const on=(typeof CO!=='undefined'&&CO.list?CO.list:[]).filter(o=>o.status==='new'||o.status==='accepted').map(o=>({src:'co',id:o.id,k:o.kds||0,t:o.t,title:o.tbl?'Meja '+o.tbl:o.num,sub:o.name,lines:o.lines,note:o.note,from:o.by?'Server: '+o.by:'Pesanan pelanggan'}));
   const lo=live(db.kds).filter(k=>(k.st||0)<3).map(k=>({src:'loc',id:k.id,k:k.st||0,t:k.t,title:k.tbl?'Meja '+k.tbl:k.no,sub:k.cust||'',lines:k.lines,note:k.note,from:'Kasir'}));
   const act=on.concat(lo).sort((a,b)=>a.t<b.t?-1:1);
-  const col=k=>act.filter(o=>o.k===k);
+  const sts=[...new Set(act.flatMap(o=>o.lines.map(l=>(find(l.id)||{}).stn||'')).filter(Boolean))];
+  if(KF.s&&!sts.includes(KF.s))KF.s='';
+  const stOf=l=>(find(l.id)||{}).stn||'';
+  const act2=KF.s?act.map(o=>({...o,lines:o.lines.filter(l=>stOf(l)===KF.s)})).filter(o=>o.lines.length):act;
+  const col=k=>act2.filter(o=>o.k===k);
   const q=o=>`'${o.src}','${String(o.id).replace(/'/g,"")}'`;
   const card=o=>{const mins=Math.max(0,Math.floor((Date.now()-new Date(o.t))/60000));return`<div class="kdc ${mins>=15?'late':mins>=8?'warn':''}"><div class="kdh"><b>${esc(o.title)}</b><span>${esc(o.sub)}</span><small>${mins} mnt</small></div>
     <ul>${o.lines.map(l=>`<li><b>${l.qty}×</b> ${esc(l.name)}</li>`).join('')}</ul>${o.note?`<div class="nt">${esc(o.note)}</div>`:''}<small class="hint">${esc(o.from)}</small>
     <div class="acts" style="margin-top:8px">${o.k===0?`<button class="btn sm" onclick="kdsSet(${q(o)},1)">Mulai masak</button>`:''}${o.k===1?`<button class="btn sm" onclick="kdsSet(${q(o)},2)">Siap saji</button>`:''}${o.k===2?`<button class="btn sm sec" onclick="kdsSet(${q(o)},0)">Batal siap</button>${o.src==='loc'?`<button class="btn sm" onclick="kdsSet(${q(o)},3)">Selesai</button>`:''}`:''}</div></div>`};
   const own=isOwner();
-  el.innerHTML=bar('<i class="ic" data-ic="cook"></i>Layar Dapur')+(own?`<div class="panel" style="margin-bottom:10px"><label class="tgl"><input type="checkbox" ${db.set.kdsOn?'checked':''} onchange="db.set.kdsOn=this.checked;save()"><span>Kirim pesanan kasir ke dapur<small>Setiap transaksi di kasir otomatis muncul di layar ini.</small></span></label></div>`:'')+`<div class="kdg">${[0,1,2].map(k=>`<div class="kdcol"><h3>${KS[k]} <b>${col(k).length}</b></h3>${col(k).map(card).join('')||'<p class="hint">Kosong</p>'}</div>`).join('')}</div>`;
+  el.innerHTML=bar('<i class="ic" data-ic="cook"></i>Layar Dapur')+(own?`<div class="panel" style="margin-bottom:10px"><label class="tgl"><input type="checkbox" ${db.set.kdsOn?'checked':''} onchange="db.set.kdsOn=this.checked;save()"><span>Kirim pesanan kasir ke dapur<small>Setiap transaksi di kasir otomatis muncul di layar ini.</small></span></label><label class="tgl"><input type="checkbox" ${db.set.stSplit?'checked':''} onchange="db.set.stSplit=this.checked;save()"><span>Cetak tiket terpisah per stasiun<small>Item Dapur dan Bar dicetak di slip berbeda (atur stasiun di data menu).</small></span></label></div>`:'')+(sts.length?`<div class="itabs"><button class="${KF.s===''?'on':''}" onclick="P2.kdsStn('')">Semua</button>${sts.map(s=>`<button class="${KF.s===s?'on':''}" onclick="P2.kdsStn('${esc(s).replace(/'/g,"")}')">${esc(s)}</button>`).join('')}</div>`:'')+`<div class="kdg">${[0,1,2].map(k=>`<div class="kdcol"><h3>${KS[k]} <b>${col(k).length}</b></h3>${col(k).map(card).join('')||'<p class="hint">Kosong</p>'}</div>`).join('')}</div>`;
 };
 
 /* ================= CABANG ================= */
@@ -303,7 +309,9 @@ P2.branch=async function(){
     openModal(`<h3>Cabang</h3><p class="hint" style="margin:0 0 8px">Tiap cabang punya menu, stok, laporan, dan karyawan sendiri. Ketuk untuk berpindah.</p>
     <div class="brl">${j.list.map(x=>`<div class="brw"><button class="brb ${x.id===j.active?'on':''}" onclick="P2.brSwitch(${x.id})"><b>${esc(x.name)}</b><small>${x.id===j.hq?'Pusat':'Cabang'}${x.id===j.active?' · aktif':''}</small></button>${j.canAdd&&x.id!==j.hq?`<button class="brx" aria-label="Hapus cabang" onclick="P2.brDel(${x.id},'${esc(x.name).replace(/'/g,"\\'")}',${x.id===j.active},${j.hq})"><i class="ic solo" data-ic="trash"></i></button>`:''}</div>`).join('')}</div>
     ${j.canAdd?`<label class="fl" for="brN">Tambah cabang baru</label><input class="fi" id="brN" maxlength="60" placeholder="Nama cabang"><button class="btn" onclick="P2.brAdd()">Buat &amp; buka cabang</button>`:''}
+    ${j.canAdd&&j.list.length>1?`<div class="two"><button class="btn sec" onclick="P2.brRep('today')">Laporan Gabungan</button><button class="btn sec" onclick="P2.brTr()">Transfer Stok</button></div>`:''}
     <button class="btn sec" onclick="closeModal()">Tutup</button>`);
+    P2.brList=j.list;
   }catch(e){toast('Gagal memuat cabang (perlu koneksi)')}
 };
 async function brApply(j){
@@ -314,6 +322,35 @@ async function brApply(j){
 }
 P2.brSwitch=async function(id){
   try{const r=await api('/api/branches/switch',{method:'POST',body:JSON.stringify({id})});const j=await r.json();if(!r.ok)throw 0;await brApply(j)}catch(e){toast('Gagal berpindah cabang')}
+};
+P2.brRep=async function(per){
+  const now=new Date(),t0=dayStart(now);const from=per==='today'?t0:per==='7d'?t0-6*864e5:new Date(now.getFullYear(),now.getMonth(),1).getTime();
+  try{const r=await api('/api/branches/report',{method:'POST',body:JSON.stringify({from:new Date(from).toISOString()})});const j=await r.json();if(!r.ok)throw 0;
+    const T=j.rows.reduce((a,x)=>({n:a.n+x.n,t:a.t+x.total,g:a.g+x.gp}),{n:0,t:0,g:0});
+    openModal(`<h3>Laporan Gabungan</h3><div class="itabs">${[['today','Hari ini'],['7d','7 hari'],['month','Bulan ini']].map(([k,l])=>`<button class="${k===per?'on':''}" onclick="P2.brRep('${k}')">${l}</button>`).join('')}</div>
+    <div class="panel" style="padding:6px 4px">${j.rows.map(x=>`<div class="li" style="cursor:default"><span class="l"><b>${esc(x.name)}${x.hq?' <small>(pusat)</small>':''}</b><small>${x.n} transaksi · est. laba kotor ${money(x.gp)}</small></span><span class="r"><b>${money(x.total)}</b></span></div>`).join('')}
+    <div class="li" style="cursor:default;border-top:1px solid var(--ln)"><span class="l"><b>Total semua cabang</b><small>${T.n} transaksi · est. laba kotor ${money(T.g)}</small></span><span class="r"><b>${money(T.t)}</b></span></div></div>
+    <p class="hint" style="margin:8px 2px">Laba kotor = penjualan − modal barang. Data tiap cabang sesuai yang sudah tersinkron ke server.</p>
+    <button class="btn sec" onclick="P2.branch()">Kembali</button>`);
+  }catch(e){toast('Gagal memuat laporan (perlu koneksi)')}
+};
+P2.brTr=function(){
+  const o=(P2.brList||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  openModal(`<h3>Transfer Stok</h3><p class="hint" style="margin:0 0 8px">Pindahkan stok satu item antar cabang. Item harus sudah ada di kedua cabang (cocok lewat barcode atau nama yang sama).</p>
+  <div class="two"><div><label class="fl">Dari</label><select class="fi" id="trF">${o}</select></div><div><label class="fl">Ke</label><select class="fi" id="trT">${o}</select></div></div>
+  <label class="fl">Nama item atau barcode</label><input class="fi" id="trN" placeholder="Mis. Kopi Susu / 8999..." autocomplete="off">
+  <label class="fl">Jumlah</label><input class="fi" id="trQ" type="number" min="0" step="any" inputmode="decimal">
+  <button class="btn" onclick="P2.brTrGo()">Transfer</button><button class="btn sec" onclick="P2.branch()">Kembali</button>`);
+  const l=P2.brList||[];if(l[1])$('#trT').value=l[1].id;
+};
+P2.brTrGo=async function(){
+  const f=+$('#trF').value,t=+$('#trT').value,n=$('#trN').value.trim(),q=+$('#trQ').value;
+  if(f===t){toast('Pilih dua cabang yang berbeda');return}if(!n||!(q>0)){toast('Isi item dan jumlah');return}
+  const body={from:f,to:t,qty:q};if(/^\d{6,}$/.test(n))body.bc=n;else body.name=n;
+  try{const r=await api('/api/branches/transfer',{method:'POST',body:JSON.stringify(body)});const j=await r.json();
+    if(!r.ok){toast(j.error||'Transfer gagal');return}
+    toast('Transfer '+j.name+' ×'+j.qty+' berhasil');closeModal();try{await syncNow()}catch(e){}
+  }catch(e){toast('Transfer gagal (perlu koneksi)')}
 };
 P2.brDel=async function(id,name,isActive,hq){
   if(!confirm('Hapus cabang "'+name+'"?\n\nSemua data cabang ini (menu, stok, transaksi, karyawan, pesanan) akan dihapus permanen dan tidak bisa dikembalikan.'))return;
@@ -425,17 +462,110 @@ P2.opReview=function(){
   opnReview();
 };
 
+
+/* ================= KARTU HADIAH ================= */
+const gcode=()=>{const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let r='GC-';for(let i=0;i<6;i++)r+=c[Math.floor(Math.random()*c.length)];return r};
+P2.giftUse=function(){
+  const code=($('#pGift').value||'').trim().toUpperCase(),e=$('#pGiftR');if(!code)return;
+  const g=live(db.gifts).find(x=>String(x.code).toUpperCase()===code);
+  if(!g){e.textContent='Kartu tidak ditemukan';return}
+  if(!(+g.bal>0)){e.textContent='Saldo kartu habis';return}
+  S.pay.gift=g.id;const pp=$('#pPaid');if(pp&&S.pay.m==='Tunai')pp.value=payTotals().payable;
+  e.innerHTML='Saldo '+money(g.bal)+' · <a href="#" onclick="P2.giftClear();return false">lepas</a>';payRefresh();
+};
+P2.giftClear=function(){S.pay.gift=null;$('#pGiftR').textContent='';$('#pGift').value='';const pp=$('#pPaid');if(pp&&S.pay.m==='Tunai')pp.value=payTotals().payable;payRefresh()};
+V.gift=function(){
+  const el=$('#v-gift');if(!el)return;const l=live(db.gifts).sort((a,b)=>b.t<a.t?-1:1);const tot=l.reduce((a,g)=>a+(+g.bal||0),0);
+  el.innerHTML=bar('<i class="ic" data-ic="gift"></i>Kartu Hadiah','<button class="btn sm" style="width:auto;margin:0" onclick="P2.giftForm()">+ Jual Kartu</button>')
+  +`<div class="kp">${kc('Kartu aktif',l.filter(g=>g.bal>0).length)}${kc('Saldo belum terpakai',money(tot))}</div>
+  <div class="panel"><h3>Daftar Kartu</h3>${l.length?l.map(g=>`<button class="li" onclick="P2.giftDetail('${g.id}')"><span class="l"><b>${esc(g.code)}</b><small>${esc(g.name||'Tanpa nama')} · ${esc(dstr(g.t))}</small></span><span class="r"><b>${money(g.bal)}</b><small>dari ${money(g.init)}</small></span></button>`).join(''):'<div class="mt">Belum ada kartu hadiah.</div>'}</div>`;
+};
+P2.giftForm=function(){
+  openModal(`<h3>Jual Kartu Hadiah</h3><label class="fl">Kode kartu</label><input class="fi" id="gcC" value="${gcode()}" maxlength="20" autocapitalize="characters"><label class="fl">Nominal</label><input class="fi" id="gcA" type="number" min="0" step="any" inputmode="decimal"><label class="fl">Nama pemilik (opsional)</label><input class="fi" id="gcN" maxlength="40">
+  <p class="hint" style="margin:6px 0">Uang diterima tunai: bila shift berjalan, otomatis dicatat sebagai kas masuk. Penjualan kartu bukan pendapatan; pendapatan dihitung saat kartu dipakai belanja.</p>
+  <button class="btn" onclick="P2.giftSave()">Simpan</button><button class="btn sec" onclick="closeModal()">Batal</button>`);
+};
+P2.giftSave=function(){
+  const c=($('#gcC').value||'').trim().toUpperCase(),a=num($('#gcA').value);if(!c||!a){toast('Isi kode dan nominal');return}
+  if(live(db.gifts).some(g=>String(g.code).toUpperCase()===c)){toast('Kode sudah dipakai');return}
+  const now=nowIso(),cur=shiftCur();
+  db.gifts.unshift({id:'g'+uid(),code:c,name:($('#gcN').value||'').trim(),init:a,bal:a,t:now,by:myName(),hist:[{t:now,d:a,note:'Penjualan kartu'}],u:Date.now()});
+  if(cur)db.exps.unshift({id:'e'+uid(),t:now,by:myName(),cat:'Kas masuk',amt:a,note:'Jual kartu hadiah '+c,src:'kas',dir:'in',sh:cur.id,u:Date.now()});
+  save();closeModal();toast('Kartu hadiah dibuat');V.gift();
+};
+P2.giftDetail=function(id){
+  const g=db.gifts.find(x=>x.id===id);if(!g)return;
+  openModal(`<h3>${esc(g.code)}</h3><p class="hint" style="margin:0 0 6px">${esc(g.name||'Tanpa nama')} · saldo <b>${money(g.bal)}</b></p><table class="dl">${(g.hist||[]).map(h=>`<tr><td>${esc(dstr(h.t))}<br><small>${esc(h.note)}</small></td><td class="${h.d<0?'neg':'pos'}">${h.d<0?'−':'+'}${money(Math.abs(h.d))}</td></tr>`).join('')}</table>
+  <label class="fl">Isi ulang saldo</label><input class="fi" id="gcT" type="number" min="0" step="any" inputmode="decimal" placeholder="Nominal"><button class="btn" onclick="P2.giftTop('${id}')">Isi Ulang</button>
+  ${isOwner()?`<button class="btn sec" style="color:var(--bad)" onclick="P2.giftDel('${id}')">Hapus kartu</button>`:''}<button class="btn sec" onclick="closeModal()">Tutup</button>`);
+};
+P2.giftTop=function(id){const g=db.gifts.find(x=>x.id===id),a=num($('#gcT').value);if(!g||!a)return;const now=nowIso(),cur=shiftCur();
+  g.bal=rnd((+g.bal||0)+a);g.init=rnd((+g.init||0)+a);g.hist.unshift({t:now,d:a,note:'Isi ulang'});g.u=Date.now();
+  if(cur)db.exps.unshift({id:'e'+uid(),t:now,by:myName(),cat:'Kas masuk',amt:a,note:'Isi ulang kartu '+g.code,src:'kas',dir:'in',sh:cur.id,u:Date.now()});
+  save();closeModal();V.gift();toast('Saldo ditambah')};
+P2.giftDel=function(id){const g=db.gifts.find(x=>x.id===id);if(!g||!confirm('Hapus kartu '+g.code+'? Sisa saldo hilang.'))return;g.del=1;g.u=Date.now();save();closeModal();V.gift()};
+
+/* ================= RESERVASI MEJA ================= */
+const RS={};
+const rsAct=()=>live(db.rsv).filter(r=>r.st==='res');
+P2.rsvFor=function(k){const now=Date.now();return rsAct().filter(r=>tkey(r.tbl)===tkey(k)&&new Date(r.t).getTime()<now+3*36e5&&new Date(r.t).getTime()>now-45*6e4)};
+V.rsv=function(){
+  const el=$('#v-rsv');if(!el)return;const l=rsAct().sort((a,b)=>a.t<b.t?-1:1),past=live(db.rsv).filter(r=>r.st!=='res').sort((a,b)=>b.t<a.t?-1:1).slice(0,8);
+  const tm=t=>new Date(t).toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'}).replace('.',':');
+  const dy=t=>{const d=new Date(t),n=new Date();return d.toDateString()===n.toDateString()?'Hari ini':d.toLocaleDateString(dloc(),{weekday:'short',day:'numeric',month:'short'})};
+  const row=r=>`<div class="rsr"><span class="tm">${tm(r.t)}</span><span class="in"><b>${esc(r.name)}</b> · Meja ${esc(r.tbl||'-')}<small>${esc(dy(r.t))} · ${r.pax||1} orang${r.phone?' · '+esc(r.phone):''}${r.note?' · '+esc(r.note):''}</small></span>${r.st==='res'?`<span class="ac"><button class="go" onclick="P2.rsvSet('${r.id}','seated')">Datang</button><button onclick="P2.rsvSet('${r.id}','cancel')">Batal</button></span>`:`<small>${r.st==='seated'?'datang':'batal'}</small>`}</div>`;
+  el.innerHTML=bar('<i class="ic" data-ic="cal"></i>Reservasi Meja','<button class="btn sm" style="width:auto;margin:0" onclick="P2.rsvForm()">+ Reservasi</button>')+(l.length?l.map(row).join(''):'<div class="panel"><div class="mt">Belum ada reservasi aktif.</div></div>')+(past.length?'<div class="mgh" style="margin:14px 2px 8px">Riwayat terakhir</div>'+past.map(row).join(''):'');
+};
+P2.rsvForm=function(){
+  const d=new Date(Date.now()+36e5);const pad=n=>String(n).padStart(2,'0');const v=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':00';
+  openModal(`<h3>Reservasi Meja</h3><label class="fl">Nama</label><input class="fi" id="rvN" maxlength="40"><div class="two"><div><label class="fl">No. meja</label><input class="fi" id="rvT" maxlength="12" inputmode="text" autocapitalize="characters"></div><div><label class="fl">Jumlah orang</label><input class="fi" id="rvP" type="number" min="1" value="2"></div></div>
+  <label class="fl">Waktu</label><input class="fi" id="rvW" type="datetime-local" value="${v}"><label class="fl">No. HP (opsional)</label><input class="fi" id="rvH" inputmode="tel" maxlength="20"><label class="fl">Catatan (opsional)</label><input class="fi" id="rvC" maxlength="80">
+  <button class="btn" onclick="P2.rsvSave()">Simpan</button><button class="btn sec" onclick="closeModal()">Batal</button>`);
+};
+P2.rsvSave=function(){
+  const n=($('#rvN').value||'').trim(),t=($('#rvT').value||'').trim().slice(0,12),w=$('#rvW').value;if(!n||!t||!w){toast('Isi nama, meja, dan waktu');return}
+  const at=new Date(w);if(isNaN(at)){toast('Waktu tidak valid');return}
+  if(rsAct().some(r=>tkey(r.tbl)===tkey(t)&&Math.abs(new Date(r.t)-at)<2*36e5)){if(!confirm('Meja '+t+' sudah dipesan dalam rentang 2 jam. Tetap simpan?'))return}
+  db.rsv.unshift({id:'v'+uid(),name:n,tbl:t,pax:Math.max(1,+$('#rvP').value||1),t:at.toISOString(),phone:$('#rvH').value.trim(),note:$('#rvC').value.trim(),st:'res',by:myName(),u:Date.now()});
+  save();closeModal();toast('Reservasi disimpan');V.rsv();
+};
+P2.rsvSet=function(id,st){const r=db.rsv.find(x=>x.id===id);if(!r)return;r.st=st;r.u=Date.now();save();V.rsv();if(S.view==='table')renderTable()};
+const tkey=t=>String(t==null?'':t).trim().toUpperCase();
+
+/* ================= LAYAR PELANGGAN (layar kedua) ================= */
+const CDCH=('BroadcastChannel' in window)?new BroadcastChannel('ordela-cd'):null;
+P2.cdPush=function(){
+  if(!CDCH||window.__isCD)return;
+  try{const lines=Object.keys(S.cart).filter(k=>find(bid(k))).map(k=>{const i=find(bid(k)),sx=lineSfx(k);return{n:i.name+(sx?' ('+sx+')':''),q:S.cart[k],p:linePrice(k)*S.cart[k],e:i.emoji||''}});
+    const c=calc();CDCH.postMessage({lines,sub:c.sub,disc:c.disc,tax:c.tax,total:c.total,store:db.set.store||'Ordela',cur:{cur:db.set.cur,dec:db.set.dec,loc:db.set.loc,pos:db.set.curPos},qris:(db.set.pay&&db.set.pay.on&&db.set.pay.qris)||''})}catch(e){}
+};
+P2.cdOpen=function(){const w=window.open(location.pathname+'#cd','ordela-cd','width=900,height=700');if(!w)toast('Izinkan pop-up untuk membuka layar pelanggan');else setTimeout(P2.cdPush,800)};
+if(location.hash==='#cd'){
+  window.__isCD=true;
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.body.innerHTML='<div id="cdv" style="min-height:100vh;display:flex;flex-direction:column;font-family:Poppins,system-ui,sans-serif;background:#111;color:#fff;padding:28px"><h1 id="cdS" style="margin:0 0 18px;font-size:28px">Ordela</h1><div id="cdL" style="flex:1"></div><div id="cdT" style="border-top:2px solid #444;padding-top:16px"></div></div>';
+    const fm=(v,c)=>{const d=+c.dec||0,n=(+v||0).toLocaleString(c.loc||'id-ID',{minimumFractionDigits:d,maximumFractionDigits:d});return c.pos==='after'?n+' '+(c.cur||''):(c.cur||'Rp')+' '+n};
+    const draw=m=>{const e=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      document.getElementById('cdS').textContent=m.store;
+      document.getElementById('cdL').innerHTML=m.lines.length?m.lines.map(l=>`<div style="display:flex;gap:14px;font-size:24px;padding:8px 0;border-bottom:1px solid #2a2a2a"><span>${e(l.e)}</span><span style="flex:1">${l.q}× ${e(l.n)}</span><b>${fm(l.p,m.cur)}</b></div>`).join(''):'<p style="font-size:28px;opacity:.6;margin-top:40px">Selamat datang! Silakan pilih menu.</p>';
+      document.getElementById('cdT').innerHTML=m.lines.length?`${m.disc?`<div style="display:flex;justify-content:space-between;font-size:20px;opacity:.8"><span>Diskon</span><span>−${fm(m.disc,m.cur)}</span></div>`:''}${m.tax?`<div style="display:flex;justify-content:space-between;font-size:20px;opacity:.8"><span>Pajak</span><span>${fm(m.tax,m.cur)}</span></div>`:''}<div style="display:flex;justify-content:space-between;font-size:40px;font-weight:800;margin-top:8px"><span>Total</span><span>${fm(m.total,m.cur)}</span></div>`:''};
+    draw({store:'Ordela',lines:[],cur:{}});
+    if(CDCH)CDCH.onmessage=ev=>draw(ev.data);
+    document.title='Layar Pelanggan';
+  });
+}
+
 /* ================= MENU UTAMA ================= */
 V.menu=function(){
   const el=$('#v-menu');if(!el)return;
   const h=new Date().getHours(),g=h>=4&&h<11?'Selamat pagi':h<15?'Selamat siang':h<18?'Selamat sore':'Selamat malam';
   const nm=(CL.on&&CL.me&&CL.me.name)||'Owner';
-  const G=[['Operasional',[['pos','Kasir','receipt','#ef4444'],['table','Meja','grid','#f59e0b'],['co','Pesanan Online','cart','#0ea5e9'],['kds','Layar Dapur','cook','#f97316'],['shift','Shift Kasir','clock','#8b5cf6'],['alert','Notifikasi','bell','#ec4899']]],
+  const G=[['Operasional',[['pos','Kasir','receipt','#ef4444'],['table','Meja','grid','#f59e0b'],['co','Pesanan Online','cart','#0ea5e9'],['kds','Layar Dapur','cook','#f97316'],['rsv','Reservasi','cal','#0ea5e9'],['gift','Kartu Hadiah','gift','#f43f5e'],['cd','Layar Pelanggan','dash','#0891b2'],['shift','Shift Kasir','clock','#8b5cf6'],['alert','Notifikasi','bell','#ec4899']]],
    ['Penjualan & Pelanggan',[['home','Beranda & Laporan','dash','#10b981'],['mem','Member','users','#14b8a6'],['promo','Promo','bolt','#eab308'],['exp','Pengeluaran','card','#64748b']]],
    ['Produk & Stok',[['inv','Inventori','box','#3b82f6'],['opname','Stok Opname','check','#0d9488'],['buy','Pembelian','download','#6366f1']]],
    ['Tim & Toko',[['att','Absensi','clock','#06b6d4'],['usr','Pengguna','users','#a855f7'],['pyr','Payroll','card','#22c55e'],['branch','Cabang','bank','#d946ef'],['prn','Printer','print','#475569'],['set','Pengaturan','sliders','#6b7280'],['acc','Akun Saya','key','#111827']]]];
   const nb=(typeof CO!=='undefined'&&CO.list)?CO.list.filter(o=>o.status==='new').length:0;
-  const tile=([v,t,ic,c])=>{const act=v==='branch'?'P2.branch()':`go('${v}')`;
+  const tile=([v,t,ic,c])=>{const act=v==='branch'?'P2.branch()':v==='cd'?'P2.cdOpen()':`go('${v}')`;
     return`<button class="mgi" onclick="${act}"><span class="mic" style="--g:${c};--g1:color-mix(in srgb,${c} 70%,#fff)"><i class="ic" data-ic="${ic}"></i>${v==='co'&&nb?`<b class="mb">${nb}</b>`:''}</span><span class="t">${esc(t)}</span></button>`};
   const secs=G.map(([t,l])=>{const x=l.filter(([v])=>v==='acc'||canView(v));return x.length?`<div class="mgc"><div class="mgh">${t}</div><div class="mgrid">${x.map(tile).join('')}</div></div>`:''}).join('');
   let st='';

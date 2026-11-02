@@ -815,6 +815,9 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 .tgl>span small{display:block;color:var(--mu);font-size:12px;margin-top:2px;font-weight:400}
 .ic[data-ic=cook]{--m:url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%23000%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M3%2017h18%22/%3E%3Cpath%20d=%22M5%2017a7%207%200%200%201%2014%200%22/%3E%3Cpath%20d=%22M12%208V6%22/%3E%3Cpath%20d=%22M4%2020.5h16%22/%3E%3C/svg%3E")}
 .brw{display:flex;gap:8px;align-items:stretch}.brw .brb{flex:1}.brx{border:0;background:var(--redbg);color:var(--bad);border-radius:14px;width:46px;cursor:pointer;display:grid;place-items:center}.brx .ic{width:20px;height:20px}
+.ic[data-ic=cal]{--m:url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%23000%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Crect%20x=%223%22%20y=%225%22%20width=%2218%22%20height=%2216%22%20rx=%222.5%22/%3E%3Cpath%20d=%22M3%2010h18M8%203v4M16%203v4%22/%3E%3C/svg%3E")}
+.ic[data-ic=gift]{--m:url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%23000%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Crect%20x=%223%22%20y=%228%22%20width=%2218%22%20height=%224%22%20rx=%221%22/%3E%3Cpath%20d=%22M12%208v13M5%2012v8a1%201%200%200%200%201%201h12a1%201%200%200%200%201-1v-8M7.5%208a2.5%202.5%200%200%201%200-5C10%203%2012%208%2012%208s2-5%204.5-5a2.5%202.5%200%200%201%200%205%22/%3E%3C/svg%3E")}
+.tbc.r{border-color:#60a5fa!important}.rsr{display:flex;gap:10px;align-items:center;background:var(--card);border-radius:18px;padding:12px 14px;margin-bottom:8px;box-shadow:0 2px 10px rgba(0,0,0,.04)}.rsr .tm{font-weight:800;font-size:15px;min-width:52px}.rsr .in{flex:1;min-width:0}.rsr .in small{color:var(--mu);display:block}.rsr .ac{display:flex;gap:6px}.rsr .ac button{border:0;border-radius:999px;padding:8px 12px;font-weight:700;font-size:12px;background:var(--peach2);color:inherit;cursor:pointer}.rsr .ac button.go{background:var(--ac);color:var(--acx)}
 </style>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-ordela-dark.svg"><link rel="icon" href="icon-ordela-dark.svg">
 <script>
@@ -858,6 +861,8 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
   <button data-v="promo" onclick="go('promo')"><i class="ic" data-ic="bolt"></i>Promo</button>
   <div class="dg">Produk &amp; Stok</div>
   <button data-v="inv" onclick="go('inv')"><i class="ic" data-ic="box"></i>Inventori</button>
+  <button data-v="gift" onclick="go('gift')"><i class="ic" data-ic="gift"></i>Kartu Hadiah</button>
+  <button data-v="rsv" onclick="go('rsv')"><i class="ic" data-ic="cal"></i>Reservasi</button>
   <button data-v="opname" onclick="go('opname')"><i class="ic" data-ic="check"></i>Stok Opname</button>
   <button data-v="buy" onclick="go('buy')"><i class="ic" data-ic="download"></i>Pembelian & Pemasok</button>
   <div class="dg">Tim</div>
@@ -963,7 +968,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
       <details class="panel" id="coDev" style="margin-top:18px"><summary>Pengaturan perangkat ini</summary><div id="coTop"></div></details>
     </section>
 
-    <section id="v-opname" hidden></section><section id="v-menu" hidden></section><section id="v-shift" hidden></section><section id="v-exp" hidden></section><section id="v-buy" hidden></section><section id="v-mem" hidden></section><section id="v-promo" hidden></section><section id="v-kds" hidden></section>
+    <section id="v-gift" hidden></section><section id="v-rsv" hidden></section><section id="v-opname" hidden></section><section id="v-menu" hidden></section><section id="v-shift" hidden></section><section id="v-exp" hidden></section><section id="v-buy" hidden></section><section id="v-mem" hidden></section><section id="v-promo" hidden></section><section id="v-kds" hidden></section>
     <section id="v-att" hidden>
       <div class="bar"><h2><i class="ic" data-ic="clock"></i>Absensi</h2></div>
       <div id="attBox"></div>
@@ -1016,7 +1021,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
   <aside class="invoice" id="invoice">
     <h2><span>Invoice</span><button class="sheet-x mini" style="color:var(--mu);font-size:22px" onclick="toggleInv(false)"><i class="ic solo" data-ic="x"></i></button></h2>
     <select id="otype" onchange="S.type=this.value">
-      <option value="Takeaway">Takeaway</option><option value="Dine In">Dine In</option><option value="Delivery">Delivery</option>
+      <option value="Takeaway">Takeaway</option><option value="Dine In">Dine In</option><option value="Delivery">Delivery</option><option value="GoFood">GoFood</option><option value="GrabFood">GrabFood</option><option value="ShopeeFood">ShopeeFood</option>
     </select>
     <div class="lines" id="lines"></div>
     <div class="sum">
@@ -1082,14 +1087,14 @@ const LOG_MAX=1000;
 const PRN_DEF={mode:'browser',auto:false,autoNew:true,cut:true,drawer:false,baud:9600,chunk:100,delay:15,uuid:'',autoConn:true};
 const DEF_LOGO='icon-192.png';   // file lokal (ikut terbawa di aplikasi iOS/Android, tidak bergantung internet)
 const GV_DEF={mode:'grid',colsD:0,colsM:2,stock:true,cats:true,tap:'add'};
-function fixDb(d){d.set=d.set||{};if(d.set.fsAuto==null)d.set.fsAuto=true;if(d.set.logoApp==null)d.set.logoApp=true;if(d.set.rc&&d.set.rc.logo&&!d.set.logo){d.set.logo=d.set.rc.logo;d.set.rc.logo=''}d.set.logo=d.set.logo||'';d.set.gv={...GV_DEF,...(d.set.gv||{})};delete d.set.gv.size;d.set.lang=d.set.lang||'id';if(d.set.dec==null)d.set.dec=0;d.set.loc=d.set.loc||'id-ID';d.set.curPos=d.set.curPos||'before';d.set.cur=d.set.cur||'Rp';d.set.curCode=d.set.curCode||(d.set.cur==='Rp'?'IDR':'CUSTOM');d.set.rc={...RC_DEF,...(d.set.rc||{})};d.set.pay={on:false,qris:'',name:'',note:'',...(d.set.pay&&typeof d.set.pay==='object'?d.set.pay:{})};delete d.set.pay.qr;d.set.prn={...PRN_DEF,...(d.set.prn||{})};d.set.att={on:false,tz:'',lat:'',lng:'',radius:100,strict:false,shifts:[],assign:{},...(d.set.att&&typeof d.set.att==='object'?d.set.att:{})};d.set.paper=d.set.paper||'80';for(const k of ['shifts','exps','buys','sups','members','promos','occ'])if(!Array.isArray(d[k]))d[k]=[];d.log=d.log||[];d.orders=d.orders||[];d.cats=d.cats||[];
+function fixDb(d){d.set=d.set||{};if(d.set.fsAuto==null)d.set.fsAuto=true;if(d.set.logoApp==null)d.set.logoApp=true;if(d.set.rc&&d.set.rc.logo&&!d.set.logo){d.set.logo=d.set.rc.logo;d.set.rc.logo=''}d.set.logo=d.set.logo||'';d.set.gv={...GV_DEF,...(d.set.gv||{})};delete d.set.gv.size;d.set.lang=d.set.lang||'id';if(d.set.dec==null)d.set.dec=0;d.set.loc=d.set.loc||'id-ID';d.set.curPos=d.set.curPos||'before';d.set.cur=d.set.cur||'Rp';d.set.curCode=d.set.curCode||(d.set.cur==='Rp'?'IDR':'CUSTOM');d.set.rc={...RC_DEF,...(d.set.rc||{})};d.set.pay={on:false,qris:'',name:'',note:'',...(d.set.pay&&typeof d.set.pay==='object'?d.set.pay:{})};delete d.set.pay.qr;d.set.prn={...PRN_DEF,...(d.set.prn||{})};d.set.att={on:false,tz:'',lat:'',lng:'',radius:100,strict:false,shifts:[],assign:{},...(d.set.att&&typeof d.set.att==='object'?d.set.att:{})};d.set.paper=d.set.paper||'80';for(const k of ['shifts','exps','buys','sups','members','promos','occ','gifts','rsv'])if(!Array.isArray(d[k]))d[k]=[];d.log=d.log||[];d.orders=d.orders||[];d.cats=d.cats||[];
   if(d.set.store==='Sushi POS'||d.set.store==='Octocat')d.set.store='Ordela';
   if(d.set.logo&&((d.set.logo.length===9895&&d.set.logo.slice(0,40)==='data:image/jpeg;base64,/9j/4AAQSkZJRgABA')||(d.set.logo.length===22538&&d.set.logo.slice(-24)==='YWBpBFcIAAAAAElFTkSuQmCC')))d.set.logo=DEF_LOGO; /* ganti logo bawaan lama */
   if(/^https?:\/\/raw\.githubusercontent\.com\/[^?#]*\/(icon|brand)[^?#]*$/i.test(String(d.set.logo||'')))d.set.logo=DEF_LOGO;   // logo bawaan lama di alamat luar -> file lokal
   if(!d.set.logo){d.set.logo=DEF_LOGO;if(!d.set.logoInit)d.set.rc.showLogo=false}
   d.set.logoInit=true;
   delete d.set.map;if(d.set.rc){delete d.set.rc.showMapQr;delete d.set.rc.mapQrText}
-  ['holds','members','promos','shifts','exps','sups','buys','kds','occ'].forEach(k=>{if(!Array.isArray(d[k]))d[k]=[]});
+  ['holds','members','promos','shifts','exps','sups','buys','kds','occ','gifts','rsv'].forEach(k=>{if(!Array.isArray(d[k]))d[k]=[]});
   if(d.set.ptsPer==null)d.set.ptsPer=10000;if(d.set.ptsVal==null)d.set.ptsVal=100;
   {const cut=Date.now()-3*864e5;d.holds=d.holds.filter(h=>!(h.del&&(h.u||0)<cut))}
   syncBundles(d);
@@ -1142,7 +1147,7 @@ setInterval(tick,15000);
 /* ---------- navigation ---------- */
 function toggleDrawer(){$('#drawer').classList.toggle('open');$('#scrim').classList.toggle('on',$('#drawer').classList.contains('open'))}
 function closeAll(){$('#drawer').classList.remove('open');$('#scrim').classList.remove('on')}
-const P2V=['opname','menu','shift','exp','buy','mem','promo','kds'];
+const P2V=['gift','rsv','opname','menu','shift','exp','buy','mem','promo','kds'];
 const ACCV=['acc','accset','accinfo','editacc','accphoto','pw','accver','accnt','accabout','accdel','accok'];
 function go(v){
   if(S.view==='set'&&v!=='set')S.setSub=null;
@@ -1329,6 +1334,7 @@ function totals(){
   $('#sDisc').textContent='− '+money(c.disc);$('#sTot').textContent=money(c.total);
   {const r=$('#sPromoR');if(r){r.hidden=!c.promo;if(c.promo){$('#sPromoN').textContent='Promo: '+c.promo.name+(c.promo.code?' ('+c.promo.code+')':'');$('#sPromoV').textContent='− '+money(c.pd)}}
    const hb=$('#holdBtn');if(hb){const h=holdsOpen().length;hb.textContent='Tahanan'+(h?' ('+h+')':'')}}
+  if(window.P2&&P2.cdPush)P2.cdPush();
   $('#placeBtn').disabled=!n;$('#fabN').innerHTML=`<i class="ic" data-ic="cart"></i>${n} item`;$('#fabT').textContent=money(c.total);
 }
 function clearCart(){S.cart={};S.cm={};S.dVal=0;S.promoId=null;{const e=$('#pcode');if(e)e.value=''}renderGrid();renderInvoice()}
@@ -1404,7 +1410,8 @@ function payTotals(){
   const m=P.mem&&db.members.find(x=>x.id===P.mem),pv=+db.set.ptsVal||0;
   if(m&&P.redeem&&pv>0){pts=Math.min(+m.pts||0,Math.floor(c.total/pv));rd=rnd(pts*pv)}
   const total=rnd(Math.max(0,c.total-rd)),tip=rnd(Math.max(0,+P.tip||0));
-  return{c,rd,pts,total,tip,payable:rnd(total+tip),mem:m||null};
+  const gc=P.gift&&(db.gifts||[]).find(g=>g.id===P.gift&&!g.del),gv=gc?Math.min(+gc.bal||0,rnd(total+tip)):0;
+  return{c,rd,pts,total,tip,gv,gc:gc||null,payable:rnd(total+tip-gv),mem:m||null};
 }
 function payForm(){
   if(db.set.shiftReq&&can('shift')&&window.shiftCur&&!shiftCur()){toast('Buka shift kasir dulu');go('shift');return}
@@ -1414,6 +1421,7 @@ function payForm(){
   openModal(`<h3>Pembayaran</h3><div class="big" id="pTot">${money(t.payable)}</div><small class="hint" id="pSub" style="display:block;text-align:center;min-height:16px"></small>
   <div class="two"><div><label class="fl" for="pCust">Nama pelanggan</label><input class="fi" id="pCust" placeholder="Opsional" value="${esc((S.holdMeta||{}).cust||'')}"></div>
   <div><label class="fl" for="pTbl">No. meja</label><input class="fi" id="pTbl" maxlength="12" inputmode="text" autocapitalize="characters" placeholder="Mis. 7" style="font-weight:700" value="${esc((S.holdMeta||{}).tbl||'')}"></div></div>
+  <label class="fl">Kartu hadiah (opsional)</label><div style="display:flex;gap:8px"><input class="fi" id="pGift" placeholder="Kode kartu" autocapitalize="characters" autocomplete="off" style="flex:1;min-width:0"><button type="button" class="btn sec" style="width:auto;margin:0" onclick="P2.giftUse()">Pakai</button></div><div id="pGiftR" class="hint"></div>
   <label class="fl">Member (opsional)</label><input class="fi" id="pMemQ" placeholder="Cari nama / no. HP member" oninput="memSearch(this.value)" autocomplete="off"><div id="pMemR"></div><div id="pMemSel"></div>
   <div class="two"><div><label class="fl">Tip (opsional)</label><input class="fi" id="pTip" type="number" step="any" min="0" oninput="S.pay.tip=+this.value||0;payRefresh()"></div>
   <div><label class="fl">Bagi rata</label><input class="fi" id="pSplitN" type="number" min="1" max="30" placeholder="Jumlah orang" oninput="payRefresh()"></div></div>
@@ -1457,7 +1465,7 @@ function payRefresh(){
   if(!S.pay||!$('#pTot'))return;
   const r=payCalc(),t=r.t;S.pay.paid=r.paid;
   $('#pTot').textContent=money(t.payable);
-  const sub=[];if(t.rd)sub.push('Tukar poin −'+money(t.rd));if(t.tip)sub.push('Tip '+money(t.tip));const n=+(($('#pSplitN')||{}).value)||0;if(n>1)sub.push('Bagi '+n+' orang: '+money(Math.ceil(t.payable/n))+'/orang');
+  const sub=[];if(t.rd)sub.push('Tukar poin −'+money(t.rd));if(t.tip)sub.push('Tip '+money(t.tip));if(t.gv)sub.push('Kartu hadiah −'+money(t.gv));const n=+(($('#pSplitN')||{}).value)||0;if(n>1)sub.push('Bagi '+n+' orang: '+money(Math.ceil(t.payable/n))+'/orang');
   $('#pSub').textContent=sub.join(' · ');
   const rt=$('#pRdT');if(rt){const m=t.mem;rt.textContent=m?' — memakai '+t.pts+' poin':''}
   const el=$('#pChg');el.classList.toggle('neg',!r.valid);
@@ -1480,13 +1488,14 @@ function checkout(){
   if(t.tip)o.tip=t.tip;if(r.pays&&r.pays.length>1)o.pays=r.pays;
   if(c.promo)o.promo={id:c.promo.id,name:c.promo.name,code:c.promo.code||'',amt:c.pd};
   if(mem)o.mem={id:mem.id,name:mem.name,earn,used:t.pts};
+  if(t.gv&&t.gc){o.gift={id:t.gc.id,code:t.gc.code,amt:t.gv};if(t.payable===0)o.method='Kartu Hadiah';t.gc.bal=rnd((+t.gc.bal||0)-t.gv);t.gc.hist=t.gc.hist||[];t.gc.hist.unshift({t:o.t,d:-t.gv,note:'Belanja '+no});t.gc.u=Date.now()}
   const sh=(typeof shiftCur==='function')?shiftCur():null;if(sh)o.sh=sh.id;
   ids.forEach(id=>{const i=find(bid(id)),q=S.cart[id];
     if(isB(i))i.bundle.forEach(c=>{const x=find(c.id);if(x){const d=Math.round(c.q*q*1000)/1000;x.stock=Math.round((x.stock-d)*1000)/1000;logAdd(x.name,-d,(i.rc?'Resep ':'Penjualan ')+no+' ('+q+'× '+i.name+')',x.stock,o.t)}});
     else{i.stock-=q;logAdd(i.name,-q,'Penjualan '+no,i.stock,o.t)}});
   if(mem){mem.pts=Math.max(0,(+mem.pts||0)-t.pts+earn);mem.visits=(+mem.visits||0)+1;mem.spent=rnd((+mem.spent||0)+t.total);mem.last=o.t;mem.u=Date.now()}
   if(o.tbl){const lim2=Date.now()-3*864e5;db.occ=db.occ.filter(x=>(+x.u||0)>lim2);db.occ.unshift({id:'t'+no,tbl:o.tbl,no,total:o.total,by:o.cashier||'',cust:o.cust||'',t:o.t,u:Date.now()})}
-  if(db.set.kdsOn){const lim=Date.now()-2*864e5;db.kds=db.kds.filter(k=>(+k.u||0)>lim);db.kds.unshift({id:'k'+no,no,t:o.t,tbl:o.tbl,cust:o.cust,lines:o.lines.map(l=>({name:l.name,qty:l.qty})),note:(S.holdMeta&&S.holdMeta.note)||'',st:0,u:Date.now()})}
+  if(db.set.kdsOn){const lim=Date.now()-2*864e5;db.kds=db.kds.filter(k=>(+k.u||0)>lim);db.kds.unshift({id:'k'+no,no,t:o.t,tbl:o.tbl,cust:o.cust,lines:o.lines.map(l=>({id:l.id,name:l.name,qty:l.qty})),note:(S.holdMeta&&S.holdMeta.note)||'',st:0,u:Date.now()})}
   db.log=db.log.slice(0,LOG_MAX);db.orders.unshift(o);db.seq++;save();
   coLink(no);
   S.cart={};S.cm={};S.dVal=0;S.promoId=null;S.holdMeta=null;{const e=$('#pcode');if(e)e.value=''}
@@ -2062,6 +2071,9 @@ function itemForm(id,ns){
   <div class="two"><div><label class="fl">Harga jual *</label><input class="fi" id="fP" type="number" step="any" min="0" value="${i.price}"></div>
   <div><label class="fl">Harga modal</label><input class="fi" id="fK" type="number" step="any" min="0" value="${i.cost||''}"></div></div>
   <div class="two"><div><label class="fl">Barcode (opsional)</label><input class="fi" id="fBC" value="${esc(i.bc||'')}" inputmode="text" autocomplete="off" placeholder="Scan / ketik"></div><div style="display:flex;align-items:flex-end"><button type="button" class="btn sec" style="margin:0;width:100%" onclick="P2.scan(c=>{$('#fBC').value=c;return true},{once:true,keep:true})"><i class="ic" data-ic="camera"></i>Scan kamera</button></div></div>
+  <div class="two"><div><label class="fl">Stasiun (opsional)</label><input class="fi" id="fSt" list="stL" maxlength="20" placeholder="Dapur / Bar" value="${esc(i.stn||'')}"><datalist id="stL"><option>Dapur</option><option>Bar</option><option>Dessert</option></datalist></div>
+  <div><label class="fl">Satuan beli (opsional)</label><div style="display:flex;gap:6px"><input class="fi" id="fPuN" maxlength="12" placeholder="karung" value="${esc((i.pu||{}).n||'')}" style="flex:1;min-width:0"><input class="fi" id="fPuF" type="number" min="0" step="any" inputmode="decimal" placeholder="isi" value="${(i.pu||{}).f||''}" style="width:72px"></div></div></div>
+  <small class="hint" style="display:block;margin:-2px 0 6px">Satuan beli: mis. 1 karung = 25000 (gram). Dipakai di Pembelian agar stok bertambah otomatis.</small>
   <label class="fl">Varian &amp; tambahan (opsional)</label><textarea class="fi" id="fMods" rows="3" placeholder="Level pedas (wajib): Sedang, Pedas, Extra pedas +2000&#10;Topping (banyak): Keju +5000, Telur +4000" style="min-height:70px">${esc(modsText(i.mods))}</textarea>
   <small class="hint">Satu baris satu grup. Tulis (wajib) bila harus dipilih, (banyak) bila boleh pilih lebih dari satu, dan +harga untuk tambahan biaya.</small>
   <label class="tgl"><input type="checkbox" id="fNS" ${i.ns?'checked':''} onchange="nsToggle()"><span>Bahan / tidak dijual (hanya untuk stok &amp; opname, tidak muncul di Kasir)</span></label>
@@ -2175,8 +2187,9 @@ function saveItem(){
   if(bundle&&!cost)cost=rnd(bundle.reduce((a,c)=>a+c.q*((find(c.id)||{}).cost||0),0));
   const d={name,cat,price,cost,stock,min:Math.max(0,Math.floor(+($('#fM')||{}).value||0)),img:S.edit.img||''};
   {const bc=($('#fBC').value||'').trim();if(bc){if(db.items.some(x=>x.bc===bc&&x.id!==S.edit.id)){toast('Barcode sudah dipakai menu lain');return}d.bc=bc}const mods=modsParse($('#fMods').value);if(mods.length)d.mods=mods;if(bundle&&S.edit.rc)d.rc=1}
+  {const st=($('#fSt').value||'').trim().slice(0,20);if(st)d.stn=st;const pn=($('#fPuN').value||'').trim().slice(0,12),pf=+$('#fPuF').value;if(pn&&pf>0&&!bundle)d.pu={n:pn,f:pf}}
   if(ns)d.ns=1;
-  if(S.edit.id){const i=find(S.edit.id);if(!isB(i)&&!bundle&&stock!==i.stock)logAdd(name,stock-i.stock,'Edit item',stock);if(bundle&&!isB(i)&&i.stock)logAdd(name,-i.stock,'Dijadikan item paket',0);Object.assign(i,d);if(!ns)delete i.ns;if(!d.mods)delete i.mods;if(!d.bc)delete i.bc;if(!d.rc)delete i.rc;if(bundle)i.bundle=bundle;else delete i.bundle}
+  if(S.edit.id){const i=find(S.edit.id);if(!isB(i)&&!bundle&&stock!==i.stock)logAdd(name,stock-i.stock,'Edit item',stock);if(bundle&&!isB(i)&&i.stock)logAdd(name,-i.stock,'Dijadikan item paket',0);Object.assign(i,d);if(!ns)delete i.ns;if(!d.mods)delete i.mods;if(!d.bc)delete i.bc;if(!d.rc)delete i.rc;if(!d.stn)delete i.stn;if(!d.pu)delete i.pu;if(bundle)i.bundle=bundle;else delete i.bundle}
   else{const ni={id:uid(),emoji:'🍽️',...d};if(bundle)ni.bundle=bundle;db.items.push(ni);if(!bundle&&stock)logAdd(name,stock,'Stok awal',stock)}
   save();closeModal();render();toast('Item disimpan');
 }
@@ -3180,7 +3193,7 @@ function merge3(base,L,S){
   const cats=(S.cats||[]).filter(c=>!(bc.has(c)&&!lc.has(c)));(L.cats||[]).forEach(c=>{if(!sc.has(c)&&!bc.has(c))cats.push(c)});
   const vs=new Set(),voided=[...(S.voided||[]),...(L.voided||[])].filter(x=>{const k=sj(x);if(vs.has(k))return false;vs.add(k);return true}).sort((a,b)=>a.at<b.at?1:a.at>b.at?-1:0).slice(0,200);
   const colM=k=>{const m=new Map();(S[k]||[]).forEach(x=>m.set(x.id,x));(L[k]||[]).forEach(x=>{const y=m.get(x.id);if(!y||(+x.u||0)>(+y.u||0))m.set(x.id,x)});return [...m.values()]};
-  const cols={};['holds','members','promos','shifts','exps','sups','buys','kds','occ'].forEach(k=>{cols[k]=colM(k)});
+  const cols={};['holds','members','promos','shifts','exps','sups','buys','kds','occ','gifts','rsv'].forEach(k=>{cols[k]=colM(k)});
   return {...S,...cols,items,orders,log,voided,cats,set:m3(B.set,L.set,S.set),seq:Math.max(+L.seq||0,+S.seq||0),_ts:Math.max(+L._ts||0,+S._ts||0)};
 }
 /* ----- sinkron ----- */
@@ -3451,7 +3464,9 @@ function ticketModel(o){
   if(o.by)m.push({t:'row',l:'Server',r:o.by});
   m.push({t:'row',l:'Waktu',r:fmtDT(o)});
   hr();
-  o.lines.forEach(l=>m.push({t:'text',x:l.qty+'x '+l.name,a:'left',b:true}));
+  if(o.stn)m.splice(2,0,{t:'text',x:'== '+o.stn.toUpperCase()+' ==',a:'center',b:true,big:true});
+  {const g={};o.lines.forEach(l=>{const k=(find(l.id)||{}).stn||'';(g[k]=g[k]||[]).push(l)});const ks=Object.keys(g);
+   ks.forEach(k=>{if(ks.length>1&&!o.stn)m.push({t:'text',x:'['+(k||'Umum')+']',a:'left',b:true});g[k].forEach(l=>m.push({t:'text',x:l.qty+'x '+l.name,a:'left',b:true}))})}
   if(o.note){hr();m.push({t:'text',x:'Catatan: '+o.note,a:'left'})}
   hr();
   m.push({t:'row',l:'TOTAL',r:money(o.total),b:true});
@@ -3460,6 +3475,8 @@ function ticketModel(o){
 }
 const ticketOf=o=>({...o,ticket:true});
 async function printTicket(o){
+  if(db.set.stSplit&&!o.stn){const g={};o.lines.forEach(l=>{const k=(find(l.id)||{}).stn||'Umum';(g[k]=g[k]||[]).push(l)});const ks=Object.keys(g);
+    if(ks.length>1){let all=true;for(const k of ks){const ok=await printTicket({...o,lines:g[k],stn:k});if(!ok)all=false;await sleep(400)}return all}}
   const p=db.set.prn,t=ticketOf(o);CO.perr='';
   try{
     if(p.mode==='browser'){
@@ -3804,7 +3821,7 @@ function coStart(){
 const PERM_LBL={pos:'Kasir & Transaksi',shift:'Shift Kasir',co:'Pesanan Online',kds:'Layar Dapur',mem:'Member',inv:'Inventori',opn:'Stok Opname',buy:'Pembelian & Pemasok',exp:'Pengeluaran',hist:'Rekap & Riwayat Penjualan',prn:'Printer',set:'Pengaturan',att:'Absensi'};
 const PERM_DESC={shift:'Buka dan tutup shift, hitung uang laci, catat kas masuk/keluar.',kds:'Lihat dan ubah status masak di Layar Dapur.',mem:'Kelola data member dan poin.',opn:'Hitung stok fisik (scan/ketik/Excel) dan terapkan selisih.',buy:'Catat pembelian barang, pemasok, dan hutang.',exp:'Catat dan lihat pengeluaran serta laba.',pos:'Operasional kasir: Kasir, Meja, Beranda, Notifikasi, dan membuat transaksi.',co:'Terima dan proses pesanan dari pelanggan.',inv:'Lihat dan ubah stok, menu bahan, dan riwayat perubahan stok.',hist:'Lihat rekap, riwayat, dan ekspor penjualan di Beranda.',prn:'Sambungkan printer dan cetak struk.',set:'Toko, desain struk, pembayaran, tampilan, data & cadangan.',att:'Absen masuk dan pulang sendiri.'};
 const PERM_SHORT={shift:'Shift',kds:'Dapur',mem:'Member',opn:'Opname',buy:'Pembelian',exp:'Pengeluaran',pos:'Kasir',co:'Pesanan Online',inv:'Inventori',hist:'Rekap',prn:'Printer',set:'Pengaturan',att:'Absensi'};
-const VIEW_PERM={pyr:'#owner',pos:'pos',home:'pos',table:'pos',alert:'pos',inv:'inv',rc:'set',prn:'prn',set:'set',co:'co',att:'att',usr:'#owner',shift:'shift',exp:'exp',mem:'mem',buy:'buy',promo:'#owner',kds:'kds',opname:'opn'};
+const VIEW_PERM={pyr:'#owner',pos:'pos',home:'pos',table:'pos',alert:'pos',inv:'inv',rc:'set',prn:'prn',set:'set',co:'co',att:'att',usr:'#owner',gift:'pos',rsv:'pos',cd:'pos',shift:'shift',exp:'exp',mem:'mem',buy:'buy',promo:'#owner',kds:'kds',opname:'opn'};
 CL.me=null;try{CL.me=JSON.parse(localStorage.getItem('pos_me')||'null')}catch(e){}
 function setMe(m){CL.me=m||null;try{if(m)localStorage.setItem('pos_me',JSON.stringify(m));else localStorage.removeItem('pos_me')}catch(e){}}
 /* tanpa server (mode offline/standalone) tidak ada akun: semua terbuka */
@@ -5261,16 +5278,17 @@ function renderTable(){
   const LT=locTbl();LT.forEach(x=>{const k=tkey(x.tbl);if(!names.includes(k))names.push(k)});
   const lt=k=>LT.filter(x=>tkey(x.tbl)===k);
   const by=k=>act.filter(o=>tkey(o.tbl)===k);
-  const st=k=>{const a=by(k),l=lt(k);return(a.some(o=>o.status==='accepted')||l.some(x=>x.kind==='occ'))?'p':(a.length||l.length)?'n':'f'};
-  const c={f:0,n:0,p:0};names.forEach(k=>c[st(k)]++);
-  const lbl={f:'Kosong',n:'Baru · belum bayar',p:'Diproses'};
+  const st=k=>{const a=by(k),l=lt(k);return(a.some(o=>o.status==='accepted')||l.some(x=>x.kind==='occ'))?'p':(a.length||l.length)?'n':(window.P2&&P2.rsvFor(k).length?'r':'f')};
+  const c={f:0,n:0,p:0,r:0};names.forEach(k=>c[st(k)]++);
+  const lbl={f:'Kosong',n:'Baru · belum bayar',p:'Diproses',r:'Dipesan'};
+  const rv=k=>{const q=window.P2?P2.rsvFor(k)[0]:null;return q?'<small>'+new Date(q.t).toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'}).replace('.',':')+' · '+esc(q.name)+'</small>':''};
   const paid=o=>o.pst===2,pl=k=>{const a=by(k),l=lt(k);if(!a.length&&!l.length)return '';return(a.every(paid)&&!l.some(x=>x.kind==='hold'))?'Sudah bayar':'Belum bayar'};
   el.innerHTML=`
   <div class="hm-h"><div><h2>Meja</h2></div>
     ${isOwner()||can('set')?`<span class="stp">Jumlah meja <button onclick="tblStep(-1)" aria-label="Kurangi">−</button>${n}<button onclick="tblStep(1)" aria-label="Tambah">+</button></span>`:''}</div>
   <div class="tbg">
-    <div class="panel"><div class="tbs">${names.map(k=>{const s=st(k),a=by(k),l=lt(k);return`<button type="button" class="tbc ${s==='f'?'':s}" onclick="tblOpen('${esc(k).replace(/'/g,"\\'")}')"><b>${esc(k)}</b><small>${s==='p'?'Diproses · '+pl(k):lbl[s]}</small>${l.length&&!a.length?`<small>${l.length} pesanan kasir${[...new Set(l.map(x=>x.by).filter(Boolean))].length?' · '+esc([...new Set(l.map(x=>x.by).filter(Boolean))].join(', ')):''}</small>`:''}${a.length?`<small>${a.length} pesanan${[...new Set(a.map(o=>o.by).filter(Boolean))].length?' · '+esc([...new Set(a.map(o=>o.by).filter(Boolean))].join(', ')):''}</small>`:''}</button>`}).join('')}</div>
-      <div class="tlg"><span><i style="background:#6fd6a0"></i>Kosong: ${c.f}</span><span><i style="background:#f7c244"></i>Pesanan baru: ${c.n}</span><span><i style="background:var(--b)"></i>Diproses: ${c.p}</span></div></div>
+    <div class="panel"><div class="tbs">${names.map(k=>{const s=st(k),a=by(k),l=lt(k);return`<button type="button" class="tbc ${s==='f'?'':s}" onclick="tblOpen('${esc(k).replace(/'/g,"\\'")}')"><b>${esc(k)}</b><small>${s==='p'?'Diproses · '+pl(k):lbl[s]}</small>${rv(k)}${l.length&&!a.length?`<small>${l.length} pesanan kasir${[...new Set(l.map(x=>x.by).filter(Boolean))].length?' · '+esc([...new Set(l.map(x=>x.by).filter(Boolean))].join(', ')):''}</small>`:''}${a.length?`<small>${a.length} pesanan${[...new Set(a.map(o=>o.by).filter(Boolean))].length?' · '+esc([...new Set(a.map(o=>o.by).filter(Boolean))].join(', ')):''}</small>`:''}</button>`}).join('')}</div>
+      <div class="tlg"><span><i style="background:#6fd6a0"></i>Kosong: ${c.f}</span><span><i style="background:#f7c244"></i>Pesanan baru: ${c.n}</span><span><i style="background:var(--b)"></i>Diproses: ${c.p}</span><span><i style="background:#60a5fa"></i>Dipesan: ${c.r}</span></div></div>
     <div class="panel"><h3>Pesanan Aktif</h3>${act.length?act.map(o=>`<button class="li" onclick="coDet(${o.id})"><span class="l"><b>Meja ${esc(o.tbl)} · ${esc(o.name)}</b><small>${o.lines.reduce((a,l)=>a+l.qty,0)} item · ${esc(ago(o.t))}${o.by?' · '+esc(o.by):''}</small></span><span class="r"><b>${money(o.total)}</b><small>${o.status==='new'?'baru':'diproses'}</small></span><span class="ch">›</span></button>`).join(''):'<div class="mt">Belum ada pesanan online aktif dengan nomor meja.</div>'}${LT.map(x=>`<button class="li" onclick="tblOpen('${esc(tkey(x.tbl)).replace(/'/g,"\\'")}')"><span class="l"><b>Meja ${esc(x.tbl)} · ${esc(x.cust||'Kasir')}</b><small>${x.kind==='hold'?x.n+' item · ditahan':esc(x.no)} · ${esc(ago(x.t))}${x.by?' · '+esc(x.by):''}</small></span><span class="r"><b>${money(x.total)}</b><small>${x.kind==='hold'?'belum bayar':'sudah bayar'}</small></span><span class="ch">›</span></button>`).join('')}</div>
   </div>`;
 }

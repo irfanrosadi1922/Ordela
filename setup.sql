@@ -437,7 +437,8 @@ begin
     return 'Riwayat perubahan stok tidak boleh dihapus (khusus owner)';
   end if;
   if (cur -> 'shifts') is distinct from (nxt -> 'shifts') and not (pm ? 'shift') then return 'Akun ini tidak punya izin Shift Kasir'; end if;
-  if (cur -> 'exps') is distinct from (nxt -> 'exps') and not (pm ? 'exp') then return 'Akun ini tidak punya izin Pengeluaran'; end if;
+  if (cur -> 'exps') is distinct from (nxt -> 'exps') and not (pm ? 'exp' or pm ? 'shift') then return 'Akun ini tidak punya izin Pengeluaran'; end if;
+  if (cur -> 'gifts') is distinct from (nxt -> 'gifts') and not (pm ? 'pos') then return 'Akun ini tidak punya izin Kasir'; end if;
   if (cur -> 'buys') is distinct from (nxt -> 'buys') and not (pm ? 'buy') then return 'Akun ini tidak punya izin Pembelian'; end if;
   if (cur -> 'members') is distinct from (nxt -> 'members') and not (pm ? 'mem' or pm ? 'pos') then return 'Akun ini tidak punya izin Member'; end if;
   if (cur -> 'promos') is distinct from (nxt -> 'promos') then return 'Hanya owner yang boleh mengatur promo'; end if;
@@ -680,7 +681,7 @@ end $$;
 
 create or replace function pos.route(m text, u text, q jsonb, b jsonb, t text) returns jsonb language plpgsql as $$
 declare me pos.users; v_auth uuid; mt text[]; r pos.co; tu pos.users; own boolean; nrole text; act boolean; nm text; nperms jsonb; un text; nsingle boolean;
-  d pos.doc; gerr text; nv int; cnt int; rv bigint; wt numeric; ms bigint; x jsonb; v_proof text; v_act bigint; v_hq bigint; v_id bigint; v_name text; v_code text; v_tz text;
+  d pos.doc; gerr text; nv int; cnt int; rv bigint; wt numeric; ms bigint; x jsonb; v_proof text; v_act bigint; v_from timestamptz; v_hq bigint; v_id bigint; v_name text; v_code text; v_tz text;
 begin
   if u = '/api/health' then return pos.r(200, '{"ok":true,"pos":true,"sb":true}'); end if;
   if u = '/api/login' and m = 'POST' then return pos.login(b); end if;
@@ -915,6 +916,50 @@ begin
     perform set_config('pos.sid', v_hq::text, true);
     perform pos.audit(me.id, me.username, 'hapus-cabang', v_id::text);
     return pos.r(200, jsonb_build_object('ok', true, 'active', (select coalesce(ss.act_sid, v_hq) from pos.sessions ss where ss.th = encode(extensions.digest(t, 'sha256'), 'hex'))));
+  end if;
+  if u = '/api/branches/report' and m = 'POST' then
+    if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
+    v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
+    if not exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id) then return pos.r(403, '{"error":"Hanya owner pusat"}'); end if;
+    begin v_from := coalesce(nullif(b ->> 'from', '')::timestamptz, now() - interval '1 day'); exception when others then v_from := now() - interval '1 day'; end;
+    return pos.r(200, jsonb_build_object('rows', coalesce((
+      select jsonb_agg(jsonb_build_object('id', st.id, 'name', st.name, 'hq', st.id = v_hq, 'n', coalesce(rq.cnt, 0), 'total', coalesce(rq.tot, 0), 'gp', coalesce(rq.gp, 0)) order by (st.id = v_hq) desc, st.id)
+      from pos.stores st left join lateral (
+        select count(*) cnt, sum((o ->> 'total')::numeric) tot,
+               sum((o ->> 'total')::numeric - (select coalesce(sum((l ->> 'qty')::numeric * coalesce(nullif(l ->> 'cost', '')::numeric, 0)), 0) from jsonb_array_elements(coalesce(o -> 'lines', '[]'::jsonb)) l)) gp
+        from pos.t_doc dd, jsonb_array_elements(coalesce(dd.json -> 'orders', '[]'::jsonb)) o
+        where dd.store_id = st.id and dd.id = 1 and jsonb_typeof(dd.json) = 'object' and (o ->> 't')::timestamptz >= v_from) rq on true
+      where st.id = v_hq or st.grp = v_hq), '[]'::jsonb)));
+  end if;
+  if u = '/api/branches/transfer' and m = 'POST' then
+    if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
+    v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
+    if not exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id) then return pos.r(403, '{"error":"Hanya owner pusat"}'); end if;
+    declare v_f bigint := nullif(b ->> 'from', '')::bigint; v_t bigint := nullif(b ->> 'to', '')::bigint; v_q numeric; v_nm text := lower(btrim(coalesce(b ->> 'name', '')));
+            v_bc text := btrim(coalesce(b ->> 'bc', '')); jf jsonb; jt jsonb; ifx int; itx int; sf numeric; nmf text; nowt text := to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+    begin
+      begin v_q := (b ->> 'qty')::numeric; exception when others then v_q := null; end;
+      if v_f is null or v_t is null or v_f = v_t or v_q is null or v_q <= 0 or v_q > 1000000 or (v_nm = '' and v_bc = '') then return pos.r(400, '{"error":"Data transfer tidak valid"}'); end if;
+      if not exists (select 1 from pos.stores x where x.id = v_f and (x.id = v_hq or x.grp = v_hq)) or not exists (select 1 from pos.stores x where x.id = v_t and (x.id = v_hq or x.grp = v_hq)) then return pos.r(404, '{"error":"Cabang tidak ditemukan"}'); end if;
+      select json into jf from pos.t_doc where store_id = v_f and id = 1 for update;
+      select json into jt from pos.t_doc where store_id = v_t and id = 1 for update;
+      if jf is null or jt is null then return pos.r(409, '{"error":"Cabang belum punya data menu"}'); end if;
+      select (i.ord - 1)::int, (i.e ->> 'stock')::numeric, i.e ->> 'name' into ifx, sf, nmf from jsonb_array_elements(jf -> 'items') with ordinality i(e, ord)
+        where not (i.e ? 'bundle') and ((v_bc <> '' and i.e ->> 'bc' = v_bc) or (v_bc = '' and lower(i.e ->> 'name') = v_nm)) limit 1;
+      if ifx is null then return pos.r(404, '{"error":"Item tidak ada di cabang asal"}'); end if;
+      select (i.ord - 1)::int into itx from jsonb_array_elements(jt -> 'items') with ordinality i(e, ord)
+        where not (i.e ? 'bundle') and ((v_bc <> '' and i.e ->> 'bc' = v_bc) or lower(i.e ->> 'name') = lower(nmf)) limit 1;
+      if itx is null then return pos.r(404, '{"error":"Item belum ada di cabang tujuan (tambahkan dulu menu yang sama)"}'); end if;
+      if coalesce(sf, 0) < v_q then return pos.r(409, jsonb_build_object('error', 'Stok cabang asal tidak cukup', 'stock', coalesce(sf, 0))); end if;
+      jf := jsonb_set(jf, array['items', ifx::text, 'stock'], to_jsonb(coalesce(sf, 0) - v_q));
+      jt := jsonb_set(jt, array['items', itx::text, 'stock'], to_jsonb(coalesce((jt -> 'items' -> itx ->> 'stock')::numeric, 0) + v_q));
+      jf := jsonb_set(jf, '{log}', jsonb_build_array(jsonb_build_object('t', nowt, 'name', nmf, 'd', -v_q, 'note', 'Transfer ke ' || (select name from pos.stores where id = v_t), 's', coalesce(sf, 0) - v_q, 'u', me.username, 'by', me.name)) || coalesce(jf -> 'log', '[]'::jsonb));
+      jt := jsonb_set(jt, '{log}', jsonb_build_array(jsonb_build_object('t', nowt, 'name', nmf, 'd', v_q, 'note', 'Transfer dari ' || (select name from pos.stores where id = v_f), 's', (jt -> 'items' -> itx ->> 'stock')::numeric, 'u', me.username, 'by', me.name)) || coalesce(jt -> 'log', '[]'::jsonb));
+      update pos.t_doc set json = jf, version = version + 1, updated_at = now() where store_id = v_f and id = 1;
+      update pos.t_doc set json = jt, version = version + 1, updated_at = now() where store_id = v_t and id = 1;
+      perform pos.audit(me.id, me.username, 'transfer-stok', nmf || ' x' || v_q::text);
+      return pos.r(200, jsonb_build_object('ok', true, 'name', nmf, 'qty', v_q));
+    end;
   end if;
   if u = '/api/branches/switch' and m = 'POST' then
     if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
