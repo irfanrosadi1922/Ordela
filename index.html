@@ -805,6 +805,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 .mgi .mic .ic{width:26px;height:26px;margin:0;vertical-align:0;color:#fff;display:block}
 .mgi span.t{font-size:11.5px;font-weight:600;text-align:center;line-height:1.2;width:100%;padding:0 2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.4em}
 .mgi .mb{position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:2px solid var(--card);border-radius:999px;font-size:11px;min-width:22px;height:22px;display:grid;place-items:center;font-weight:700;padding:0 5px}
+#invoice #otype{-webkit-appearance:none;appearance:none;line-height:1.3;min-height:42px;padding-right:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;font-family:inherit;text-overflow:ellipsis}
 </style>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-ordela-dark.svg"><link rel="icon" href="icon-ordela-dark.svg">
 <script>
@@ -1071,14 +1072,14 @@ const LOG_MAX=1000;
 const PRN_DEF={mode:'browser',auto:false,autoNew:true,cut:true,drawer:false,baud:9600,chunk:100,delay:15,uuid:'',autoConn:true};
 const DEF_LOGO='icon-192.png';   // file lokal (ikut terbawa di aplikasi iOS/Android, tidak bergantung internet)
 const GV_DEF={mode:'grid',colsD:0,colsM:2,stock:true,cats:true,tap:'add'};
-function fixDb(d){d.set=d.set||{};if(d.set.fsAuto==null)d.set.fsAuto=true;if(d.set.logoApp==null)d.set.logoApp=true;if(d.set.rc&&d.set.rc.logo&&!d.set.logo){d.set.logo=d.set.rc.logo;d.set.rc.logo=''}d.set.logo=d.set.logo||'';d.set.gv={...GV_DEF,...(d.set.gv||{})};delete d.set.gv.size;d.set.lang=d.set.lang||'id';if(d.set.dec==null)d.set.dec=0;d.set.loc=d.set.loc||'id-ID';d.set.curPos=d.set.curPos||'before';d.set.cur=d.set.cur||'Rp';d.set.curCode=d.set.curCode||(d.set.cur==='Rp'?'IDR':'CUSTOM');d.set.rc={...RC_DEF,...(d.set.rc||{})};d.set.pay={on:false,qris:'',name:'',note:'',...(d.set.pay&&typeof d.set.pay==='object'?d.set.pay:{})};delete d.set.pay.qr;d.set.prn={...PRN_DEF,...(d.set.prn||{})};d.set.att={on:false,tz:'',lat:'',lng:'',radius:100,strict:false,shifts:[],assign:{},...(d.set.att&&typeof d.set.att==='object'?d.set.att:{})};d.set.paper=d.set.paper||'80';for(const k of ['shifts','exps','buys','sups','members','promos'])if(!Array.isArray(d[k]))d[k]=[];d.log=d.log||[];d.orders=d.orders||[];d.cats=d.cats||[];
+function fixDb(d){d.set=d.set||{};if(d.set.fsAuto==null)d.set.fsAuto=true;if(d.set.logoApp==null)d.set.logoApp=true;if(d.set.rc&&d.set.rc.logo&&!d.set.logo){d.set.logo=d.set.rc.logo;d.set.rc.logo=''}d.set.logo=d.set.logo||'';d.set.gv={...GV_DEF,...(d.set.gv||{})};delete d.set.gv.size;d.set.lang=d.set.lang||'id';if(d.set.dec==null)d.set.dec=0;d.set.loc=d.set.loc||'id-ID';d.set.curPos=d.set.curPos||'before';d.set.cur=d.set.cur||'Rp';d.set.curCode=d.set.curCode||(d.set.cur==='Rp'?'IDR':'CUSTOM');d.set.rc={...RC_DEF,...(d.set.rc||{})};d.set.pay={on:false,qris:'',name:'',note:'',...(d.set.pay&&typeof d.set.pay==='object'?d.set.pay:{})};delete d.set.pay.qr;d.set.prn={...PRN_DEF,...(d.set.prn||{})};d.set.att={on:false,tz:'',lat:'',lng:'',radius:100,strict:false,shifts:[],assign:{},...(d.set.att&&typeof d.set.att==='object'?d.set.att:{})};d.set.paper=d.set.paper||'80';for(const k of ['shifts','exps','buys','sups','members','promos','occ'])if(!Array.isArray(d[k]))d[k]=[];d.log=d.log||[];d.orders=d.orders||[];d.cats=d.cats||[];
   if(d.set.store==='Sushi POS'||d.set.store==='Octocat')d.set.store='Ordela';
   if(d.set.logo&&((d.set.logo.length===9895&&d.set.logo.slice(0,40)==='data:image/jpeg;base64,/9j/4AAQSkZJRgABA')||(d.set.logo.length===22538&&d.set.logo.slice(-24)==='YWBpBFcIAAAAAElFTkSuQmCC')))d.set.logo=DEF_LOGO; /* ganti logo bawaan lama */
   if(/^https?:\/\/raw\.githubusercontent\.com\/[^?#]*\/(icon|brand)[^?#]*$/i.test(String(d.set.logo||'')))d.set.logo=DEF_LOGO;   // logo bawaan lama di alamat luar -> file lokal
   if(!d.set.logo){d.set.logo=DEF_LOGO;if(!d.set.logoInit)d.set.rc.showLogo=false}
   d.set.logoInit=true;
   delete d.set.map;if(d.set.rc){delete d.set.rc.showMapQr;delete d.set.rc.mapQrText}
-  ['holds','members','promos','shifts','exps','sups','buys','kds'].forEach(k=>{if(!Array.isArray(d[k]))d[k]=[]});
+  ['holds','members','promos','shifts','exps','sups','buys','kds','occ'].forEach(k=>{if(!Array.isArray(d[k]))d[k]=[]});
   if(d.set.ptsPer==null)d.set.ptsPer=10000;if(d.set.ptsVal==null)d.set.ptsVal=100;
   {const cut=Date.now()-3*864e5;d.holds=d.holds.filter(h=>!(h.del&&(h.u||0)<cut))}
   syncBundles(d);
@@ -1308,6 +1309,7 @@ function renderInvoice0(){
     return`<div class="ln"><div class="th">${thumb(i)}</div><div class="in"><div>${esc(i.name)}</div><small>x ${q}${sx?' · '+esc(sx):''}${isB(i)?' · '+esc(bdLbl(i.bundle)):''}</small><b>${money(linePrice(id)*q)}</b></div>
     <span class="qty"><button onclick="chg('${esc(id).replace(/'/g,"\\'")}',-1)">−</button><span>${q}</span><button onclick="chg('${esc(id).replace(/'/g,"\\'")}',1)" ${q>=maxQty(i,id)?'disabled':''}>+</button></span></div>`}).join('')
     :'<div class="empty" style="padding:30px 0">Keranjang kosong.<br>Pilih menu untuk memulai.</div>';
+  {const ot=$('#otype');if(![...ot.options].some(x=>x.value===S.type))S.type='Takeaway';ot.value=S.type}
   $('#otype').value=S.type;$('#dType').value=S.dType;$('#dVal').value=S.dVal;
   totals();
 }
@@ -1473,6 +1475,7 @@ function checkout(){
     if(isB(i))i.bundle.forEach(c=>{const x=find(c.id);if(x){const d=Math.round(c.q*q*1000)/1000;x.stock=Math.round((x.stock-d)*1000)/1000;logAdd(x.name,-d,(i.rc?'Resep ':'Penjualan ')+no+' ('+q+'× '+i.name+')',x.stock,o.t)}});
     else{i.stock-=q;logAdd(i.name,-q,'Penjualan '+no,i.stock,o.t)}});
   if(mem){mem.pts=Math.max(0,(+mem.pts||0)-t.pts+earn);mem.visits=(+mem.visits||0)+1;mem.spent=rnd((+mem.spent||0)+t.total);mem.last=o.t;mem.u=Date.now()}
+  if(o.tbl){const lim2=Date.now()-3*864e5;db.occ=db.occ.filter(x=>(+x.u||0)>lim2);db.occ.unshift({id:'t'+no,tbl:o.tbl,no,total:o.total,by:o.cashier||'',cust:o.cust||'',t:o.t,u:Date.now()})}
   if(db.set.kdsOn){const lim=Date.now()-2*864e5;db.kds=db.kds.filter(k=>(+k.u||0)>lim);db.kds.unshift({id:'k'+no,no,t:o.t,tbl:o.tbl,cust:o.cust,lines:o.lines.map(l=>({name:l.name,qty:l.qty})),note:(S.holdMeta&&S.holdMeta.note)||'',st:0,u:Date.now()})}
   db.log=db.log.slice(0,LOG_MAX);db.orders.unshift(o);db.seq++;save();
   coLink(no);
@@ -3167,7 +3170,7 @@ function merge3(base,L,S){
   const cats=(S.cats||[]).filter(c=>!(bc.has(c)&&!lc.has(c)));(L.cats||[]).forEach(c=>{if(!sc.has(c)&&!bc.has(c))cats.push(c)});
   const vs=new Set(),voided=[...(S.voided||[]),...(L.voided||[])].filter(x=>{const k=sj(x);if(vs.has(k))return false;vs.add(k);return true}).sort((a,b)=>a.at<b.at?1:a.at>b.at?-1:0).slice(0,200);
   const colM=k=>{const m=new Map();(S[k]||[]).forEach(x=>m.set(x.id,x));(L[k]||[]).forEach(x=>{const y=m.get(x.id);if(!y||(+x.u||0)>(+y.u||0))m.set(x.id,x)});return [...m.values()]};
-  const cols={};['holds','members','promos','shifts','exps','sups','buys','kds'].forEach(k=>{cols[k]=colM(k)});
+  const cols={};['holds','members','promos','shifts','exps','sups','buys','kds','occ'].forEach(k=>{cols[k]=colM(k)});
   return {...S,...cols,items,orders,log,voided,cats,set:m3(B.set,L.set,S.set),seq:Math.max(+L.seq||0,+S.seq||0),_ts:Math.max(+L._ts||0,+S._ts||0)};
 }
 /* ----- sinkron ----- */
@@ -5238,6 +5241,11 @@ function renderHome(){
 }
 /* ---------- Meja ---------- */
 const tkey=t=>String(t==null?'':t).trim().toUpperCase();
+/* meja yang diisi lewat kasir: pesanan ditahan (belum bayar) dan transaksi kasir (sudah bayar) yang belum dikosongkan */
+function locTbl(k){const o=[];
+  (db.holds||[]).filter(h=>!h.del&&h.tbl&&(!k||tkey(h.tbl)===tkey(k))).forEach(h=>o.push({kind:'hold',tbl:h.tbl,id:h.id,t:h.t,by:h.by,cust:h.cust,n:Object.values(h.cart).reduce((a,b)=>a+b,0),total:holdTotal(h)}));
+  (db.occ||[]).filter(x=>!x.del&&(!k||tkey(x.tbl)===tkey(k))).forEach(x=>o.push({kind:'occ',tbl:x.tbl,id:x.id,t:x.t,by:x.by,cust:x.cust,no:x.no,total:x.total}));
+  return o}
 function tblStep(d){db.set.tblN=Math.max(1,Math.min(60,(+db.set.tblN||9)+d));save();renderTable()}
 function renderTable(){
   const el=$('#tableBox');if(!el)return;
@@ -5245,28 +5253,32 @@ function renderTable(){
   const n=Math.max(1,Math.min(60,+db.set.tblN||9)),names=[];
   for(let i=1;i<=n;i++)names.push(String(i));
   act.forEach(o=>{const k=tkey(o.tbl);if(!names.includes(k))names.push(k)});
+  const LT=locTbl();LT.forEach(x=>{const k=tkey(x.tbl);if(!names.includes(k))names.push(k)});
+  const lt=k=>LT.filter(x=>tkey(x.tbl)===k);
   const by=k=>act.filter(o=>tkey(o.tbl)===k);
-  const st=k=>{const a=by(k);return a.some(o=>o.status==='accepted')?'p':a.length?'n':'f'};
+  const st=k=>{const a=by(k),l=lt(k);return(a.some(o=>o.status==='accepted')||l.some(x=>x.kind==='occ'))?'p':(a.length||l.length)?'n':'f'};
   const c={f:0,n:0,p:0};names.forEach(k=>c[st(k)]++);
   const lbl={f:'Kosong',n:'Baru · belum bayar',p:'Diproses'};
-  const paid=o=>o.pst===2,pl=k=>{const a=by(k);return !a.length?'':a.every(paid)?'Sudah bayar':'Belum bayar'};
+  const paid=o=>o.pst===2,pl=k=>{const a=by(k),l=lt(k);if(!a.length&&!l.length)return '';return(a.every(paid)&&!l.some(x=>x.kind==='hold'))?'Sudah bayar':'Belum bayar'};
   el.innerHTML=`
   <div class="hm-h"><div><h2>Meja</h2></div>
     ${isOwner()||can('set')?`<span class="stp">Jumlah meja <button onclick="tblStep(-1)" aria-label="Kurangi">−</button>${n}<button onclick="tblStep(1)" aria-label="Tambah">+</button></span>`:''}</div>
   <div class="tbg">
-    <div class="panel"><div class="tbs">${names.map(k=>{const s=st(k),a=by(k);return`<button type="button" class="tbc ${s==='f'?'':s}" onclick="tblOpen('${esc(k).replace(/'/g,"\\'")}')"><b>${esc(k)}</b><small>${s==='p'?'Diproses · '+pl(k):lbl[s]}</small>${a.length?`<small>${a.length} pesanan${[...new Set(a.map(o=>o.by).filter(Boolean))].length?' · '+esc([...new Set(a.map(o=>o.by).filter(Boolean))].join(', ')):''}</small>`:''}</button>`}).join('')}</div>
+    <div class="panel"><div class="tbs">${names.map(k=>{const s=st(k),a=by(k),l=lt(k);return`<button type="button" class="tbc ${s==='f'?'':s}" onclick="tblOpen('${esc(k).replace(/'/g,"\\'")}')"><b>${esc(k)}</b><small>${s==='p'?'Diproses · '+pl(k):lbl[s]}</small>${l.length&&!a.length?`<small>${l.length} pesanan kasir${[...new Set(l.map(x=>x.by).filter(Boolean))].length?' · '+esc([...new Set(l.map(x=>x.by).filter(Boolean))].join(', ')):''}</small>`:''}${a.length?`<small>${a.length} pesanan${[...new Set(a.map(o=>o.by).filter(Boolean))].length?' · '+esc([...new Set(a.map(o=>o.by).filter(Boolean))].join(', ')):''}</small>`:''}</button>`}).join('')}</div>
       <div class="tlg"><span><i style="background:#6fd6a0"></i>Kosong: ${c.f}</span><span><i style="background:#f7c244"></i>Pesanan baru: ${c.n}</span><span><i style="background:var(--b)"></i>Diproses: ${c.p}</span></div></div>
-    <div class="panel"><h3>Pesanan Aktif</h3>${act.length?act.map(o=>`<button class="li" onclick="coDet(${o.id})"><span class="l"><b>Meja ${esc(o.tbl)} · ${esc(o.name)}</b><small>${o.lines.reduce((a,l)=>a+l.qty,0)} item · ${esc(ago(o.t))}${o.by?' · '+esc(o.by):''}</small></span><span class="r"><b>${money(o.total)}</b><small>${o.status==='new'?'baru':'diproses'}</small></span><span class="ch">›</span></button>`).join(''):'<div class="mt">Belum ada pesanan online aktif dengan nomor meja.</div>'}</div>
+    <div class="panel"><h3>Pesanan Aktif</h3>${act.length?act.map(o=>`<button class="li" onclick="coDet(${o.id})"><span class="l"><b>Meja ${esc(o.tbl)} · ${esc(o.name)}</b><small>${o.lines.reduce((a,l)=>a+l.qty,0)} item · ${esc(ago(o.t))}${o.by?' · '+esc(o.by):''}</small></span><span class="r"><b>${money(o.total)}</b><small>${o.status==='new'?'baru':'diproses'}</small></span><span class="ch">›</span></button>`).join(''):'<div class="mt">Belum ada pesanan online aktif dengan nomor meja.</div>'}${LT.map(x=>`<button class="li" onclick="tblOpen('${esc(tkey(x.tbl)).replace(/'/g,"\\'")}')"><span class="l"><b>Meja ${esc(x.tbl)} · ${esc(x.cust||'Kasir')}</b><small>${x.kind==='hold'?x.n+' item · ditahan':esc(x.no)} · ${esc(ago(x.t))}${x.by?' · '+esc(x.by):''}</small></span><span class="r"><b>${money(x.total)}</b><small>${x.kind==='hold'?'belum bayar':'sudah bayar'}</small></span><span class="ch">›</span></button>`).join('')}</div>
   </div>`;
 }
 
 async function tblClear(k){
-  const a=(CO.list||[]).filter(o=>tkey(o.tbl)===tkey(k)&&(o.status==='new'||o.status==='accepted'));if(!a.length){closeModal();return}
+  const a=(CO.list||[]).filter(o=>tkey(o.tbl)===tkey(k)&&(o.status==='new'||o.status==='accepted'));const oc=(db.occ||[]).filter(x=>!x.del&&tkey(x.tbl)===tkey(k));
+  if(!a.length){if(oc.length&&confirm('Pelanggan di meja '+k+' sudah pergi? Meja jadi kosong.')){oc.forEach(x=>{x.del=1;x.u=Date.now()});save();toast('Meja '+k+' dikosongkan');renderTable()}closeModal();return}
   const unp=a.filter(o=>o.pst!==2),tot=unp.reduce((x,o)=>x+o.total,0);
   if(unp.length&&!can('pos')){toast('Ada pesanan belum dibayar, minta kasir');return}
   const msg=unp.length?'Meja '+k+' dikosongkan.\n\n'+unp.length+' pesanan BELUM DIBAYAR ('+money(tot)+') akan dibatalkan dan tidak masuk penjualan. Lanjutkan?':'Pelanggan di meja '+k+' sudah pergi? Pesanan ditandai selesai dan meja jadi kosong.';
   if(!confirm(msg))return;
   let ok=true;for(const o of a){const r=await coAct(o.id,o.pst===2?'done':'cancel');if(!r)ok=false}
+  oc.forEach(x=>{x.del=1;x.u=Date.now()});if(oc.length)save();
   closeModal();toast(ok?'Meja '+k+' dikosongkan':'Sebagian pesanan gagal diubah');
   try{const x=await (await api('/api/co?rev=0')).json();if(!x.unchanged){CO.rev=x.rev;coApply(x)}}catch(e){}
   if(S.view==='table')renderTable();
@@ -5274,12 +5286,13 @@ async function tblClear(k){
 function tblOpen(k){
   const a=(CO.list||[]).filter(o=>tkey(o.tbl)===tkey(k)&&(o.status==='new'||o.status==='accepted')),tm=t=>new Date(t).toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
   const sl=o=>o.status==='new'?'Menunggu diterima':'Sedang diproses',pay=o=>o.pst===2?'Sudah bayar':'Belum bayar';
-  openModal(`<h3>Meja ${esc(k)}</h3>`+(a.length?a.map(o=>`<div class="tbo"><div class="tbh"><b>${esc(o.num)} · ${esc(o.name)}</b><span class="pst ${o.pst===2?'ok':'w'}">${pay(o)}</span></div>
+  const lc=locTbl(k);
+  openModal(`<h3>Meja ${esc(k)}</h3>`+(a.length||lc.length?lc.map(x=>`<div class="tbo"><div class="tbh"><b>${x.kind==='hold'?'Pesanan ditahan':esc(x.no)}${x.cust?' · '+esc(x.cust):''}</b><span class="pst ${x.kind==='occ'?'ok':'w'}">${x.kind==='occ'?'Sudah bayar':'Belum bayar'}</span></div><small>Kasir: <b>${esc(x.by||'-')}</b> · ${tm(x.t)}</small><div class="tbt"><span>Total</span><b>${money(x.total)}</b></div>${x.kind==='hold'&&can('pos')?'<button class="btn sec" onclick="closeModal();holdList()">Buka pesanan ditahan</button>':''}</div>`).join('')+a.map(o=>`<div class="tbo"><div class="tbh"><b>${esc(o.num)} · ${esc(o.name)}</b><span class="pst ${o.pst===2?'ok':'w'}">${pay(o)}</span></div>
     <small>${sl(o)} · ${tm(o.t)} · Dilayani: <b>${o.by?esc(o.by):'Pelanggan (pesan sendiri)'}</b></small>
     <div class="tbl">${o.lines.map(l=>`<div><span>${l.qty}× ${esc(l.name)}</span><span>${money(l.price*l.qty)}</span></div>`).join('')}</div>
     ${o.note?`<small>Catatan: ${esc(o.note)}</small>`:''}<div class="tbt"><span>Total</span><b>${money(o.total)}</b></div>
     <button class="btn sec" onclick="closeModal();coDet(${o.id})">Detail pesanan</button></div>`).join(''):'<p class="hint">Meja ini kosong, belum ada pesanan aktif.</p>')
-  +(a.length&&can('co')?(a.every(o=>o.pst===2)||can('pos')?`<button class="btn sec" onclick="tblClear('${esc(k).replace(/'/g,"\\'")}')"><i class="ic" data-ic="check"></i>Kosongkan Meja ${esc(k)}</button>`:'<p class="hint">Ada pesanan belum dibayar. Hanya kasir yang bisa mengosongkan meja ini.</p>'):'')
+  +((a.length||lc.some(x=>x.kind==='occ'))&&(can('co')||can('pos'))?(a.every(o=>o.pst===2)||can('pos')?`<button class="btn sec" onclick="tblClear('${esc(k).replace(/'/g,"\\'")}')"><i class="ic" data-ic="check"></i>Kosongkan Meja ${esc(k)}</button>`:'<p class="hint">Ada pesanan belum dibayar. Hanya kasir yang bisa mengosongkan meja ini.</p>'):'')
   +(can('co')?`<button class="btn" onclick="closeModal();noOpen('${esc(k).replace(/'/g,"\\'")}')">+ Ambil Pesanan di Meja ${esc(k)}</button>`:'')+`<button class="btn sec" onclick="closeModal()">Tutup</button>`);
 }
 /* ---------- Notifikasi ---------- */
