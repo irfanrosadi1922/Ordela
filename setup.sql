@@ -80,6 +80,7 @@ alter table pos.t_co add column if not exists pay text not null default '';
 alter table pos.t_co add column if not exists pst int not null default 0;
 alter table pos.t_co add column if not exists proof text not null default '';
 alter table pos.t_co add column if not exists by_name text not null default '';
+alter table pos.t_co add column if not exists kds int not null default 0;
 create index if not exists co_day on pos.t_co(day);
 create index if not exists co_status on pos.t_co(status, id);
 create table if not exists pos.t_att(
@@ -350,7 +351,7 @@ end $$;
 create or replace function pos.staff_view(r pos.co) returns jsonb language sql stable as $$
   select jsonb_build_object('id', r.id, 'num', r.num, 'name', r.name, 'tbl', r.tbl, 'type', r.type, 'note', r.note, 'lines', r.lines,
     'sub', r.sub, 'tax', r.tax, 'total', r.total, 'status', r.status, 'printed', r.printed, 'saleNo', coalesce(r.sale_no, ''), 'pay', r.pay, 'pst', r.pst, 'hp', r.proof <> '',
-    'by', r.by_name, 't', pos.iso(r.created_at), 'u', pos.iso(r.updated_at)) $$;
+    'by', r.by_name, 'kds', r.kds, 't', pos.iso(r.created_at), 'u', pos.iso(r.updated_at)) $$;
 create or replace function pos.cust_view(r pos.co) returns jsonb language sql stable as $$
   select jsonb_build_object('num', r.num, 'name', r.name, 'tbl', r.tbl, 'type', r.type, 'note', r.note, 'lines', r.lines,
     'total', r.total, 'sub', r.sub, 'tax', r.tax, 'status', r.status, 'pay', r.pay, 'pst', r.pst, 'hp', r.proof <> '', 't', pos.iso(r.created_at)) $$;
@@ -433,6 +434,8 @@ begin
       except select x from jsonb_array_elements(coalesce(nxt -> 'log', '[]')) x) t) then
     return 'Riwayat perubahan stok tidak boleh dihapus (khusus owner)';
   end if;
+  if (cur -> 'promos') is distinct from (nxt -> 'promos') then return 'Hanya owner yang boleh mengatur promo'; end if;
+  if (cur -> 'sups') is distinct from (nxt -> 'sups') then return 'Hanya owner yang boleh mengatur pemasok'; end if;
   for k in select jsonb_object_keys(coalesce(cur -> 'set', '{}')) loop
     if (nxt -> 'set') ? k and coalesce(pos.additive(cur -> 'set' -> k, nxt -> 'set' -> k), false) then continue; end if;
     if k in ('gv','lang','fsAuto','logoInit','logoApp') or pm ? 'set' or (k = 'prn' and pm ? 'prn') then continue; end if;
@@ -1029,6 +1032,12 @@ begin
       else return pos.r(400, '{"error":"aksi?"}'); end if;
       perform pos.bump();
       return pos.r(200, '{"ok":true}');
+    end if;
+    if b ->> 'action' in ('cook', 'ready', 'unready') then
+      if r.status in ('done', 'cancelled') then return pos.r(409, jsonb_build_object('error', 'sudah selesai', 'status', r.status)); end if;
+      update pos.co set kds = case b ->> 'action' when 'cook' then 1 when 'ready' then 2 else 0 end, updated_at = now() where id = r.id returning * into r;
+      perform pos.bump();
+      return pos.r(200, pos.staff_view(r));
     end if;
     if b ->> 'action' in ('paid', 'unpaid', 'reject') then
       if r.pay not in ('qris', 'duitnow') then return pos.r(400, '{"error":"bukan pesanan bayar online"}'); end if;
