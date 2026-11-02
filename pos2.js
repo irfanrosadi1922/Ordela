@@ -346,6 +346,22 @@ P2.spGo=function(){
 window.addEventListener('load',()=>{const cm0=window.closeModal;window.closeModal=function(){
   if(S.rest){for(const k in S.rest.cart){S.cart[k]=(S.cart[k]||0)+S.rest.cart[k];if(S.rest.cm[k]&&!S.cm[k])S.cm[k]=S.rest.cm[k]}S.rest=null;try{renderGrid();renderInvoice();renderCats()}catch(e){}toast('Pisah tagihan dibatalkan')}
   return cm0.apply(this,arguments)}});
+
+/* ================= MENU UTAMA ================= */
+V.menu=function(){
+  const el=$('#v-menu');if(!el)return;
+  const h=new Date().getHours(),g=h>=4&&h<11?'Selamat pagi':h<15?'Selamat siang':h<18?'Selamat sore':'Selamat malam';
+  const nm=(CL.on&&CL.me&&CL.me.name)||'Owner';
+  const G=[['Operasional',[['pos','Kasir','receipt','#ef4444'],['table','Meja','grid','#f59e0b'],['co','Pesanan Online','cart','#0ea5e9'],['kds','Layar Dapur','list','#f97316'],['shift','Shift Kasir','clock','#8b5cf6'],['alert','Notifikasi','bell','#ec4899']]],
+   ['Penjualan & Pelanggan',[['home','Beranda & Laporan','dash','#10b981'],['mem','Member','users','#14b8a6'],['promo','Promo','bolt','#eab308'],['exp','Pengeluaran','card','#64748b']]],
+   ['Produk & Stok',[['inv','Inventori','box','#3b82f6'],['buy','Pembelian','download','#6366f1']]],
+   ['Tim & Toko',[['att','Absensi','clock','#06b6d4'],['usr','Pengguna','users','#a855f7'],['pyr','Payroll','card','#22c55e'],['branch','Cabang','bank','#d946ef'],['prn','Printer','print','#475569'],['set','Pengaturan','sliders','#6b7280'],['acc','Akun Saya','key','#111827']]]];
+  const nb=(typeof CO!=='undefined'&&CO.list)?CO.list.filter(o=>o.status==='new').length:0;
+  const tile=([v,t,ic,c])=>{const act=v==='branch'?'P2.branch()':`go('${v}')`;
+    return`<button class="mgi" onclick="${act}"><span class="mic" style="background:${c}"><i class="ic" data-ic="${ic}"></i>${v==='co'&&nb?`<b class="mb">${nb}</b>`:''}</span><span class="t">${esc(t)}</span></button>`};
+  const secs=G.map(([t,l])=>{const x=l.filter(([v])=>v==='acc'||canView(v));return x.length?`<div class="mgh">${t}</div><div class="mgrid">${x.map(tile).join('')}</div>`:''}).join('');
+  el.innerHTML=`<div class="mhi"><small>${g},</small><h2>${esc(nm)}</h2><p>${esc(db.set.store||'Ordela')} · ${new Date().toLocaleDateString(dloc(),{weekday:'long',day:'numeric',month:'long'})}</p></div>${secs}`;
+};
 P2.t={get shiftStats(){return shiftStats},get debtOf(){return debtOf},get BP(){return BP}};
 window.kdsSet=async function(src,id,st){
   if(src==='loc'){const k=db.kds.find(x=>x.id===id);if(k){k.st=st;k.u=Date.now();save()}V.kds();return}
