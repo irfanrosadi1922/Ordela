@@ -806,6 +806,12 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 .mgi span.t{font-size:11.5px;font-weight:600;text-align:center;line-height:1.2;width:100%;padding:0 2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.4em}
 .mgi .mb{position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:2px solid var(--card);border-radius:999px;font-size:11px;min-width:22px;height:22px;display:grid;place-items:center;font-weight:700;padding:0 5px}
 #invoice #otype{-webkit-appearance:none;appearance:none;line-height:1.3;min-height:42px;padding-right:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;font-family:inherit;text-overflow:ellipsis}
+#scBox{width:100%;min-height:240px;border-radius:16px;overflow:hidden;background:#000}#scBox video{width:100%!important;object-fit:cover}
+.opr{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:18px;padding:10px 12px;margin-bottom:8px;box-shadow:0 2px 10px rgba(0,0,0,.04);scroll-margin-top:90px}
+.opr.hl{outline:2px solid var(--ac)}.opr .on{flex:1;min-width:0}.opr .on b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.opr .on small{color:var(--mu)}
+.opr input{width:84px;text-align:center;font-weight:700;border:1.5px solid var(--ln);border-radius:12px;padding:9px 6px;background:var(--bg2);color:inherit;font-size:15px}
+.opr .df{min-width:46px;text-align:right;font-weight:700;font-size:13px}.opr .df.gu{color:var(--ok)}.opr .df.gd{color:var(--bad)}
+.opbar{position:sticky;bottom:78px;background:var(--card);border-radius:20px;padding:10px 12px;margin-top:10px;box-shadow:0 6px 22px rgba(0,0,0,.14);display:flex;gap:10px;align-items:center;z-index:5}.opbar .btn{margin:0;flex:1}
 </style>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-ordela-dark.svg"><link rel="icon" href="icon-ordela-dark.svg">
 <script>
@@ -849,6 +855,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
   <button data-v="promo" onclick="go('promo')"><i class="ic" data-ic="bolt"></i>Promo</button>
   <div class="dg">Produk &amp; Stok</div>
   <button data-v="inv" onclick="go('inv')"><i class="ic" data-ic="box"></i>Inventori</button>
+  <button data-v="opname" onclick="go('opname')"><i class="ic" data-ic="check"></i>Stok Opname</button>
   <button data-v="buy" onclick="go('buy')"><i class="ic" data-ic="download"></i>Pembelian & Pemasok</button>
   <div class="dg">Tim</div>
   <button data-v="att" id="attNav" onclick="go('att')" hidden><i class="ic" data-ic="clock"></i>Absensi</button>
@@ -917,7 +924,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 
     <section id="v-inv" hidden>
       <div class="bar"><h2><i class="ic" data-ic="box"></i>Inventori</h2>
-        <button class="btn sm" id="opnBtn" onclick="opnOpen()"><i class="ic" data-ic="check"></i>Stok Opname</button>
+        <button class="btn sm" id="opnBtn" onclick="go('opname')"><i class="ic" data-ic="check"></i>Stok Opname</button>
         <button class="btn sm own-only" id="addItemBtn" onclick="itemForm(null,S.itab==='ns')">+ Tambah Item</button>
         <button class="btn sm red" id="bulkDel" onclick="bulkDel()" hidden><i class="ic" data-ic="trash"></i>Hapus terpilih (0)</button>
         <button class="btn sm sec own-only" onclick="orderForm()"><i class="ic" data-ic="reorder"></i>Atur Urutan Menu</button>
@@ -953,7 +960,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
       <details class="panel" id="coDev" style="margin-top:18px"><summary>Pengaturan perangkat ini</summary><div id="coTop"></div></details>
     </section>
 
-    <section id="v-menu" hidden></section><section id="v-shift" hidden></section><section id="v-exp" hidden></section><section id="v-buy" hidden></section><section id="v-mem" hidden></section><section id="v-promo" hidden></section><section id="v-kds" hidden></section>
+    <section id="v-opname" hidden></section><section id="v-menu" hidden></section><section id="v-shift" hidden></section><section id="v-exp" hidden></section><section id="v-buy" hidden></section><section id="v-mem" hidden></section><section id="v-promo" hidden></section><section id="v-kds" hidden></section>
     <section id="v-att" hidden>
       <div class="bar"><h2><i class="ic" data-ic="clock"></i>Absensi</h2></div>
       <div id="attBox"></div>
@@ -1132,7 +1139,7 @@ setInterval(tick,15000);
 /* ---------- navigation ---------- */
 function toggleDrawer(){$('#drawer').classList.toggle('open');$('#scrim').classList.toggle('on',$('#drawer').classList.contains('open'))}
 function closeAll(){$('#drawer').classList.remove('open');$('#scrim').classList.remove('on')}
-const P2V=['menu','shift','exp','buy','mem','promo','kds'];
+const P2V=['opname','menu','shift','exp','buy','mem','promo','kds'];
 const ACCV=['acc','accset','accinfo','editacc','accphoto','pw','accver','accnt','accabout','accdel','accok'];
 function go(v){
   if(S.view==='set'&&v!=='set')S.setSub=null;
@@ -1397,7 +1404,7 @@ function payTotals(){
   return{c,rd,pts,total,tip,payable:rnd(total+tip),mem:m||null};
 }
 function payForm(){
-  if(db.set.shiftReq&&window.shiftCur&&!shiftCur()){toast('Buka shift kasir dulu');go('shift');return}
+  if(db.set.shiftReq&&can('shift')&&window.shiftCur&&!shiftCur()){toast('Buka shift kasir dulu');go('shift');return}
   const co=S.coId?CO.list.find(x=>x.id===S.coId):null,pre=isOnl(co)?'QRIS':'Tunai';
   S.pay={m:pre,paid:0,split:false,parts:[],tip:0,mem:null,redeem:false,rd:0};
   const t=payTotals();S.pay.paid=t.payable;const c=t.c;
@@ -1963,7 +1970,7 @@ async function opnLoad(inp){
     const n=typeof raw==='number'?raw:parseFloat(String(raw).replace(',','.'));
     if(!isFinite(n)||n<0)return OP.bad.push(label+' ('+raw+')');
     if(seen.has(it.id)){OP.bad.push(label+' (dobel)');return}seen.add(it.id);
-    const fis=Math.round(n);OP.rows.push({id:it.id,name:it.name,fis,note:cC>=0?String(r[cC]==null?'':r[cC]).trim().slice(0,60):'',on:fis!==it.stock});
+    const fis=Math.round(n*1000)/1000;OP.rows.push({id:it.id,name:it.name,fis,note:cC>=0?String(r[cC]==null?'':r[cC]).trim().slice(0,60):'',on:fis!==it.stock});
   });
   OP.name=f.name;opnReview();
 }
@@ -1981,12 +1988,12 @@ function opnReview(){
   :`<div class="empty" style="padding:22px 0">Tidak ada selisih. Stok fisik sama dengan stok sistem.</div>`}
   ${warn('Tidak ditemukan di inventori',OP.miss)}${warn('Angka tidak valid / dobel',OP.bad)}
   ${diff.length?`<button class="btn" id="opnGo" type="button" onclick="opnApply()">Terapkan Selisih</button>`:''}
-  <button class="btn sec" type="button" onclick="${diff.length?'opnOpen()':'closeModal()'}">${diff.length?'Kembali':'Tutup'}</button>`);
+  <button class="btn sec" type="button" onclick="${diff.length&&OP.name!=='Hitung langsung'?'opnOpen()':'closeModal()'}">${diff.length&&OP.name!=='Hitung langsung'?'Kembali':'Tutup'}</button>`);
   if(diff.length)opnSum();
 }
 function opnEdit(id,el){
   const r=OP.rows.find(q=>q.id===id),i=find(id);if(!r||!i)return;
-  r.fis=Math.max(0,Math.round(+el.value||0));const d=r.fis-i.stock,e=$('#opd_'+id);
+  r.fis=Math.max(0,Math.round((+el.value||0)*1000)/1000);const d=r.fis-i.stock,e=$('#opd_'+id);
   if(e){e.textContent=(d>0?'+':'')+d;e.className='chgp '+(d<0?'gd':'gu')}
   opnSum();
 }
@@ -2005,7 +2012,7 @@ function opnApply(){
     done.push([i.name,i.cat||'',before,r.fis,d,+i.cost||0,r.note]);
   });
   if(!done.length){closeModal();return}
-  db.log=db.log.slice(0,LOG_MAX);save();renderInv();
+  db.log=db.log.slice(0,LOG_MAX);save();renderInv();if(window.P2&&P2.opnReset)P2.opnReset();
   S.opnDone={rows:done,tag};
   const q=done.reduce((a,x)=>a+x[4],0);
   openModal(`<div class="lgo"><div class="lgi" style="background:var(--greenbg);color:var(--ok)"><i class="ic" data-ic="check"></i></div><h3>Stok opname selesai</h3>
@@ -2051,7 +2058,7 @@ function itemForm(id,ns){
   <div><label class="fl">atau kategori baru</label><input class="fi" id="fC2" placeholder="Opsional"></div></div>
   <div class="two"><div><label class="fl">Harga jual *</label><input class="fi" id="fP" type="number" step="any" min="0" value="${i.price}"></div>
   <div><label class="fl">Harga modal</label><input class="fi" id="fK" type="number" step="any" min="0" value="${i.cost||''}"></div></div>
-  <div class="two"><div><label class="fl">Barcode (opsional)</label><input class="fi" id="fBC" value="${esc(i.bc||'')}" inputmode="numeric" autocomplete="off" placeholder="Scan / ketik"></div><div></div></div>
+  <div class="two"><div><label class="fl">Barcode (opsional)</label><input class="fi" id="fBC" value="${esc(i.bc||'')}" inputmode="text" autocomplete="off" placeholder="Scan / ketik"></div><div style="display:flex;align-items:flex-end"><button type="button" class="btn sec" style="margin:0;width:100%" onclick="P2.scan(c=>{$('#fBC').value=c;return true},{once:true,keep:true})"><i class="ic" data-ic="camera"></i>Scan kamera</button></div></div>
   <label class="fl">Varian &amp; tambahan (opsional)</label><textarea class="fi" id="fMods" rows="3" placeholder="Level pedas (wajib): Sedang, Pedas, Extra pedas +2000&#10;Topping (banyak): Keju +5000, Telur +4000" style="min-height:70px">${esc(modsText(i.mods))}</textarea>
   <small class="hint">Satu baris satu grup. Tulis (wajib) bila harus dipilih, (banyak) bila boleh pilih lebih dari satu, dan +harga untuk tambahan biaya.</small>
   <label class="tgl"><input type="checkbox" id="fNS" ${i.ns?'checked':''} onchange="nsToggle()"><span>Bahan / tidak dijual (hanya untuk stok &amp; opname, tidak muncul di Kasir)</span></label>
@@ -3578,13 +3585,9 @@ function scanEnter(el){
   if(it){gridAdd(it.id);el.value='';S.q='';renderGrid();toast(it.name+' ditambahkan')}
 }
 /* kamera: pemindai barcode bila peramban mendukung (BarcodeDetector); pemindai Bluetooth/USB cukup mengetik ke kolom cari lalu Enter */
-async function scanCam(){
-  if(!('BarcodeDetector' in window)){toast('Pemindai kamera tidak didukung di perangkat ini. Pakai pemindai barcode (Bluetooth/USB) atau ketik kodenya.');return}
-  let stream,det;try{det=new BarcodeDetector();stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}catch(e){toast('Kamera tidak bisa dibuka');return}
-  openModal('<h3>Scan Barcode</h3><video id="scV" playsinline muted style="width:100%;border-radius:14px;background:#000"></video><button class="btn sec" id="scX">Tutup</button>');
-  const v=$('#scV');v.srcObject=stream;await v.play().catch(()=>{});let on=true;
-  const stop=()=>{on=false;stream.getTracks().forEach(t=>t.stop());closeModal()};$('#scX').onclick=stop;
-  (async function loop(){while(on){try{const r=await det.detect(v);if(r&&r[0]){const code=r[0].rawValue,it=db.items.find(i=>!i.ns&&String(i.bc||'')===code);if(it){gridAdd(it.id);toast(it.name+' ditambahkan');await new Promise(z=>setTimeout(z,1200))}else toast('Barcode '+code+' tidak terdaftar')}}catch(e){}await new Promise(z=>setTimeout(z,300))}})();
+function scanCam(){
+  P2.scan(code=>{const it=db.items.find(i=>!i.ns&&String(i.bc||'')===code);
+    if(it){gridAdd(it.id);toast(it.name+' ditambahkan');return true}toast('Barcode '+code+' belum terdaftar');return false});
 }
 function coPay(id){
   const o=CO.list.find(x=>x.id===id);if(!o)return;
@@ -3795,10 +3798,10 @@ function coStart(){
 }
 
 /* ---------- akun, peran, izin ---------- */
-const PERM_LBL={pos:'Kasir & Transaksi',co:'Pesanan Online',inv:'Inventori & Stok Opname',hist:'Rekap & Riwayat Penjualan',prn:'Printer',set:'Pengaturan',att:'Absensi'};
-const PERM_DESC={pos:'Operasional kasir: Kasir, Meja, Beranda, Notifikasi, dan membuat transaksi.',co:'Terima dan proses pesanan dari pelanggan.',inv:'Lihat dan ubah stok, termasuk stok opname.',hist:'Lihat rekap, riwayat, dan ekspor penjualan di Beranda.',prn:'Sambungkan printer dan cetak struk.',set:'Toko, desain struk, pembayaran, tampilan, data & cadangan.',att:'Absen masuk dan pulang sendiri.'};
-const PERM_SHORT={pos:'Kasir',co:'Pesanan Online',inv:'Inventori',hist:'Rekap',prn:'Printer',set:'Pengaturan',att:'Absensi'};
-const VIEW_PERM={pyr:'#owner',pos:'pos',home:'pos',table:'pos',alert:'pos',inv:'inv',rc:'set',prn:'prn',set:'set',co:'co',att:'att',usr:'#owner',shift:'pos',exp:'pos',mem:'pos',buy:'inv',promo:'#owner',kds:'co'};
+const PERM_LBL={pos:'Kasir & Transaksi',shift:'Shift Kasir',co:'Pesanan Online',kds:'Layar Dapur',mem:'Member',inv:'Inventori',opn:'Stok Opname',buy:'Pembelian & Pemasok',exp:'Pengeluaran',hist:'Rekap & Riwayat Penjualan',prn:'Printer',set:'Pengaturan',att:'Absensi'};
+const PERM_DESC={shift:'Buka dan tutup shift, hitung uang laci, catat kas masuk/keluar.',kds:'Lihat dan ubah status masak di Layar Dapur.',mem:'Kelola data member dan poin.',opn:'Hitung stok fisik (scan/ketik/Excel) dan terapkan selisih.',buy:'Catat pembelian barang, pemasok, dan hutang.',exp:'Catat dan lihat pengeluaran serta laba.',pos:'Operasional kasir: Kasir, Meja, Beranda, Notifikasi, dan membuat transaksi.',co:'Terima dan proses pesanan dari pelanggan.',inv:'Lihat dan ubah stok, menu bahan, dan riwayat perubahan stok.',hist:'Lihat rekap, riwayat, dan ekspor penjualan di Beranda.',prn:'Sambungkan printer dan cetak struk.',set:'Toko, desain struk, pembayaran, tampilan, data & cadangan.',att:'Absen masuk dan pulang sendiri.'};
+const PERM_SHORT={shift:'Shift',kds:'Dapur',mem:'Member',opn:'Opname',buy:'Pembelian',exp:'Pengeluaran',pos:'Kasir',co:'Pesanan Online',inv:'Inventori',hist:'Rekap',prn:'Printer',set:'Pengaturan',att:'Absensi'};
+const VIEW_PERM={pyr:'#owner',pos:'pos',home:'pos',table:'pos',alert:'pos',inv:'inv',rc:'set',prn:'prn',set:'set',co:'co',att:'att',usr:'#owner',shift:'shift',exp:'exp',mem:'mem',buy:'buy',promo:'#owner',kds:'kds',opname:'opn'};
 CL.me=null;try{CL.me=JSON.parse(localStorage.getItem('pos_me')||'null')}catch(e){}
 function setMe(m){CL.me=m||null;try{if(m)localStorage.setItem('pos_me',JSON.stringify(m));else localStorage.removeItem('pos_me')}catch(e){}}
 /* tanpa server (mode offline/standalone) tidak ada akun: semua terbuka */
@@ -3814,7 +3817,6 @@ function canView(v){
   if(v==='att')return CL.on&&can('att');
   if(v==='branch')return CL.on&&isOwner();
   if(v==='menu')return true;
-  if(v==='kds'&&CL.on)return can('co')||can('pos');
   if(v==='pyr')return CL.on&&isOwner();
   if(v==='set'&&can('prn'))return true;   // pemakai berizin Printer saja tetap bisa membuka Pengaturan > Printer
   const p=VIEW_PERM[v];if(p===undefined||p===null)return true;
@@ -4947,7 +4949,7 @@ function permBoxes(sel){return Object.keys(PERM_LBL).map(p=>permRow(p,sel.includ
 function jbHidden(){return Array.isArray(db.set.hiddenRoles)?db.set.hiddenRoles:[]}
 function usrRoleList(){const d=Array.isArray(db.set.staffRoles)?db.set.staffRoles:[],hid=jbHidden();return [...new Set(['Owner',...JB_BASE.filter(r=>jbKey(r)==='staff'||!hid.includes(jbKey(r))),...d].map(x=>String(x||'').trim()).filter(Boolean))].slice(0,30)}
 /* izin awal tiap jabatan bawaan; terisi otomatis saat jabatan dipilih, tetap bisa diubah per karyawan */
-const ROLE_PERMS={kasir:['pos','co','prn'],pelayan:['co'],koki:['co'],barista:['pos','co','prn'],manajer:['pos','co','inv','hist','prn','set','att'],'admin gudang':['inv'],server:['co'],kitchen:['co'],staff:['pos','co','prn'],staf:['pos','co','prn']};
+const ROLE_PERMS={kasir:['pos','shift','mem','co','prn'],pelayan:['co'],koki:['co','kds'],barista:['pos','shift','mem','co','prn'],manajer:['pos','shift','co','kds','mem','inv','opn','buy','exp','hist','prn','set','att'],'admin gudang':['inv','opn','buy'],server:['co'],kitchen:['co','kds'],staff:['pos','shift','mem','co','prn'],staf:['pos','shift','mem','co','prn']};
 function rolePermsOf(k){const o=db.set.rolePerms&&db.set.rolePerms[k];return Array.isArray(o)?o:ROLE_PERMS[k]}
 /* panel Kelola Jabatan: tambah, ubah nama, hapus jabatan buatan sendiri, dan atur izin awal tiap jabatan (per toko) */
 const JB_BASE=['Kasir','Pelayan','Koki','Barista','Manajer','Admin Gudang','Server','Kitchen','Staf'];

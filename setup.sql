@@ -238,10 +238,10 @@ end $$;
 create or replace function pos.clean_perms(j jsonb) returns jsonb language sql immutable as $$
   select coalesce(jsonb_agg(x order by o), '[]'::jsonb) from (
     select x, min(o) o from jsonb_array_elements_text(case when jsonb_typeof(j) = 'array' then j else '[]'::jsonb end) with ordinality t(x, o)
-    where x in ('pos','co','inv','hist','prn','set','att') group by x) s $$;
+    where x in ('pos','shift','co','kds','mem','inv','opn','buy','exp','hist','prn','set','att') group by x) s $$;
 
 create or replace function pos.perms_of(u pos.users) returns jsonb language sql immutable as
-$$ select case when u.role = 'owner' then '["pos","co","inv","hist","prn","set","att"]'::jsonb else pos.clean_perms(u.perms) end $$;
+$$ select case when u.role = 'owner' then '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att"]'::jsonb else pos.clean_perms(u.perms) end $$;
 
 create or replace function pos.can(u pos.users, k text) returns boolean language sql immutable as
 $$ select u.role = 'owner' or pos.perms_of(u) ? k $$;
@@ -436,6 +436,10 @@ begin
       except select x from jsonb_array_elements(coalesce(nxt -> 'log', '[]')) x) t) then
     return 'Riwayat perubahan stok tidak boleh dihapus (khusus owner)';
   end if;
+  if (cur -> 'shifts') is distinct from (nxt -> 'shifts') and not (pm ? 'shift') then return 'Akun ini tidak punya izin Shift Kasir'; end if;
+  if (cur -> 'exps') is distinct from (nxt -> 'exps') and not (pm ? 'exp') then return 'Akun ini tidak punya izin Pengeluaran'; end if;
+  if (cur -> 'buys') is distinct from (nxt -> 'buys') and not (pm ? 'buy') then return 'Akun ini tidak punya izin Pembelian'; end if;
+  if (cur -> 'members') is distinct from (nxt -> 'members') and not (pm ? 'mem' or pm ? 'pos') then return 'Akun ini tidak punya izin Member'; end if;
   if (cur -> 'promos') is distinct from (nxt -> 'promos') then return 'Hanya owner yang boleh mengatur promo'; end if;
   if (cur -> 'sups') is distinct from (nxt -> 'sups') then return 'Hanya owner yang boleh mengatur pemasok'; end if;
   for k in select jsonb_object_keys(coalesce(cur -> 'set', '{}')) loop
@@ -899,7 +903,7 @@ begin
   end if;
   if u = '/api/users' and m = 'GET' then
     if not own then return pos.r(403, '{"error":"Anda tidak punya akses untuk ini"}'); end if;
-    return pos.r(200, jsonb_build_object('perms', '["pos","co","inv","hist","prn","set","att"]'::jsonb,
+    return pos.r(200, jsonb_build_object('perms', '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att"]'::jsonb,
       'users', coalesce((select jsonb_agg(pos.me_view(uu) order by (uu.role = 'owner') desc, uu.username) from pos.users uu), '[]')));
   end if;
   if u = '/api/users' and m = 'POST' then
@@ -910,7 +914,7 @@ begin
     if exists (select 1 from pos.t_users where username = un) then return pos.r(409, '{"error":"Username sudah dipakai"}'); end if;
     nrole := case when lower(btrim(coalesce(b ->> 'role', ''))) = 'owner' then 'owner' else left(btrim(coalesce(b ->> 'role', 'staff')), 32) end;
     nperms := case when nrole = 'owner' then '[]'::jsonb
-      else pos.clean_perms(case when b -> 'perms' is null or jsonb_typeof(b -> 'perms') = 'null' then '["pos","co","prn"]'::jsonb else b -> 'perms' end) end;
+      else pos.clean_perms(case when b -> 'perms' is null or jsonb_typeof(b -> 'perms') = 'null' then '["pos","shift","mem","co","prn"]'::jsonb else b -> 'perms' end) end;
     insert into pos.users(username, name, role, perms, pw, single) values (un, nm, nrole, nperms, extensions.crypt(b ->> 'password', extensions.gen_salt('bf', 10)),
       case when jsonb_typeof(b -> 'single') = 'boolean' then (b ->> 'single')::boolean end) returning * into tu;
     perform pos.audit(me.id, me.username, 'tambah-user', un || ' (' || nrole || ')');
@@ -1316,5 +1320,20 @@ do $$ begin
         and lower(role) not in ('pelayan', 'koki', 'server', 'kitchen', 'admin gudang')
         and not (jsonb_array_length(coalesce(perms, '[]'::jsonb)) > 0 and perms <@ '["att"]'::jsonb);
     insert into pos.t_meta(store_id, k, v) values (0, 'perm_pos_v1', 'true'::jsonb) on conflict do nothing;
+  end if;
+end $$;
+
+-- izin baru v2: Shift, Layar Dapur, Member, Pengeluaran, Pembelian, Stok Opname (diturunkan dari izin lama agar akun lama tetap berfungsi)
+do $$ begin
+  if not exists (select 1 from pos.t_meta where k = 'perm_v2') then
+    update pos.t_users u set perms = (
+      select coalesce(jsonb_agg(distinct x), '[]'::jsonb) from jsonb_array_elements_text(
+        coalesce(u.perms, '[]'::jsonb)
+        || case when coalesce(u.perms, '[]'::jsonb) ? 'pos' then '["shift","mem","kds"]'::jsonb else '[]'::jsonb end
+        || case when coalesce(u.perms, '[]'::jsonb) ? 'co' then '["kds"]'::jsonb else '[]'::jsonb end
+        || case when coalesce(u.perms, '[]'::jsonb) ? 'inv' then '["opn","buy"]'::jsonb else '[]'::jsonb end
+        || case when coalesce(u.perms, '[]'::jsonb) ? 'hist' then '["exp"]'::jsonb else '[]'::jsonb end) t(x))
+      where u.role <> 'owner';
+    insert into pos.t_meta(store_id, k, v) values (0, 'perm_v2', 'true'::jsonb) on conflict do nothing;
   end if;
 end $$;
