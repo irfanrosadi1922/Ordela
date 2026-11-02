@@ -294,6 +294,59 @@ V.kds=function(){
   const own=isOwner();
   el.innerHTML=bar('<i class="ic" data-ic="list"></i>Layar Dapur')+(own?`<div class="panel" style="margin-bottom:10px"><label class="tgl"><input type="checkbox" ${db.set.kdsOn?'checked':''} onchange="db.set.kdsOn=this.checked;save()"><span>Kirim pesanan kasir ke dapur<small>Setiap transaksi di kasir otomatis muncul di layar ini.</small></span></label></div>`:'')+`<div class="kdg">${[0,1,2].map(k=>`<div class="kdcol"><h3>${KS[k]} <b>${col(k).length}</b></h3>${col(k).map(card).join('')||'<p class="hint">Kosong</p>'}</div>`).join('')}</div>`;
 };
+
+/* ================= CABANG ================= */
+P2.branch=async function(){
+  closeAll();
+  try{
+    const j=await (await api('/api/branches')).json();if(!j.list)throw 0;
+    openModal(`<h3>Cabang</h3><p class="hint" style="margin:0 0 8px">Tiap cabang punya menu, stok, laporan, dan karyawan sendiri. Ketuk untuk berpindah.</p>
+    <div class="brl">${j.list.map(x=>`<button class="brb ${x.id===j.active?'on':''}" onclick="P2.brSwitch(${x.id})"><b>${esc(x.name)}</b><small>${x.id===j.hq?'Pusat':'Cabang'}${x.id===j.active?' · aktif':''}</small></button>`).join('')}</div>
+    ${j.canAdd?`<label class="fl" for="brN">Tambah cabang baru</label><input class="fi" id="brN" maxlength="60" placeholder="Nama cabang"><button class="btn" onclick="P2.brAdd()">Buat &amp; buka cabang</button>`:''}
+    <button class="btn sec" onclick="closeModal()">Tutup</button>`);
+  }catch(e){toast('Gagal memuat cabang (perlu koneksi)')}
+};
+async function brApply(j){
+  CL.me.store={code:j.code,name:j.name};setMe(CL.me);
+  await localOwnerGuard(CL.me);closeModal();
+  try{await syncNow()}catch(e){}
+  applyBrand();applyAccess();go('pos');toast('Cabang aktif: '+j.name);
+}
+P2.brSwitch=async function(id){
+  try{const r=await api('/api/branches/switch',{method:'POST',body:JSON.stringify({id})});const j=await r.json();if(!r.ok)throw 0;await brApply(j)}catch(e){toast('Gagal berpindah cabang')}
+};
+P2.brAdd=async function(){
+  const n=($('#brN').value||'').trim();if(n.length<2){toast('Isi nama cabang');return}
+  try{const r=await api('/api/branches',{method:'POST',body:JSON.stringify({name:n})});const j=await r.json();if(!r.ok)throw j;await brApply(j)}catch(e){toast((e&&e.error)||'Gagal membuat cabang')}
+};
+
+/* ================= PISAH TAGIHAN PER ITEM ================= */
+const SP={sel:{}};
+P2.splitForm=function(){
+  SP.sel={};for(const k in S.cart)SP.sel[k]=S.cart[k];
+  const rows=Object.keys(S.cart).filter(k=>find(bid(k))).map(k=>{const i=find(bid(k)),sx=lineSfx(k);
+    return`<div class="chg"><span>${esc(i.name)}${sx?' <small>('+esc(sx)+')</small>':''}<br><small>${money(linePrice(k))} · ada ${S.cart[k]}</small></span><span class="qs"><button type="button" onclick="P2.spQ('${k.replace(/'/g,"\\'")}',-1)">−</button><b id="sp_${btoa(unescape(encodeURIComponent(k))).replace(/=/g,'')}">${S.cart[k]}</b><button type="button" onclick="P2.spQ('${k.replace(/'/g,"\\'")}',1)">+</button></span></div>`}).join('');
+  openModal(`<h3>Pisah Tagihan</h3><p class="hint" style="margin:0 0 8px">Atur jumlah item yang dibayar sekarang. Sisanya tetap di keranjang untuk dibayar berikutnya.</p>${rows}<div class="chg"><span><b>Dibayar sekarang</b></span><b id="spT">${money(spTotal())}</b></div>
+  <button class="btn" onclick="P2.spGo()">Bayar yang dipilih</button><button class="btn sec" onclick="payForm()">Kembali</button>`);
+};
+function spTotal(){let t=0;for(const k in SP.sel)t+=linePrice(k)*SP.sel[k];return rnd(t)}
+P2.spQ=function(k,d){
+  const n=Math.max(0,Math.min(S.cart[k],(SP.sel[k]||0)+d));SP.sel[k]=n;
+  const e=document.getElementById('sp_'+btoa(unescape(encodeURIComponent(k))).replace(/=/g,''));if(e)e.textContent=n;$('#spT').textContent=money(spTotal());
+};
+P2.spGo=function(){
+  const pay={},payM={},rest={},restM={};
+  for(const k in S.cart){const a=SP.sel[k]||0,b=S.cart[k]-a;
+    if(a>0){pay[k]=a;if(S.cm[k])payM[k]=S.cm[k]}
+    if(b>0){rest[k]=b;if(S.cm[k])restM[k]=JSON.parse(JSON.stringify(S.cm[k]))}}
+  if(!Object.keys(pay).length){toast('Pilih minimal satu item');return}
+  if(Object.keys(rest).length){if(S.rest){for(const k in rest){S.rest.cart[k]=(S.rest.cart[k]||0)+rest[k];if(restM[k]&&!S.rest.cm[k])S.rest.cm[k]=restM[k]}}else S.rest={cart:rest,cm:restM,meta:S.holdMeta||null}}
+  S.cart=pay;S.cm=payM;renderInvoice();renderGrid();payForm();
+};
+window.addEventListener('load',()=>{const cm0=window.closeModal;window.closeModal=function(){
+  if(S.rest){for(const k in S.rest.cart){S.cart[k]=(S.cart[k]||0)+S.rest.cart[k];if(S.rest.cm[k]&&!S.cm[k])S.cm[k]=S.rest.cm[k]}S.rest=null;try{renderGrid();renderInvoice();renderCats()}catch(e){}toast('Pisah tagihan dibatalkan')}
+  return cm0.apply(this,arguments)}});
+P2.t={get shiftStats(){return shiftStats},get debtOf(){return debtOf},get BP(){return BP}};
 window.kdsSet=async function(src,id,st){
   if(src==='loc'){const k=db.kds.find(x=>x.id===id);if(k){k.st=st;k.u=Date.now();save()}V.kds();return}
   try{const r=await api('/api/co/'+id,{method:'POST',body:JSON.stringify({action:st===1?'cook':st===2?'ready':'unready'})});if(!r.ok)throw 0;
