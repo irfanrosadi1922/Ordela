@@ -153,3 +153,8 @@ The cashier product grid, category filter, quick-add cards, modifier selection, 
 ## POS checkout feature boundary
 
 Discount eligibility, cart totals, parked-ticket management, member/loyalty redemption, split tender, cash/change validation, and final transaction commit now live in `app-pos-checkout.js`, included only in the POS build. The Business app keeps only the shared `promoUsed` and `holdTotal` summaries because its promotion administration and table-occupancy views consume them. The table screen hides the parked-ticket action in Business, and online-order payment is routed to POS. Receipt display/printing remains shared for historical reprints. Build tests check the POS API and the shared helper boundary.
+
+
+## POS table occupancy feature boundary
+
+Table occupancy, active-order summaries, reservation indicators, table clearing, and table-detail actions now live in `app-pos-table.js`, included only in the POS build. The Business reservation-management page remains separate, while the small reservation lookup stays in shared `pos2.js` for the POS table indicators. The Business render loop no longer invokes the POS table screen; build tests validate the table API and exclusion from Business.
