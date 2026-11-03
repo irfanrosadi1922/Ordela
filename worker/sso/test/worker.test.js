@@ -39,3 +39,48 @@ test("responds to allowed CORS preflight", async () => {
   assert.equal(r.headers.get("Access-Control-Allow-Origin"), "https://ordela-platform-preview.pages.dev");
   assert.equal(r.headers.get("Access-Control-Allow-Credentials"), "true");
 });
+
+test("login puts the token only in a secure HttpOnly cookie", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => new Response(JSON.stringify({
+    s: 200, b: { token: "ps_test_secret_token_123456789", days: 14, me: { username: "owner" } }
+  }), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const r = await worker.fetch(new Request("https://ordela-sso-preview.workers.dev/api/login", {
+    method: "POST",
+    headers: {
+      Origin: "https://ordela-platform-preview.pages.dev",
+      "Content-Type": "application/json",
+      "X-Ordela-Client": "web-v1"
+    },
+    body: JSON.stringify({ username: "owner", password: "example" })
+  }), env);
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.token, undefined);
+  assert.equal(body.me.username, "owner");
+  const cookie = r.headers.get("Set-Cookie");
+  assert.match(cookie, /HttpOnly/);
+  assert.match(cookie, /Secure/);
+  assert.match(cookie, /SameSite=Lax/);
+  assert.match(cookie, /__Secure-ordela_session=/);
+  assert.doesNotMatch(cookie, /Domain=/);
+});
+
+test("production cookie is scoped to Ordela subdomains", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => new Response(JSON.stringify({
+    s: 200, b: { token: "ps_test_secret_token_123456789", days: 14, me: { username: "owner" } }
+  }), { status: 200 }));
+  const r = await worker.fetch(new Request("https://api.ordela.my.id/api/login", {
+    method: "POST",
+    headers: {
+      Origin: "https://app.ordela.my.id",
+      "Content-Type": "application/json",
+      "X-Ordela-Client": "web-v1"
+    },
+    body: JSON.stringify({ username: "owner", password: "example" })
+  }), {
+    ...env,
+    ALLOWED_ORIGINS: "https://app.ordela.my.id"
+  });
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("Set-Cookie"), /Domain=\.ordela\.my\.id/);
+});
