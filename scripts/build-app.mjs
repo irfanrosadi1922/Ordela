@@ -50,12 +50,22 @@ if (mode === "business") {
   if (!existsSync(payrollModule)) throw new Error("Required Business payroll module missing.");
   cpSync(payrollModule, join(output, "app-business-payroll.js"));
 }
+if (mode === "business") {
+  const inventoryModule = join(ROOT, "app-business-inventory.js");
+  if (!existsSync(inventoryModule)) throw new Error("Required Business inventory module missing.");
+  cpSync(inventoryModule, join(output, "app-business-inventory.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
 const payrollTag = '<script src="app-business-payroll.js"></script>';
 if (mode === "pos" && html.includes(payrollTag)) {
   writeFileSync(indexPath, html.replace(payrollTag, ""));
+}
+const inventoryTag = '<script src="app-business-inventory.js"></script>';
+if (mode === "pos" && html.includes(inventoryTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(inventoryTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
