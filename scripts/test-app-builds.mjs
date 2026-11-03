@@ -74,6 +74,23 @@ for (const mode of ["pos", "business"]) {
   const membersPath = join(dir, "app-business-members.js");
   const kdsTag = '<script src="app-pos-kds.js"></script>';
   const kdsPath = join(dir, "app-pos-kds.js");
+  const catalogTag = '<script src="app-pos-catalog.js"></script>';
+  const catalogPath = join(dir, "app-pos-catalog.js");
+  if (mode === "pos") {
+    if (!html.includes(catalogTag) || !existsSync(catalogPath)) throw new Error("POS catalog module is missing from POS build");
+    const catalogSource = readFileSync(catalogPath, "utf8");
+    new vm.Script(catalogSource, { filename: mode + "/app-pos-catalog.js" });
+    const catalogSandbox = { window: {} };
+    vm.runInNewContext(catalogSource, catalogSandbox, { filename: mode + "/app-pos-catalog.js" });
+    for (const name of ["renderCats", "filtered", "renderPop", "renderGrid", "renderGrid0", "tapItem", "gridAdd", "gridSub", "popSel", "popPick", "popForm", "popQ", "popAdd", "chg"]) {
+      if (typeof catalogSandbox.window[name] !== "function") throw new Error("POS catalog API missing " + name);
+    }
+    if (appCore.includes("function renderCats(") || !appCore.includes("if(ORDELA_APP_MODE==='pos'){renderCats();renderGrid();renderInvoice();}")) {
+      throw new Error("POS catalog feature boundary or shared render gate is invalid");
+    }
+  } else if (html.includes(catalogTag) || existsSync(catalogPath)) {
+    throw new Error("POS catalog source leaked into Business build");
+  }
   const shiftTag = '<script src="app-pos-shift.js"></script>';
   const shiftPath = join(dir, "app-pos-shift.js");
   if (mode === "pos") {
@@ -323,6 +340,7 @@ for (const mode of ["pos", "business"]) {
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
   const shiftTagIndex = html.indexOf(shiftTag);
+  const catalogTagIndex = html.indexOf(catalogTag);
   const kdsTagIndex = html.indexOf(kdsTag);
   const membersTagIndex = html.indexOf(membersTag);
   const promosTagIndex = html.indexOf(promosTag);
@@ -333,8 +351,8 @@ for (const mode of ["pos", "business"]) {
   const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && (shiftTagIndex >= 0 || existsSync(shiftPath) || kdsTagIndex >= 0 || existsSync(kdsPath))) || (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < membersTagIndex && membersTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0 || membersTagIndex >= 0 || !(pos2TagIndex >= 0 && pos2TagIndex < shiftTagIndex && shiftTagIndex < kdsTagIndex && kdsTagIndex < coreTagIndex)))) {
+      (mode === "business" && (shiftTagIndex >= 0 || existsSync(shiftPath) || kdsTagIndex >= 0 || existsSync(kdsPath) || catalogTagIndex >= 0 || existsSync(catalogPath))) || (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < membersTagIndex && membersTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0 || membersTagIndex >= 0 || !(pos2TagIndex >= 0 && pos2TagIndex < shiftTagIndex && shiftTagIndex < kdsTagIndex && kdsTagIndex < catalogTagIndex && catalogTagIndex < coreTagIndex)))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
