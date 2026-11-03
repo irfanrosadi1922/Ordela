@@ -95,6 +95,7 @@ for (const mode of ["pos", "business"]) {
   const coreTagIndex = html.indexOf('<script src="app-core.js"></script>');
   const inventoryTagIndex = html.indexOf(inventoryTag);
   const usersTagIndex = html.indexOf(usersTag);
+  const dashboardTagIndex = html.indexOf(dashboardTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
       (mode === "business" && !(xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < coreTagIndex)) ||
       (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0))) {
