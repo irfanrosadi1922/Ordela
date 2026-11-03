@@ -45,9 +45,18 @@ for (const file of publicFiles) {
   if (!existsSync(source)) throw new Error("Required app asset missing: " + file);
   cpSync(source, join(output, file), { recursive: true });
 }
+if (mode === "business") {
+  const payrollModule = join(ROOT, "app-business-payroll.js");
+  if (!existsSync(payrollModule)) throw new Error("Required Business payroll module missing.");
+  cpSync(payrollModule, join(output, "app-business-payroll.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
+const payrollTag = '<script src="app-business-payroll.js"></script>';
+if (mode === "pos" && html.includes(payrollTag)) {
+  writeFileSync(indexPath, html.replace(payrollTag, ""));
+}
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
 }
