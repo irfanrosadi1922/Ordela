@@ -36,6 +36,11 @@ Deno.serve(async (req: Request) => {
     });
     const hj = await hr.json().catch(() => null);
     if (!hr.ok) return out({ error: hr.status === 401 ? "Sesi tidak valid" : "Gagal memproses riwayat chat" }, hr.status === 401 ? 401 : 500);
+    if (hj && !Array.isArray(hj) && typeof hj.error === "string") {
+      const status = hj.error === "unauthorized" ? 401 : hj.error === "forbidden" ? 403 : 400;
+      const message = hj.error === "unauthorized" ? "Sesi tidak valid" : hj.error === "forbidden" ? "Anda tidak punya izin AI Manager" : "Permintaan riwayat chat tidak valid";
+      return out({ error: message }, status);
+    }
     return out({ messages: b.action === "history_load" ? (Array.isArray(hj) ? hj : []) : undefined, ok: b.action !== "history_load" });
   }
 
