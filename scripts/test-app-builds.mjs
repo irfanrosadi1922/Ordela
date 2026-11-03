@@ -175,6 +175,9 @@ for (const mode of ["pos", "business"]) {
     if (typeof aiP2.views.ai !== "function" || appCore.includes("const AI=")) {
       throw new Error("Business AI feature boundary or view registration is invalid");
     }
+    if (!aiSource.includes("function aiSafeHtml(raw)") || !aiSource.includes("const allowed=new Set(['B','STRONG','EM','I','CODE','BR','P','UL','OL','LI','SMALL','DIV'])")) {
+      throw new Error("Business AI chat history renderer is missing its HTML allowlist sanitizer");
+    }
   } else if (html.includes(aiTag) || existsSync(aiPath)) {
     throw new Error("Business AI source leaked into POS build");
   }
