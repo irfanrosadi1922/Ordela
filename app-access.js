@@ -34,7 +34,7 @@
       ai: 'AI Manager', gift: 'Kartu Hadiah', rsv: 'Reservasi'
     }),
     viewPermissions: Object.freeze({
-      ai: 'ai', riw: 'pos', integ: '#owner', pyr: '#owner', pos: 'pos', home: 'pos',
+      ai: 'ai', riw: 'hist', integ: '#owner', pyr: '#owner', pos: 'pos', home: 'hist',
       table: 'pos', alert: 'pos', inv: 'inv', rc: 'set', prn: 'prn', set: 'set',
       co: 'co', att: 'att', usr: '#owner', gift: 'gift', rsv: 'rsv',
       shift: 'shift', exp: 'exp', mem: 'mem', buy: 'buy', promo: '#owner',
