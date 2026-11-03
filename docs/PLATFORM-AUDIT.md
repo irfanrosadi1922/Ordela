@@ -84,3 +84,15 @@ Follow-up date: 2026-11-04
 - Re-tested the stable Pages host: HTTP 200, title `Order · Ordela`, guard message visible, menu hidden, and demo item content absent.
 - This does not validate a real tenant's QR, order submission, status polling, or payment. Those flows require a real store code and must be tested before adding `order.ordela.my.id`.
 - Browser Rendering returned a rate-limit response on a later asset-check batch; no further repeated calls were made.
+
+
+### Authentication boundary review for multiple app origins
+
+A read-only inspection of the current Supabase functions found:
+
+- `public.pos_api(jsonb)` delegates requests to `pos.route(..., p ->> 't')`; browser requests carry the session token through the existing API bridge.
+- `pos.login(jsonb)` creates a server-side session token and applies the user's `single` session setting. Staff default to single-session behavior; owners default to multi-session unless configured otherwise.
+- Browser `localStorage` is origin-scoped. Moving the same app to `pos.ordela.my.id` and `app.ordela.my.id` means tokens and cached client state will not automatically be shared.
+- A staff member with single-session enabled who signs in separately on both hosts may invalidate the earlier session. This needs a deliberate SSO/session-handoff design or an explicitly accepted separate-login behavior before production split.
+
+No database functions, tables, policies, sessions, tokens, or auth settings were modified during this review.
