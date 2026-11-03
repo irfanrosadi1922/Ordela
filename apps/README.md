@@ -93,3 +93,8 @@ The sales dashboard now lives in `app-business-dashboard.js`: period comparisons
 ## Business finance feature boundary
 
 Operating-expense entry, profit calculation, supplier management, purchases, supplier debt tracking, and purchase-driven stock updates now live in `app-business-finance.js`. The module is loaded after `pos2.js` has initialized the shared view registry, and it is included only in the Business build. Compatibility exports for profit and supplier debt remain available to existing Business-only AI and stock-count workflows. The POS build excludes the module and its script tag; the shared shift screen retains its own shift statistics implementation.
+
+
+## Business AI assistant feature boundary
+
+The Ordela AI assistant now lives in `app-business-ai.js`, loaded after the Business finance module because its store analysis reads the shared profit summary. It owns the guided feature-help responses, data-aware analysis entry point, AI cloud request, per-account conversation history, and chat UI. The Business artifact includes and tests the P2 AI API; the POS artifact excludes the module and its script reference. The AI still relies on existing server-side authorization and the configured AI Edge Function; this extraction does not change provider credentials or production AI configuration.
