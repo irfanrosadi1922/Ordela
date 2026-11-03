@@ -98,6 +98,26 @@ for (const mode of ["pos", "business"]) {
   const kdsPath = join(dir, "app-pos-kds.js");
   const catalogTag = '<script src="app-pos-catalog.js"></script>';
   const catalogPath = join(dir, "app-pos-catalog.js");
+  const checkoutTag = '<script src="app-pos-checkout.js"></script>';
+  const checkoutPath = join(dir, "app-pos-checkout.js");
+  if (mode === "pos") {
+    if (!html.includes(checkoutTag) || !existsSync(checkoutPath)) throw new Error("POS checkout module is missing from POS build");
+    const checkoutSource = readFileSync(checkoutPath, "utf8");
+    new vm.Script(checkoutSource, { filename: mode + "/app-pos-checkout.js" });
+    const checkoutP2 = { giftUse: () => {}, giftClear: () => {} };
+    const checkoutSandbox = { window: { P2: checkoutP2 }, P2: checkoutP2 };
+    vm.runInNewContext(checkoutSource, checkoutSandbox, { filename: mode + "/app-pos-checkout.js" });
+    for (const name of ["renderInvoice", "renderInvoice0", "clearCart", "holdSave", "holdList", "holdResume", "holdDel", "applyCode", "payTotals", "payForm", "payCalc", "payRefresh", "checkout"]) {
+      if (typeof checkoutSandbox.window[name] !== "function") throw new Error("POS checkout API missing " + name);
+    }
+    if (appCore.includes("function payForm(") || !appCore.includes("function holdTotal(h)") ||
+        !appCore.includes("function promoUsed(id)") ||
+        !appCore.includes("x.kind==='hold'&&ORDELA_APP_MODE==='pos'&&can('pos')?")) {
+      throw new Error("POS checkout boundary or shared table/promo helper integration is invalid");
+    }
+  } else if (html.includes(checkoutTag) || existsSync(checkoutPath)) {
+    throw new Error("POS checkout source leaked into Business build");
+  }
   if (mode === "pos") {
     if (!html.includes(catalogTag) || !existsSync(catalogPath)) throw new Error("POS catalog module is missing from POS build");
     const catalogSource = readFileSync(catalogPath, "utf8");
@@ -363,6 +383,7 @@ for (const mode of ["pos", "business"]) {
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
   const shiftTagIndex = html.indexOf(shiftTag);
   const catalogTagIndex = html.indexOf(catalogTag);
+  const checkoutTagIndex = html.indexOf(checkoutTag);
   const kdsTagIndex = html.indexOf(kdsTag);
   const membersTagIndex = html.indexOf(membersTag);
   const promosTagIndex = html.indexOf(promosTag);
@@ -373,8 +394,8 @@ for (const mode of ["pos", "business"]) {
   const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && (shiftTagIndex >= 0 || existsSync(shiftPath) || kdsTagIndex >= 0 || existsSync(kdsPath) || catalogTagIndex >= 0 || existsSync(catalogPath))) || (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < membersTagIndex && membersTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0 || membersTagIndex >= 0 || !(pos2TagIndex >= 0 && pos2TagIndex < shiftTagIndex && shiftTagIndex < kdsTagIndex && kdsTagIndex < catalogTagIndex && catalogTagIndex < coreTagIndex)))) {
+      (mode === "business" && (shiftTagIndex >= 0 || existsSync(shiftPath) || kdsTagIndex >= 0 || existsSync(kdsPath) || catalogTagIndex >= 0 || existsSync(catalogPath) || checkoutTagIndex >= 0 || existsSync(checkoutPath))) || (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < membersTagIndex && membersTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0 || membersTagIndex >= 0 || !(pos2TagIndex >= 0 && pos2TagIndex < shiftTagIndex && shiftTagIndex < kdsTagIndex && kdsTagIndex < catalogTagIndex && catalogTagIndex < checkoutTagIndex && checkoutTagIndex < coreTagIndex)))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
