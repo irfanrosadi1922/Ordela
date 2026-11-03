@@ -3856,6 +3856,10 @@ const PERM_LBL={pos:'Kasir & Transaksi',shift:'Shift Kasir',co:'Pesanan Online',
 const PERM_DESC={shift:'Buka dan tutup shift, hitung uang laci, catat kas masuk/keluar.',kds:'Lihat dan ubah status masak di Layar Dapur.',mem:'Kelola data member dan poin.',opn:'Hitung stok fisik (scan/ketik/Excel) dan terapkan selisih.',buy:'Catat pembelian barang, pemasok, dan hutang.',exp:'Catat dan lihat pengeluaran serta laba.',pos:'Operasional kasir: Kasir, Meja, Beranda, Notifikasi, dan membuat transaksi.',co:'Terima dan proses pesanan dari pelanggan.',inv:'Lihat dan ubah stok, menu bahan, dan riwayat perubahan stok.',hist:'Lihat rekap, riwayat, dan ekspor penjualan di Beranda.',prn:'Sambungkan printer dan cetak struk.',set:'Toko, desain struk, pembayaran, tampilan, data & cadangan.',att:'Absen masuk dan pulang sendiri.'};
 const PERM_SHORT={shift:'Shift',kds:'Dapur',mem:'Member',opn:'Opname',buy:'Pembelian',exp:'Pengeluaran',pos:'Kasir',co:'Pesanan Online',inv:'Inventori',hist:'Rekap',prn:'Printer',set:'Pengaturan',att:'Absensi'};
 const VIEW_PERM={ai:'pos',riw:'pos',integ:'#owner',pyr:'#owner',pos:'pos',home:'pos',table:'pos',alert:'pos',inv:'inv',rc:'set',prn:'prn',set:'set',co:'co',att:'att',usr:'#owner',gift:'pos',rsv:'pos',cd:'pos',shift:'shift',exp:'exp',mem:'mem',buy:'buy',promo:'#owner',kds:'kds',opname:'opn'};
+/* Staging app split: keep the production host unchanged until the independent builds pass acceptance. */
+const ORDELA_APP_MODE=location.hostname==='pos-preview.ordela.my.id'?'pos':location.hostname==='app-preview.ordela.my.id'?'business':'legacy';
+const ORDELA_POS_ONLY=new Set(['pos','table','shift','kds']);
+const ORDELA_BUSINESS_ONLY=new Set(['home','inv','usr','pyr','integ','gift','rsv','opname','exp','mem','buy','promo','ai']);
 CL.me=null;try{if(window.POS_SSO_API)localStorage.removeItem('pos_me');else CL.me=JSON.parse(localStorage.getItem('pos_me')||'null')}catch(e){}
 function setMe(m){CL.me=m||null;try{if(m)localStorage.setItem('pos_me',JSON.stringify(m));else localStorage.removeItem('pos_me')}catch(e){}}
 /* tanpa server (mode offline/standalone) tidak ada akun: semua terbuka */
@@ -3863,8 +3867,10 @@ function isOwner(){return !CL.on||(!!CL.me&&CL.me.role==='owner')}
 function can(p){return !CL.on||(!!CL.me&&(CL.me.role==='owner'||(CL.me.perms||[]).includes(p)))}
 /* karyawan yang HANYA punya izin Absensi: tidak boleh memakai Kasir, Meja, Beranda, atau Notifikasi (tidak ada transaksi) */
 function attOnly(){const m=CL.on&&CL.me;if(!m||m.role==='owner')return false;const p=m.perms||[];return p.length>0&&p.every(x=>x==='att')}
-function landing(){if(CL.on&&CL.me)return 'menu';return ['pos','home','co','inv','att','set','prn'].find(v=>canView(v))||'acc'}
+function landing(){if(CL.on&&CL.me)return 'menu';const order=ORDELA_APP_MODE==='business'?['home','co','inv','att','set','prn','pos']:['pos','co','att','set','prn','home','inv'];return order.find(v=>canView(v))||'acc'}
 function canView(v){
+  if(ORDELA_APP_MODE==='pos'&&ORDELA_BUSINESS_ONLY.has(v))return false;
+  if(ORDELA_APP_MODE==='business'&&ORDELA_POS_ONLY.has(v))return false;
   if(v==='table'&&can('co'))return true;   // server/pelayan melihat status meja dari antrean pesanan
   if(v==='home'&&can('hist'))return true;   // Rekap & Riwayat tampil di Beranda
   if(v==='riw')return can('pos')||can('hist')||can('co');
