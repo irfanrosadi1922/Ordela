@@ -10,11 +10,28 @@ for (const mode of ["pos", "business"]) {
   const html = readFileSync(join(dir, "index.html"), "utf8");
   const modeConfig = readFileSync(join(dir, "app-mode.js"), "utf8");
   const accessConfig = readFileSync(join(dir, "app-access.js"), "utf8");
+  const navigationConfig = readFileSync(join(dir, "app-navigation.js"), "utf8");
   new vm.Script(accessConfig, { filename: mode + "/app-access.js" });
   if (!accessConfig.includes("window.ORDELA_ACCESS_CONFIG") || !accessConfig.includes("viewPermissions") || !accessConfig.includes("permissionLabels")) throw new Error("Missing extracted app-access module: " + mode);
   new vm.Script(modeConfig, { filename: mode + "/app-mode.js" });
   if (!modeConfig.includes("window.ORDELA_APP_CONFIG") || !modeConfig.includes("posOnly") || !modeConfig.includes("businessOnly")) throw new Error("Missing extracted app-mode module: " + mode);
-  if (!html.includes('<script src="app-mode.js"></script>') || !html.includes('<script src="app-access.js"></script>')) throw new Error("App configuration modules are not loaded before the main app: " + mode);
+  if (!html.includes('<script src="app-mode.js"></script>') || !html.includes('<script src="app-access.js"></script>') || !html.includes('<script src="app-navigation.js"></script>')) throw new Error("App configuration modules are not loaded before the main app: " + mode);
+  new vm.Script(navigationConfig, { filename: mode + "/app-navigation.js" });
+  const navigationSandbox = { window: {} };
+  vm.runInNewContext(navigationConfig, navigationSandbox, { filename: mode + "/app-navigation.js" });
+  const navigation = navigationSandbox.window.ORDELA_NAV_CONFIG;
+  for (const key of ["secondaryViews", "accountViews"]) {
+    const values = navigation[key];
+    if (!Array.isArray(values) || new Set(values).size !== values.length || values.some(value => typeof value !== "string" || !value)) {
+      throw new Error("Invalid or duplicate navigation metadata: " + key + " (" + mode + ")");
+    }
+  }
+  for (const view of navigation.secondaryViews) {
+    if (!["ai", "riw", "integ", "gift", "rsv", "opname", "menu", "shift", "exp", "buy", "mem", "promo", "kds"].includes(view)) {
+      throw new Error("Unknown secondary navigation view: " + view);
+    }
+  }
+  if (!navigation.accountViews.includes("acc") || !navigation.accountViews.includes("pw")) throw new Error("Account navigation metadata is incomplete: " + mode);
   if (!modeConfig.includes("var mode = '" + mode + "';")) throw new Error("Build mode not locked in app-mode.js: " + mode);
   if (modeConfig.includes("window.location.hostname")) throw new Error("Runtime hostname selector leaked into " + mode);
   const accessSandbox = { window: {} };
