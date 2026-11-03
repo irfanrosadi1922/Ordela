@@ -302,7 +302,7 @@ V.kds=function(){
 };
 
 /* ================= ASISTEN ORDELA (berbasis aturan, berjalan di perangkat, tanpa API key) ================= */
-const AI={msgs:[],busy:0,why:'',uid:'',loaded:false,loading:false};
+const AI={msgs:[],busy:0,why:'',uid:'',loaded:false,loading:false,saveChain:Promise.resolve()};
 const aiN=s=>String(s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 const aiHas=(q,...w)=>w.some(x=>q.includes(x));
 function aiRange(q){
@@ -416,7 +416,7 @@ async function aiHistoryLoad(uid){
 }
 function aiHistorySave(){
   if(!AI.uid||!AI.loaded||!CL.tok)return;
-  aiHistoryRequest('history_save',AI.msgs.slice(-60)).catch(()=>{});
+  const snapshot=AI.msgs.slice(-60);AI.saveChain=AI.saveChain.then(()=>aiHistoryRequest('history_save',snapshot)).catch(()=>{});
 }
 V.ai=function(){
   const el=$('#v-ai');if(!el)return;
@@ -435,7 +435,7 @@ P2.aiAsk=async function(t){
   const log=$('#aiLog');if(!log){return}
   if(!AI.msgs.length)log.innerHTML='';
   const add=m=>{m.ts=aiTm();AI.msgs.push(m);log.insertAdjacentHTML('beforeend',aiBub(m));aiScroll()};
-  add({me:1,t});aiHistorySave();let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
+  add({me:1,t});let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
   if(a===null){AI.busy=1;const go=$('#aiGo');if(go)go.disabled=true;
     log.insertAdjacentHTML('beforeend','<div class="cr" id="aiTyp"><span class="cav"><i class="ic" data-ic="bolt"></i></span><div class="cbw"><div class="cb typ"><i></i><i></i><i></i></div></div></div>');aiScroll();
     AI.why='';a=await aiCloud(t);const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false;if(a===null)a=AIMISS+(AI.why&&isOwner()?'<br><small style="opacity:.65">AI cloud tidak aktif: '+esc(AI.why)+'.</small>':'')}
