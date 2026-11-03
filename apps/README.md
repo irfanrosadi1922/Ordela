@@ -143,3 +143,8 @@ The KDS ticket board, station filter, local/online ticket state updates, and tim
 ## POS shift screen boundary
 
 The cashier shift screen, opening/closing cash drawer, cash-in/cash-out forms, variance calculation, and shift detail view now live in `app-pos-shift.js`, included only in the POS artifact. The lightweight `window.shiftCur` lookup and shift statistics remain in the shared operational registry because Business expense/purchase records can be associated with a currently active cashier shift. Tests check the POS module API and preserve the shared lookup.
+
+
+## POS catalog and cart feature boundary
+
+The cashier product grid, category filter, quick-add cards, modifier selection, quantity editing, and cart update handlers now live in `app-pos-catalog.js`, loaded only by the POS build. The Business render loop no longer calls POS catalog/invoice renderers, and inventory ordering/grid preferences are guarded by the build mode. Online orders opened in Business now show a clear message directing payment to the POS app instead of opening a hidden cashier form. Tests validate the exported cashier API and verify the Business artifact excludes the module.
