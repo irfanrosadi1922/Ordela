@@ -12,6 +12,38 @@ for (const mode of ["pos", "business"]) {
   const accessConfig = readFileSync(join(dir, "app-access.js"), "utf8");
   const navigationConfig = readFileSync(join(dir, "app-navigation.js"), "utf8");
   const appCore = readFileSync(join(dir, "app-core.js"), "utf8");
+  const xlsxModule = readFileSync(join(dir, "app-export-xlsx.js"), "utf8");
+  new vm.Script(xlsxModule, { filename: mode + "/app-export-xlsx.js" });
+  if (!html.includes('<script src="app-export-xlsx.js"></script><script src="app-core.js"></script>')) {
+    throw new Error("XLSX helper must load before the shared runtime: " + mode);
+  }
+  const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
+  vm.runInNewContext(xlsxModule, xlsxSandbox, { filename: mode + "/app-export-xlsx.js" });
+  const xlsxApi = xlsxSandbox.window.OrdelaXlsx;
+  if (!xlsxApi || xlsxApi.crc32(new TextEncoder().encode("123456789")) !== 0xcbf43926) {
+    throw new Error("XLSX CRC-32 regression failed: " + mode);
+  }
+  const xlsxBlob = xlsxApi.build([{ name: "Uji", rows: [["Nama", "Nilai"], ["Ordela", 123]], head: 1, w: [20, 12] }], 0);
+  if (xlsxBlob.type !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+    throw new Error("XLSX MIME type regression failed: " + mode);
+  }
+  const xlsxBytes = new Uint8Array(await xlsxBlob.arrayBuffer());
+  const zipView = new DataView(xlsxBytes.buffer, xlsxBytes.byteOffset, xlsxBytes.byteLength);
+  const zipNames = [];
+  for (let offset = 0; offset + 30 <= xlsxBytes.length && zipView.getUint32(offset, true) === 0x04034b50;) {
+    const nameLength = zipView.getUint16(offset + 26, true);
+    const extraLength = zipView.getUint16(offset + 28, true);
+    const size = zipView.getUint32(offset + 18, true);
+    const nameStart = offset + 30;
+    zipNames.push(new TextDecoder().decode(xlsxBytes.slice(nameStart, nameStart + nameLength)));
+    offset = nameStart + nameLength + extraLength + size;
+  }
+  for (const required of ["[Content_Types].xml", "xl/workbook.xml", "xl/worksheets/sheet1.xml"]) {
+    if (!zipNames.includes(required)) throw new Error("Generated XLSX is missing " + required + ": " + mode);
+  }
+  if (appCore.includes("function xlsxBuild") || !appCore.includes("OrdelaXlsx.build(")) {
+    throw new Error("Shared runtime did not migrate to the standalone XLSX module: " + mode);
+  }
   new vm.Script(appCore, { filename: mode + "/app-core.js" });
   if (!html.includes('<script src="app-core.js"></script>')) throw new Error("Main app core is not loaded as an external module: " + mode);
   if (html.includes("const $=s=>document.querySelector(s)")) throw new Error("Main app core remains duplicated inline: " + mode);
