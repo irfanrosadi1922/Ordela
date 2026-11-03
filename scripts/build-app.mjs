@@ -55,6 +55,11 @@ if (mode === "business") {
   if (!existsSync(inventoryModule)) throw new Error("Required Business inventory module missing.");
   cpSync(inventoryModule, join(output, "app-business-inventory.js"));
 }
+if (mode === "business") {
+  const usersModule = join(ROOT, "app-business-users.js");
+  if (!existsSync(usersModule)) throw new Error("Required Business users module missing.");
+  cpSync(usersModule, join(output, "app-business-users.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
@@ -66,6 +71,11 @@ const inventoryTag = '<script src="app-business-inventory.js"></script>';
 if (mode === "pos" && html.includes(inventoryTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(inventoryTag, ""));
+}
+const usersTag = '<script src="app-business-users.js"></script>';
+if (mode === "pos" && html.includes(usersTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(usersTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
