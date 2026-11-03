@@ -41,3 +41,9 @@ Each output locks its app mode at build time, carries its own public assets and 
 - UI route filtering is not a replacement for server-side role/tenant authorization.
 - Verify login, logout, password change, cross-app switching, role permissions, session expiry, ordering, payments, printing, and mobile/PWA behavior before production migration.
 - Keep the migration PR in Draft and do not merge or change production DNS without explicit approval.
+
+## Extracted shared frontend module
+
+The hostname-to-app-mode selection and the POS-only/Business-only route classification now live in the standalone `app-mode.js` module. The root entrypoint loads this module before the main application script, and both dedicated build artifacts include it. The POS and Business build scripts lock the selected mode inside the copied module at build time; regression checks validate that the selector is locked and that the module is loaded by the entrypoint.
+
+This is the first safe source extraction, not the completion of feature-source separation. The remaining UI, navigation, state, and feature implementations still reside in the large root `index.html` bundle and must be moved in small dependency-aware slices with tests.
