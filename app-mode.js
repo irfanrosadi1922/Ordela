@@ -12,6 +12,7 @@
   window.ORDELA_APP_CONFIG = Object.freeze({
     mode: mode,
     posOnly: Object.freeze(['pos', 'table', 'shift', 'kds']),
-    businessOnly: Object.freeze(['home', 'inv', 'usr', 'pyr', 'integ', 'gift', 'rsv', 'opname', 'exp', 'mem', 'buy', 'promo', 'ai', 'branch'])
+    businessOnly: Object.freeze(['home', 'inv', 'usr', 'pyr', 'integ', 'gift', 'rsv', 'opname', 'exp', 'mem', 'buy', 'promo', 'ai', 'branch']),
+    shared: Object.freeze(['menu', 'riw', 'co', 'alert', 'att', 'set', 'rc', 'prn'])
   });
 })(window);
