@@ -4,6 +4,7 @@ const MAX_BODY = 750_000;
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const PUBLIC_PATHS = new Set([
   "/api/health",
+  "/api/food/hook",
   "/api/register/check",
   "/api/public/menu",
   "/api/public/order"
@@ -52,12 +53,13 @@ async function handle(request, env) {
   const host = url.hostname;
   const isProductionHost = host === "api.ordela.my.id";
   if (!isProductionHost && host !== env.PREVIEW_HOST) return json({ error: "host_not_allowed" }, 421);
-  if (!validOrigin(origin, env)) return json({ error: "origin_not_allowed" }, 403);
+  const isServerHook = url.pathname === "/api/food/hook" && request.method === "POST";
+  if (origin ? !validOrigin(origin, env) : !isServerHook) return json({ error: "origin_not_allowed" }, 403);
 
-  const cors = corsHeaders(origin, (env.ALLOWED_ORIGINS || "").split(","));
+  const cors = origin ? corsHeaders(origin, (env.ALLOWED_ORIGINS || "").split(",")) : {};
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (!url.pathname.startsWith("/api/")) return json({ error: "not_found" }, 404);
-  if (!SAFE_METHODS.has(request.method) && request.headers.get("X-Ordela-Client") !== "web-v1") {
+  if (!isServerHook && !SAFE_METHODS.has(request.method) && request.headers.get("X-Ordela-Client") !== "web-v1") {
     return json({ error: "csrf_check_failed" }, 403, cors);
   }
 
@@ -120,7 +122,7 @@ async function handle(request, env) {
     headers["Set-Cookie"] = cookieValue(payload.token, host);
     delete payload.token;
   }
-  if (isLogout) headers["Set-Cookie"] = clearCookie(host);
+  if (isLogout || envelope.s === 401) headers["Set-Cookie"] = clearCookie(host);
   return json(payload ?? {}, envelope.s, headers);
 }
 export default { fetch: handle };
