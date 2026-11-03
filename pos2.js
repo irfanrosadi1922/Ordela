@@ -395,8 +395,6 @@ async function aiCloud(q){
 const aiTm=()=>new Date().toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
 const aiBub=m=>`<div class="cr ${m.me?'me':''}">${m.me?'':'<span class="cav"><i class="ic" data-ic="bolt"></i></span>'}<div class="cbw"><div class="cb">${m.me?esc(m.t):m.t}</div><small>${esc(m.ts||'')}</small></div></div>`;
 const AISUG=['Omzet hari ini','Menu terlaris minggu ini','Stok menipis','Jam ramai','Laba bulan ini','Pasangan menu untuk upsell','Cara split bill','Cara buka shift'];
-function aiFit(){const c=$('#aiChat');if(!c)return;const m=c.closest('.main'),bn=$('#bnav'),bh=bn&&getComputedStyle(bn).display!=='none'?bn.offsetHeight:0;
-  const top=c.getBoundingClientRect().top,bot=m?m.getBoundingClientRect().bottom:innerHeight;c.style.height=Math.max(320,bot-top-bh-10)+'px'}
 function aiScroll(){const l=$('#aiLog');if(l)l.scrollTop=l.scrollHeight}
 V.ai=function(){
   const el=$('#v-ai');if(!el)return;
@@ -404,9 +402,8 @@ V.ai=function(){
   <div class="clog" id="aiLog">${AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten Ordela. Tanyakan penjualan, stok, jam ramai, atau cara memakai aplikasi. Saya hanya menampilkan data sesuai hak akses Anda.',ts:aiTm()})}</div>
   <div class="csg" id="aiSug">${AISUG.map(x=>`<button type="button" onclick="P2.aiAsk(this.textContent)">${x}</button>`).join('')}</div>
   <form class="cin" onsubmit="event.preventDefault();P2.aiSend();return false"><input id="aiIn" placeholder="Tulis pertanyaan…" autocomplete="off" maxlength="200" enterkeyhint="send"><button class="csend" id="aiGo" type="submit" aria-label="Kirim"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></button></form></div>`;
-  aiFit();aiScroll();
+  aiScroll();
 };
-window.addEventListener('resize',()=>{if(S.view==='ai')aiFit()});
 P2.aiSend=function(){const i=$('#aiIn');if(!i)return;const v=i.value;i.value='';P2.aiAsk(v)};
 P2.aiAsk=async function(t){
   t=String(t||'').trim().slice(0,200);if(!t||AI.busy)return;

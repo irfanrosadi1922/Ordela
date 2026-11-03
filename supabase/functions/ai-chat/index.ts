@@ -36,22 +36,25 @@ Deno.serve(async (req: Request) => {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 20000);
   try {
-    const r = await fetch((Deno.env.get("AI_BASE_URL") || "https://api.openai.com/v1").replace(/\/+$/, "") + "/chat/completions", {
+    const endpoint = (Deno.env.get("AI_BASE_URL") || "https://api.openai.com/v1").trim().replace(/\/+$/, "") + "/chat/completions";
+    const model = (Deno.env.get("AI_MODEL") || Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini").trim();
+    const r = await fetch(endpoint, {
       method: "POST", signal: ctrl.signal,
-      headers: { ...J, Authorization: `Bearer ${key}` },
+      headers: { ...J, Authorization: `Bearer ${key.trim()}` },
       body: JSON.stringify({
-        model: Deno.env.get("AI_MODEL") || Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini", temperature: 0.3, max_tokens: 400,
+        model, temperature: 0.3, max_tokens: 400,
         messages: [{ role: "system", content: sys }, { role: "user", content: `DATA TOKO (ringkasan):\n${ctx}\n\nPERTANYAAN: ${q}` }],
       }),
     });
-    const j = await r.json();
+    const j0 = await r.json().catch(() => null);
+    const j = Array.isArray(j0) ? j0[0] : j0;   // Gemini kadang membalas error dalam bentuk array
     if (!r.ok) {
       const raw = String(j?.error?.message ?? j?.message ?? (typeof j?.error === "string" ? j.error : "")).replace(/[\r\n]+/g, " ").slice(0, 140);
       const why: Record<number, string> = {
         400: "permintaan tidak valid (cek AI_MODEL)", 401: "API key salah/tidak berlaku (cek AI_API_KEY)", 402: "saldo penyedia AI habis (isi saldo)",
         403: "akses ditolak (key tidak punya izin atau wilayah diblokir)", 404: "alamat/model tidak ditemukan (cek AI_BASE_URL dan AI_MODEL)", 429: "kuota habis atau terlalu cepat",
       };
-      return out({ error: `Penyedia AI menolak (${r.status}): ${why[r.status] ?? "kesalahan penyedia"}${raw ? " — " + raw : ""}` }, 502);
+      return out({ error: `Penyedia AI menolak (${r.status}): ${why[r.status] ?? "kesalahan penyedia"}${raw ? " — " + raw : ""} [model=${model}, ${new URL(endpoint).host}${new URL(endpoint).pathname}]` }, 502);
     }
     const a = j?.choices?.[0]?.message?.content;
     return out({ answer: String(a ?? "").slice(0, 2000) });
