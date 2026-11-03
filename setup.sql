@@ -1354,7 +1354,10 @@ begin
     return jsonb_build_object('ok', true);
   end if;
 
-  if jsonb_typeof(p_messages) is distinct from 'array' or jsonb_array_length(p_messages) > 60 or length(p_messages::text) > 100000 then
+  if jsonb_typeof(p_messages) is distinct from 'array' then
+    return jsonb_build_object('error', 'invalid_messages');
+  end if;
+  if jsonb_array_length(p_messages) > 60 or length(p_messages::text) > 100000 then
     return jsonb_build_object('error', 'invalid_messages');
   end if;
   for v_item in select value from jsonb_array_elements(p_messages) loop
