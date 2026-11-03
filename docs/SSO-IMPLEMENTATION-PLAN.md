@@ -36,6 +36,22 @@ Cookie requirements:
 4. Verify same-browser login on both preview apps, role and permission enforcement, session timeout, printer/push behavior, and cross-app logout.
 5. Only after review, configure `api.ordela.my.id`, then app/POS custom domains and rollout. Keep rollback to the legacy path available.
 
+
+## Implementation progress (2026-11-04)
+- Added `worker/sso/index.js`: Cloudflare Worker gateway that proxies the existing `public.pos_api(jsonb)` RPC.
+- Added `sbapi.js` cookie transport behind the `window.POS_SSO_API` switch. It strips the legacy Authorization header, uses `credentials: include`, and adds the CSRF header on mutations.
+- Added app-shell support for an in-memory SSO session marker. In SSO mode, startup does not trust the old `pos_tok` or cached `pos_me`; the server must validate the HttpOnly cookie.
+- The SSO switch in `config.js` is intentionally empty/disabled. Existing login transport remains active until the gateway and client rollout are validated together.
+- Deployed a preview Worker at `https://ordela-sso-preview.irfanrosadi1922.workers.dev`. Its health endpoint returned HTTP 200 with `ok=true`, `pos=true`, and `sb=true`.
+- Worker bindings use the existing Supabase URL and publishable key only. No service-role key, Supabase schema, production DNS, or production app setting was changed.
+- GitHub Actions run `41706629162` passed both the app JavaScript syntax check and SSO Worker unit tests.
+
+## Remaining blockers before enabling SSO
+- The `workers.dev` preview and `pages.dev` app previews are different sites, so they cannot validate the real shared-domain cookie behavior. A temporary preview hostname under `ordela.my.id` is required for browser-level cross-subdomain testing.
+- The existing idle-timeout UI tracks activity in origin-scoped localStorage. Once POS and Business are split across origins, those local timers can disagree and one app could end a session while the user is active in the other. Shared cross-subdomain activity/idle enforcement must be designed and tested before enabling the SSO flag.
+- The login, logout, password-change, account setup, email verification, QR ordering, native push, printer, and iOS PWA flows still need end-to-end regression testing through the gateway.
+- The current PR remains a draft. Do not merge, attach production domains, or enable `POS_SSO_API` until the blockers above are closed.
+
 ## Not yet verified
 - End-to-end SSO, cookie behavior on iOS Safari/PWA, CSRF protection, push, printer, QR ordering, and native builds.
 - Whether any existing production deployment relies on the legacy same-origin Node server routes.
