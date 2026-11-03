@@ -103,3 +103,8 @@ The Ordela AI assistant now lives in `app-business-ai.js`, loaded after the Busi
 ## Business integrations feature boundary
 
 The Integration Center's provider connection UI, integration configuration forms, one-time webhook URL display/regeneration, test-order action, and disconnect flow now live in `app-business-integrations.js`. It registers the `integ` view and P2 actions after the shared `pos2.js` registry is initialized. Only the Business build includes this module; tests execute it in isolation and assert the POS build has no copy or script tag. This extraction does not grant GoFood, GrabFood, or ShopeeFood API access; official platform partner approval and credentials remain required.
+
+
+## Business branch and reservation feature boundaries
+
+Branch switching, consolidated branch reporting, inter-branch stock transfer, branch creation and deletion now live in `app-business-branches.js`. Reservation administration, creation, seating/cancellation actions, and the reservation view live in `app-business-reservations.js`. The small `P2.rsvFor` lookup remains in the shared operational runtime because the POS table screen uses it to show reserved tables. Both new feature modules are Business-only and are verified as isolated build artifacts; the shared POS table lookup is regression-tested separately.
