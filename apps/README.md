@@ -138,3 +138,8 @@ The setup SQL now provisions a store-scoped `pos.ai_history` table and a restric
 ## POS kitchen display feature boundary
 
 The KDS ticket board, station filter, local/online ticket state updates, and timed refresh now live in `app-pos-kds.js`. The POS build includes and loads this module after the shared operational registry; the Business build excludes it. Online-order reception itself remains shared, while the kitchen execution screen is POS-only. Automated tests validate the KDS view/action API and ensure the module is absent from Business.
+
+
+## Workspace HTML page separation
+
+The build now prunes full `section#v-*` page roots from the opposite workspace: POS output omits Business pages, and Business output omits POS cashier/table/shift/KDS pages. Shared account, attendance, online-order, settings, history, receipt-design and printer sections remain in both outputs. The build test parses the emitted section IDs and fails if a foreign workspace page leaks into an artifact or a required shared page is removed. The legacy root `index.html` is not modified by this build-time pruning; only `dist/pos` and `dist/business` are transformed.
