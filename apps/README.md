@@ -130,6 +130,10 @@ Promo and voucher administration (schedule/rules, code and automatic discounts, 
 Member directory, search, member profile/history, loyalty-point configuration, manual point adjustment, and member deletion now live in `app-business-members.js`. The POS checkout's member selection and point redemption/earning logic remains in the cashier runtime, while the Business-only member administration page is excluded from POS. The build tests check the Business handlers and the absence of this management module from POS.
 
 
+## Known security release gate: document read authorization
+
+The current `/api/data` GET route still returns the complete store JSON to any authenticated staff session. The server-side `pos.guard` validates writes, but it does not yet provide field-level read confidentiality. Hiding a page in the browser is not a security boundary. Before production release, implement and end-to-end test a permission-scoped document projection plus a server-side merge that preserves fields hidden from a role. Until that work is complete, staff roles must be treated as trusted within the same store; do not claim that role permissions protect sensitive reads such as supplier, purchase, expense, member, or item-cost data.
+
 ## AI conversation history and authorization
 
 The setup SQL now provisions a store-scoped `pos.ai_history` table and a restricted `public.ai_chat_history` RPC. The RPC validates the active Ordela session, resolves the owner’s active branch, checks the AI Manager permission, bounds message count/size, and only grants execution to `service_role`; the Edge Function never trusts a client-supplied user or store ID. The AI history endpoint maps unauthorized/forbidden results to HTTP errors, and the Business chat renderer sanitizes stored assistant HTML through a small element allowlist before inserting it into the page. Applying this SQL and configuring the Edge Function’s `SUPABASE_SERVICE_ROLE_KEY` secret are still deployment steps; neither was changed in production.
