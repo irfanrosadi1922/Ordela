@@ -125,6 +125,11 @@ if (mode === "pos") {
   if (!existsSync(catalogModule)) throw new Error("Required POS catalog module missing.");
   cpSync(catalogModule, join(output, "app-pos-catalog.js"));
 }
+if (mode === "pos") {
+  const checkoutModule = join(ROOT, "app-pos-checkout.js");
+  if (!existsSync(checkoutModule)) throw new Error("Required POS checkout module missing.");
+  cpSync(checkoutModule, join(output, "app-pos-checkout.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
@@ -206,6 +211,11 @@ const catalogTag = '<script src="app-pos-catalog.js"></script>';
 if (mode === "business" && html.includes(catalogTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(catalogTag, ""));
+}
+const checkoutTag = '<script src="app-pos-checkout.js"></script>';
+if (mode === "business" && html.includes(checkoutTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(checkoutTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
