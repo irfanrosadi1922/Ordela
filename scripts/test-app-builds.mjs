@@ -13,12 +13,12 @@ for (const mode of ["pos", "business"]) {
   for (const required of ["function ssCookieGet()", "function ssCookieSet(", "function ssCookieClear()", "Domain=.ordela.my.id", "function canView(v)"]) {
     if (!html.includes(required)) throw new Error("Missing required shared app behavior in " + mode + ": " + required);
   }
-  const scriptRe = /<script\\b([^>]*)>([\\s\\S]*?)<\\/script\\s*>/gi;
+  const scriptRe = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
   let match, count = 0;
   while ((match = scriptRe.exec(html))) {
-    if (/\\bsrc\\s*=/.test(match[1] || "")) continue;
-    const type = (match[1].match(/\\btype\\s*=\\s*["']?([^\\s"'>]+)/i) || [])[1] || "";
-    if (type && !/^(text|application)\\/(javascript|ecmascript)$/i.test(type) && type !== "module") continue;
+    if (/\bsrc\s*=/.test(match[1] || "")) continue;
+    const type = (match[1].match(/\btype\s*=\s*["']?([^\s"'>]+)/i) || [])[1] || "";
+    if (type && !/^(text|application)\/(javascript|ecmascript)$/i.test(type) && type !== "module") continue;
     if (!match[2].trim()) continue;
     new vm.Script(match[2], { filename: mode + "/index.html#inline-" + (++count) });
   }
