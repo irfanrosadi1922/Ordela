@@ -5,10 +5,20 @@ on:
     branches: [feat/ordela-multi-app-platform]
     paths:
       - "worker/sso/**"
+      - "index.html"
+      - "sbapi.js"
+      - "config.js"
+      - "auth.js"
+      - "apps/order/**"
       - ".github/workflows/sso-worker-tests.yml"
   pull_request:
     paths:
       - "worker/sso/**"
+      - "index.html"
+      - "sbapi.js"
+      - "config.js"
+      - "auth.js"
+      - "apps/order/**"
       - ".github/workflows/sso-worker-tests.yml"
 
 jobs:
@@ -19,5 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Check existing app JavaScript syntax
+        run: node worker/sso/test/check-app-syntax.mjs
       - name: Run SSO Worker unit tests
         run: node --test worker/sso/test/worker.test.js
