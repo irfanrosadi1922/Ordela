@@ -19,6 +19,16 @@
   window.fetch = function (input, o) {
     if (typeof input !== 'string' || input.indexOf('/api/') !== 0) return orig(input, o);
     o = o || {};
+    // SSO mode: only the HttpOnly cookie is sent to the central API gateway.
+    // Never forward a legacy bearer token from browser JavaScript.
+    if (window.POS_SSO_API) {
+      var h = new Headers(o.headers || {});
+      h.delete('Authorization');
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(String(o.method || 'GET').toUpperCase())) h.set('X-Ordela-Client', 'web-v1');
+      return orig(String(window.POS_SSO_API).replace(/\/+$/, '') + input, {
+        ...o, headers: h, credentials: 'include', cache: 'no-store'
+      });
+    }
     var u = new URL(input, 'http://x'), q = {}, b = {}, isMenu = u.pathname === '/api/public/menu';
     u.searchParams.forEach(function (v, k) { q[k] = v; });
     if (typeof o.body === 'string' && o.body) { try { b = JSON.parse(o.body); } catch (e) { return Promise.resolve(res(400, { error: 'bad json' })); } }
