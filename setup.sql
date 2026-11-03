@@ -419,7 +419,7 @@ begin
   if (cur -> 'seq') is distinct from (nxt -> 'seq') and not (pm ? 'pos') then
     return 'Akun ini tidak punya izin Kasir & Transaksi';
   end if;
-  if (cur -> 'occ') is distinct from (nxt -> 'occ') and not (pm ? 'pos') then
+  if (cur -> 'occ') is distinct from (nxt -> 'occ') and not (pm ? 'co' or pm ? 'pos') then
     return 'Akun ini tidak punya izin Kasir & Transaksi';
   end if;
   if (cur -> 'kds') is distinct from (nxt -> 'kds') and not (pm ? 'co' or pm ? 'pos') then
