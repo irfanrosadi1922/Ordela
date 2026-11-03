@@ -1,4 +1,4 @@
-const COOKIE = "__Host-ordela_session";
+const COOKIE = "__Secure-ordela_session";
 const COOKIE_DOMAIN = ".ordela.my.id";
 const MAX_BODY = 750_000;
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
