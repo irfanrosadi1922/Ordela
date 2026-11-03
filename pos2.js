@@ -387,7 +387,7 @@ async function aiCloud(q){
   // sebelum mengirim riwayat agar model hanya menerima teks percakapan.
   const history=AI.msgs.slice(-20).map(m=>{
     let content=String(m.t||'');
-    if(!m.me){const el=document.createElement('div');el.innerHTML=content;content=el.textContent||el.innerText||'';content=content.replace(/dijawab AI\\s*$/i,'').trim();}
+    if(!m.me){const el=document.createElement('div');el.innerHTML=content;content=el.textContent||el.innerText||'';content=content.replace(/dijawab AI\s*$/i,'').trim();}
     return {role:m.me?'user':'assistant',content:content.slice(0,2000)};
   }).filter(m=>m.content);
   try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx(),messages:history})});
