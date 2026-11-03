@@ -12,6 +12,24 @@ for (const mode of ["pos", "business"]) {
   const accessConfig = readFileSync(join(dir, "app-access.js"), "utf8");
   const navigationConfig = readFileSync(join(dir, "app-navigation.js"), "utf8");
   const appCore = readFileSync(join(dir, "app-core.js"), "utf8");
+  const payrollTag = '<script src="app-business-payroll.js"></script>';
+  const payrollPath = join(dir, "app-business-payroll.js");
+  if (mode === "business") {
+    if (!html.includes(payrollTag) || !existsSync(payrollPath)) throw new Error("Business payroll module is missing from Business build");
+    const payrollSource = readFileSync(payrollPath, "utf8");
+    new vm.Script(payrollSource, { filename: mode + "/app-business-payroll.js" });
+    const payrollSandbox = { window: {} };
+    vm.runInNewContext(payrollSource, payrollSandbox, { filename: mode + "/app-business-payroll.js" });
+    if (!payrollSandbox.window.PY || typeof payrollSandbox.window.pyRender !== "function" ||
+        typeof payrollSandbox.window.attPair !== "function" || typeof payrollSandbox.window.pyXlsx !== "function") {
+      throw new Error("Business payroll public feature API is incomplete");
+    }
+    if (appCore.includes("const PY=") || !appCore.includes("if(S.view==='pyr')pyRender();")) {
+      throw new Error("Payroll feature boundary or Business integration point is invalid");
+    }
+  } else if (html.includes(payrollTag) || existsSync(payrollPath)) {
+    throw new Error("Business payroll source leaked into POS build");
+  }
   const xlsxModule = readFileSync(join(dir, "app-export-xlsx.js"), "utf8");
   new vm.Script(xlsxModule, { filename: mode + "/app-export-xlsx.js" });
   if (!html.includes('<script src="app-export-xlsx.js"></script><script src="app-core.js"></script>')) {
