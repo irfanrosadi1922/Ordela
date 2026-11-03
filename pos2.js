@@ -383,7 +383,14 @@ function aiCtx(){
 }
 async function aiCloud(q){
   const C=window.POS_SB;if(!(C&&C.url)||!(CL.on&&CL.tok))return null;
-  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx()})});
+  // AI.msgs sudah berisi pesan pengguna terbaru. Bersihkan markup tampilan
+  // sebelum mengirim riwayat agar model hanya menerima teks percakapan.
+  const history=AI.msgs.slice(-20).map(m=>{
+    let content=String(m.t||'');
+    if(!m.me){const el=document.createElement('div');el.innerHTML=content;content=el.textContent||el.innerText||'';content=content.replace(/dijawab AI\\s*$/i,'').trim();}
+    return {role:m.me?'user':'assistant',content:content.slice(0,2000)};
+  }).filter(m=>m.content);
+  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx(),messages:history})});
     const j=await r.json().catch(()=>({}));
     if(r.ok&&j.answer)return esc(j.answer).replace(/\n/g,'<br>')+'<br><small style="opacity:.6">dijawab AI</small>';
     AI.why=r.status===404?'fungsi ai-chat belum di-deploy (404)':r.status===501?'secret AI_API_KEY belum diisi':'';
