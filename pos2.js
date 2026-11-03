@@ -217,71 +217,6 @@ P2.riwSet=function(r){RW.r=r;RW.n=30;V.riw()};
 P2.riwMore=function(){RW.n+=30;V.riw()};
 let riwT=0;P2.riwQ=function(v){RW.q=v;RW.n=30;clearTimeout(riwT);riwT=setTimeout(()=>{V.riw();const e=$('#riwQ');if(e){e.focus();e.setSelectionRange(v.length,v.length)}},180)};
 
-/* ================= CABANG ================= */
-P2.branch=async function(){
-  closeAll();
-  try{
-    const j=await (await api('/api/branches')).json();if(!j.list)throw 0;
-    openModal(`<h3>Cabang</h3><p class="hint" style="margin:0 0 8px">Tiap cabang punya menu, stok, laporan, dan karyawan sendiri. Ketuk untuk berpindah.</p>
-    <div class="brl">${j.list.map(x=>`<div class="brw"><button class="brb ${x.id===j.active?'on':''}" onclick="P2.brSwitch(${x.id})"><b>${esc(x.name)}</b><small>${x.id===j.hq?'Pusat':'Cabang'}${x.id===j.active?' · aktif':''}</small></button>${j.canAdd&&x.id!==j.hq?`<button class="brx" aria-label="Hapus cabang" onclick="P2.brDel(${x.id},'${esc(x.name).replace(/'/g,"\\'")}',${x.id===j.active},${j.hq})"><i class="ic solo" data-ic="trash"></i></button>`:''}</div>`).join('')}</div>
-    ${j.canAdd?`<label class="fl" for="brN">Tambah cabang baru</label><input class="fi" id="brN" maxlength="60" placeholder="Nama cabang"><button class="btn" onclick="P2.brAdd()">Buat &amp; buka cabang</button>`:''}
-    ${j.canAdd&&j.list.length>1?`<div class="two"><button class="btn sec" onclick="P2.brRep('today')">Laporan Gabungan</button><button class="btn sec" onclick="P2.brTr()">Transfer Stok</button></div>`:''}
-    <button class="btn sec" onclick="closeModal()">Tutup</button>`);
-    P2.brList=j.list;
-  }catch(e){toast('Gagal memuat cabang (perlu koneksi)')}
-};
-async function brApply(j){
-  CL.me.store={code:j.code,name:j.name};setMe(CL.me);
-  await localOwnerGuard(CL.me);closeModal();
-  try{await syncNow()}catch(e){}
-  applyBrand();applyAccess();go('pos');toast('Cabang aktif: '+j.name);
-}
-P2.brSwitch=async function(id){
-  try{const r=await api('/api/branches/switch',{method:'POST',body:JSON.stringify({id})});const j=await r.json();if(!r.ok)throw 0;await brApply(j)}catch(e){toast('Gagal berpindah cabang')}
-};
-P2.brRep=async function(per){
-  const now=new Date(),t0=dayStart(now);const from=per==='today'?t0:per==='7d'?t0-6*864e5:new Date(now.getFullYear(),now.getMonth(),1).getTime();
-  try{const r=await api('/api/branches/report',{method:'POST',body:JSON.stringify({from:new Date(from).toISOString()})});const j=await r.json();if(!r.ok)throw 0;
-    const T=j.rows.reduce((a,x)=>({n:a.n+x.n,t:a.t+x.total,g:a.g+x.gp}),{n:0,t:0,g:0});
-    openModal(`<h3>Laporan Gabungan</h3><div class="itabs">${[['today','Hari ini'],['7d','7 hari'],['month','Bulan ini']].map(([k,l])=>`<button class="${k===per?'on':''}" onclick="P2.brRep('${k}')">${l}</button>`).join('')}</div>
-    <div class="panel" style="padding:6px 4px">${j.rows.map(x=>`<div class="li" style="cursor:default"><span class="l"><b>${esc(x.name)}${x.hq?' <small>(pusat)</small>':''}</b><small>${x.n} transaksi · est. laba kotor ${money(x.gp)}</small></span><span class="r"><b>${money(x.total)}</b></span></div>`).join('')}
-    <div class="li" style="cursor:default;border-top:1px solid var(--ln)"><span class="l"><b>Total semua cabang</b><small>${T.n} transaksi · est. laba kotor ${money(T.g)}</small></span><span class="r"><b>${money(T.t)}</b></span></div></div>
-    <p class="hint" style="margin:8px 2px">Laba kotor = penjualan − modal barang. Data tiap cabang sesuai yang sudah tersinkron ke server.</p>
-    <button class="btn sec" onclick="P2.branch()">Kembali</button>`);
-  }catch(e){toast('Gagal memuat laporan (perlu koneksi)')}
-};
-P2.brTr=function(){
-  const o=(P2.brList||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
-  openModal(`<h3>Transfer Stok</h3><p class="hint" style="margin:0 0 8px">Pindahkan stok satu item antar cabang. Item harus sudah ada di kedua cabang (cocok lewat barcode atau nama yang sama).</p>
-  <div class="two"><div><label class="fl">Dari</label><select class="fi" id="trF">${o}</select></div><div><label class="fl">Ke</label><select class="fi" id="trT">${o}</select></div></div>
-  <label class="fl">Nama item atau barcode</label><input class="fi" id="trN" placeholder="Mis. Kopi Susu / 8999..." autocomplete="off">
-  <label class="fl">Jumlah</label><input class="fi" id="trQ" type="number" min="0" step="any" inputmode="decimal">
-  <button class="btn" onclick="P2.brTrGo()">Transfer</button><button class="btn sec" onclick="P2.branch()">Kembali</button>`);
-  const l=P2.brList||[];if(l[1])$('#trT').value=l[1].id;
-};
-P2.brTrGo=async function(){
-  const f=+$('#trF').value,t=+$('#trT').value,n=$('#trN').value.trim(),q=+$('#trQ').value;
-  if(f===t){toast('Pilih dua cabang yang berbeda');return}if(!n||!(q>0)){toast('Isi item dan jumlah');return}
-  const body={from:f,to:t,qty:q};if(/^\d{6,}$/.test(n))body.bc=n;else body.name=n;
-  try{const r=await api('/api/branches/transfer',{method:'POST',body:JSON.stringify(body)});const j=await r.json();
-    if(!r.ok){toast(j.error||'Transfer gagal');return}
-    toast('Transfer '+j.name+' ×'+j.qty+' berhasil');closeModal();try{await syncNow()}catch(e){}
-  }catch(e){toast('Transfer gagal (perlu koneksi)')}
-};
-P2.brDel=async function(id,name,isActive,hq){
-  if(!confirm('Hapus cabang "'+name+'"?\n\nSemua data cabang ini (menu, stok, transaksi, karyawan, pesanan) akan dihapus permanen dan tidak bisa dikembalikan.'))return;
-  const pw=prompt('Masukkan kata sandi Anda untuk menghapus cabang "'+name+'"');if(!pw)return;
-  try{const r=await api('/api/branches/delete',{method:'POST',body:JSON.stringify({id,password:pw})});const j=await r.json();
-    if(!r.ok){toast(j.error||'Gagal menghapus cabang');return}
-    toast('Cabang dihapus');
-    if(isActive){const l=await (await api('/api/branches')).json();const h=l.list.find(x=>x.id===hq)||l.list[0];await brApply(h)}else P2.branch()
-  }catch(e){toast('Gagal menghapus cabang')}
-};
-P2.brAdd=async function(){
-  const n=($('#brN').value||'').trim();if(n.length<2){toast('Isi nama cabang');return}
-  try{const r=await api('/api/branches',{method:'POST',body:JSON.stringify({name:n})});const j=await r.json();if(!r.ok)throw j;await brApply(j)}catch(e){toast((e&&e.error)||'Gagal membuat cabang')}
-};
-
 /* ================= PISAH TAGIHAN PER ITEM ================= */
 const SP={sel:{}};
 P2.splitForm=function(){
@@ -425,27 +360,6 @@ P2.giftDel=function(id){const g=db.gifts.find(x=>x.id===id);if(!g||!confirm('Hap
 const RS={};
 const rsAct=()=>live(db.rsv).filter(r=>r.st==='res');
 P2.rsvFor=function(k){const now=Date.now();return rsAct().filter(r=>tkey(r.tbl)===tkey(k)&&new Date(r.t).getTime()<now+3*36e5&&new Date(r.t).getTime()>now-45*6e4)};
-V.rsv=function(){
-  const el=$('#v-rsv');if(!el)return;const l=rsAct().sort((a,b)=>a.t<b.t?-1:1),past=live(db.rsv).filter(r=>r.st!=='res').sort((a,b)=>b.t<a.t?-1:1).slice(0,8);
-  const tm=t=>new Date(t).toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'}).replace('.',':');
-  const dy=t=>{const d=new Date(t),n=new Date();return d.toDateString()===n.toDateString()?'Hari ini':d.toLocaleDateString(dloc(),{weekday:'short',day:'numeric',month:'short'})};
-  const row=r=>`<div class="rsr"><span class="tm">${tm(r.t)}</span><span class="in"><b>${esc(r.name)}</b> · Meja ${esc(r.tbl||'-')}<small>${esc(dy(r.t))} · ${r.pax||1} orang${r.phone?' · '+esc(r.phone):''}${r.note?' · '+esc(r.note):''}</small></span>${r.st==='res'?`<span class="ac"><button class="go" onclick="P2.rsvSet('${r.id}','seated')">Datang</button><button onclick="P2.rsvSet('${r.id}','cancel')">Batal</button></span>`:`<small>${r.st==='seated'?'datang':'batal'}</small>`}</div>`;
-  el.innerHTML=bar('<i class="ic" data-ic="cal"></i>Reservasi Meja','<button class="btn sm" style="width:auto;margin:0" onclick="P2.rsvForm()">+ Reservasi</button>')+(l.length?l.map(row).join(''):'<div class="panel"><div class="mt">Belum ada reservasi aktif.</div></div>')+(past.length?'<div class="mgh" style="margin:14px 2px 8px">Riwayat terakhir</div>'+past.map(row).join(''):'');
-};
-P2.rsvForm=function(){
-  const d=new Date(Date.now()+36e5);const pad=n=>String(n).padStart(2,'0');const v=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':00';
-  openModal(`<h3>Reservasi Meja</h3><label class="fl">Nama</label><input class="fi" id="rvN" maxlength="40"><div class="two"><div><label class="fl">No. meja</label><input class="fi" id="rvT" maxlength="12" inputmode="text" autocapitalize="characters"></div><div><label class="fl">Jumlah orang</label><input class="fi" id="rvP" type="number" min="1" value="2"></div></div>
-  <label class="fl">Waktu</label><input class="fi" id="rvW" type="datetime-local" value="${v}"><label class="fl">No. HP (opsional)</label><input class="fi" id="rvH" inputmode="tel" maxlength="20"><label class="fl">Catatan (opsional)</label><input class="fi" id="rvC" maxlength="80">
-  <button class="btn" onclick="P2.rsvSave()">Simpan</button><button class="btn sec" onclick="closeModal()">Batal</button>`);
-};
-P2.rsvSave=function(){
-  const n=($('#rvN').value||'').trim(),t=($('#rvT').value||'').trim().slice(0,12),w=$('#rvW').value;if(!n||!t||!w){toast('Isi nama, meja, dan waktu');return}
-  const at=new Date(w);if(isNaN(at)){toast('Waktu tidak valid');return}
-  if(rsAct().some(r=>tkey(r.tbl)===tkey(t)&&Math.abs(new Date(r.t)-at)<2*36e5)){if(!confirm('Meja '+t+' sudah dipesan dalam rentang 2 jam. Tetap simpan?'))return}
-  db.rsv.unshift({id:'v'+uid(),name:n,tbl:t,pax:Math.max(1,+$('#rvP').value||1),t:at.toISOString(),phone:$('#rvH').value.trim(),note:$('#rvC').value.trim(),st:'res',by:myName(),u:Date.now()});
-  save();closeModal();toast('Reservasi disimpan');V.rsv();
-};
-P2.rsvSet=function(id,st){const r=db.rsv.find(x=>x.id===id);if(!r)return;r.st=st;r.u=Date.now();save();V.rsv();if(S.view==='table')renderTable()};
 const tkey=t=>String(t==null?'':t).trim().toUpperCase();
 
 /* ================= LAYAR PELANGGAN (layar kedua) ================= */
