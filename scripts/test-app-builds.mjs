@@ -17,7 +17,7 @@ for (const field of ["holds", "seq", "occ"]) {
     throw new Error("POS operational state is missing server-side permission enforcement: " + field);
   }
 }
-if (!setupSql.includes("not (pm ? 'co' or pm ? 'pos')") ||
+if (!setupSql.includes("not (pm ? 'kds' or pm ? 'co' or pm ? 'pos')") ||
     !setupSql.includes("cur -> 'voided') is distinct from (nxt -> 'voided')")) {
   throw new Error("Kitchen or void-audit state is missing server-side permission enforcement");
 }
