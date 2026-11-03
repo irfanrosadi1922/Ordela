@@ -9,8 +9,9 @@ for (const file of direct) {
 for (const file of ["index.html", "apps/order/index.html"]) {
   const html = readFileSync(file, "utf8");
   if (file === "index.html") {
+    const runtimeSource = html + "\\n" + readFileSync("app-core.js", "utf8");
     for (const required of ["function ssCookieGet()", "function ssCookieSet(", "function ssCookieClear()", "Domain=.ordela.my.id", "ssCookieGet()"]) {
-      if (!html.includes(required)) throw new Error("Missing shared idle-session behavior: " + required);
+      if (!runtimeSource.includes(required)) throw new Error("Missing shared idle-session behavior: " + required);
     }
   }
   const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
