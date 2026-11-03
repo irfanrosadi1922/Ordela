@@ -3968,7 +3968,7 @@ function cloudLogout(msg){
   try{if(window.nativePush&&CL.tok)nativePush.off((p,o)=>fetch(p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+CL.tok}}))}catch(e){}
   try{if(CL.tok&&'PushManager' in window)coPushOff(CL.tok)}catch(e){}
   serverLogout();ssWarnHide();
-  CL.tok='';setMe(null);try{localStorage.removeItem('pos_tok');localStorage.removeItem('pos_act')}catch(e){}
+  CL.tok='';setMe(null);try{localStorage.removeItem('pos_tok');localStorage.removeItem('pos_act')}catch(e){};ssCookieClear();
   CO.list=[];CO.rev=0;CO.seen.clear();
   setSt('auth');closeAll();closeModal();applyAccess();go('pos');showLogin(typeof msg==='string'?msg:'');
 }
@@ -3977,14 +3977,17 @@ function cloudLogout(msg){
 const SS={last:Date.now(),warn:false,on:false};
 function idleMin(){const v=db&&db.set?db.set.idle:null;return v==null?30:Math.max(0,+v||0)}   // menit; 0 = tidak pernah
 function fmtIdle(m){return m<60||m%60?m+' menit':(m/60)+' jam'}
-function ssStamp(){SS.last=Date.now();try{localStorage.setItem('pos_act',String(SS.last))}catch(e){}}
+function ssCookieGet(){try{const x=document.cookie.split(';').map(v=>v.trim()).find(v=>v.indexOf('ordela_pos_act=')===0);return x?Number(x.slice(15))||0:0}catch(e){return 0}}
+function ssCookieSet(v){try{const shared=location.hostname==='ordela.my.id'||location.hostname.endsWith('.ordela.my.id');document.cookie='ordela_pos_act='+String(v)+'; Path=/; Max-Age=86400; SameSite=Lax; Secure'+(shared?'; Domain=.ordela.my.id':'')}catch(e){}}
+function ssCookieClear(){try{const shared=location.hostname==='ordela.my.id'||location.hostname.endsWith('.ordela.my.id');document.cookie='ordela_pos_act=; Path=/; Max-Age=0; SameSite=Lax; Secure'+(shared?'; Domain=.ordela.my.id':'')}catch(e){}}
+function ssStamp(){SS.last=Date.now();try{localStorage.setItem('pos_act',String(SS.last))}catch(e){}ssCookieSet(SS.last)}
 function ssWarnHide(){if(!SS.warn)return;SS.warn=false;const w=$('#sesw');if(w)w.hidden=true}
 function ssWarnShow(sec){SS.warn=true;const w=$('#sesw');if(w)w.hidden=false;const t=$('#seswT');if(t)t.textContent=sec}
 function ssExempt(){return S.view==='co'&&can('co')&&coAuto()}   // layar dapur yang menerima & mencetak pesanan tidak ikut keluar
 function ssCheck(){
   if(!CL.on||!CL.tok){ssWarnHide();return}
   const m=idleMin();if(!m){ssWarnHide();return}
-  try{const a=+localStorage.getItem('pos_act')||0;if(a>SS.last)SS.last=a}catch(e){}
+  try{const a=Math.max(+localStorage.getItem('pos_act')||0,ssCookieGet());if(a>SS.last)SS.last=a}catch(e){}
   if(ssExempt()){if(Date.now()-SS.last>20000)ssStamp();ssWarnHide();return}
   const left=m*60000-(Date.now()-SS.last);
   if(left<=0){cloudLogout('Anda keluar otomatis karena tidak ada aktivitas selama '+fmtIdle(m)+'. Masuk lagi untuk melanjutkan.');return}
@@ -3997,7 +4000,7 @@ function ssAct(){
 }
 function ssStart(){
   if(SS.on)return;SS.on=true;
-  let a=0;try{a=+localStorage.getItem('pos_act')||0}catch(e){}
+  let a=0;try{a=Math.max(+localStorage.getItem('pos_act')||0,ssCookieGet())}catch(e){}
   SS.last=a||Date.now();if(!a&&CL.tok)ssStamp();
   ['pointerdown','keydown','touchstart','wheel','scroll'].forEach(e=>document.addEventListener(e,ssAct,{passive:true,capture:true}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)ssCheck()});
