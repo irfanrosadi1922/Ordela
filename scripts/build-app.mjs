@@ -12,6 +12,7 @@ const output = join(ROOT, "dist", mode);
 const publicFiles = [
   "app-access.js",
   "app-core.js",
+  "app-export-xlsx.js",
   "app-mode.js",
   "app-navigation.js",
   "auth.js",
