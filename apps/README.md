@@ -98,3 +98,8 @@ Operating-expense entry, profit calculation, supplier management, purchases, sup
 ## Business AI assistant feature boundary
 
 The Ordela AI assistant now lives in `app-business-ai.js`, loaded after the Business finance module because its store analysis reads the shared profit summary. It owns the guided feature-help responses, data-aware analysis entry point, AI cloud request, per-account conversation history, and chat UI. The Business artifact includes and tests the P2 AI API; the POS artifact excludes the module and its script reference. The AI still relies on existing server-side authorization and the configured AI Edge Function; this extraction does not change provider credentials or production AI configuration.
+
+
+## Business integrations feature boundary
+
+The Integration Center's provider connection UI, integration configuration forms, one-time webhook URL display/regeneration, test-order action, and disconnect flow now live in `app-business-integrations.js`. It registers the `integ` view and P2 actions after the shared `pos2.js` registry is initialized. Only the Business build includes this module; tests execute it in isolation and assert the POS build has no copy or script tag. This extraction does not grant GoFood, GrabFood, or ShopeeFood API access; official platform partner approval and credentials remain required.
