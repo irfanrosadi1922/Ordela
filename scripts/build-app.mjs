@@ -120,6 +120,11 @@ if (mode === "pos") {
   if (!existsSync(kdsModule)) throw new Error("Required POS kitchen display module missing.");
   cpSync(kdsModule, join(output, "app-pos-kds.js"));
 }
+if (mode === "pos") {
+  const catalogModule = join(ROOT, "app-pos-catalog.js");
+  if (!existsSync(catalogModule)) throw new Error("Required POS catalog module missing.");
+  cpSync(catalogModule, join(output, "app-pos-catalog.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
@@ -196,6 +201,11 @@ const kdsTag = '<script src="app-pos-kds.js"></script>';
 if (mode === "business" && html.includes(kdsTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(kdsTag, ""));
+}
+const catalogTag = '<script src="app-pos-catalog.js"></script>';
+if (mode === "business" && html.includes(catalogTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(catalogTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
