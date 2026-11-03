@@ -12,7 +12,11 @@ if (!setupSql.includes('"att","ai","gift","rsv"]\'::jsonb')) throw new Error("Ow
 if (!setupSql.includes("if not pos.can(me, 'ai') then return pos.r(403")) throw new Error("AI Manager API is missing server-side permission enforcement");
 if (!setupSql.includes("not (pm ? 'gift' or pm ? 'pos')") || !setupSql.includes("not (pm ? 'rsv')")) throw new Error("Gift or reservation writes are missing server-side permission enforcement");
 if (!setupSql.includes("not (pm ? 'inv' or pm ? 'opn' or pm ? 'pos')") || !setupSql.includes("cur -> 'log') is distinct from (nxt -> 'log')")) throw new Error("Stock or stock-log writes are missing server-side permission enforcement");
-if (!setupSql.includes("'perms', '[\\\"pos\\\",\\\"shift\\\",\\\"co\\\",\\\"kds\\\",\\\"mem\\\",\\\"inv\\\",\\\"opn\\\",\\\"buy\\\",\\\"exp\\\",\\\"hist\\\",\\\"prn\\\",\\\"set\\\",\\\"att\\\",\\\"ai\\\",\\\"gift\\\",\\\"rsv\\\"]'::jsonb")) throw new Error("User administration permission catalog is out of sync");
+const ownerPermissionMatch = setupSql.match(/'perms',\s*'(\[[^']+\])'::jsonb/);
+const ownerPermissions = ownerPermissionMatch ? JSON.parse(ownerPermissionMatch[1]) : [];
+const expectedOwnerPermissions = ["pos", "shift", "co", "kds", "mem", "inv", "opn", "buy", "exp", "hist", "prn", "set", "att", "ai", "gift", "rsv"];
+if (JSON.stringify(ownerPermissions) !== JSON.stringify(expectedOwnerPermissions)) throw new Error("User administration permission catalog is out of sync");
+
 for (const mode of ["pos", "business"]) {
   const dir = join(root, "dist", mode);
   const meta = JSON.parse(readFileSync(join(dir, "ordela-app.json"), "utf8"));
