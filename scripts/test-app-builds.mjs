@@ -21,6 +21,7 @@ if (!setupSql.includes("not (pm ? 'co' or pm ? 'pos')") ||
     !setupSql.includes("cur -> 'voided') is distinct from (nxt -> 'voided')")) {
   throw new Error("Kitchen or void-audit state is missing server-side permission enforcement");
 }
+if (!setupSql.includes("cur -> 'occ') is distinct from (nxt -> 'occ') and not (pm ? 'co' or pm ? 'pos')")) throw new Error("Kitchen table-clear permission is not reflected in the occupancy guard");
 const ownerPermissionMatch = setupSql.match(/'perms',\s*'(\[[^']+\])'::jsonb/);
 const ownerPermissions = ownerPermissionMatch ? JSON.parse(ownerPermissionMatch[1]) : [];
 const expectedOwnerPermissions = ["pos", "shift", "co", "kds", "mem", "inv", "opn", "buy", "exp", "hist", "prn", "set", "att", "ai", "gift", "rsv"];
