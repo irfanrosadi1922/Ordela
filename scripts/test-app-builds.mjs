@@ -26,6 +26,40 @@ for (const mode of ["pos", "business"]) {
   const aiPath = join(dir, "app-business-ai.js");
   const integrationsTag = '<script src="app-business-integrations.js"></script>';
   const integrationsPath = join(dir, "app-business-integrations.js");
+  const branchesTag = '<script src="app-business-branches.js"></script>';
+  const branchesPath = join(dir, "app-business-branches.js");
+  if (mode === "business") {
+    if (!html.includes(branchesTag) || !existsSync(branchesPath)) throw new Error("Business branches module is missing from Business build");
+    const branchesSource = readFileSync(branchesPath, "utf8");
+    new vm.Script(branchesSource, { filename: mode + "/app-business-branches.js" });
+    const branchesP2 = {};
+    const branchesSandbox = { window: { P2: branchesP2 }, P2: branchesP2 };
+    vm.runInNewContext(branchesSource, branchesSandbox, { filename: mode + "/app-business-branches.js" });
+    for (const name of ["branch", "brSwitch", "brRep", "brTr", "brTrGo", "brDel", "brAdd"]) {
+      if (typeof branchesP2[name] !== "function") throw new Error("Business branches API missing P2." + name);
+    }
+  } else if (html.includes(branchesTag) || existsSync(branchesPath)) {
+    throw new Error("Business branches source leaked into POS build");
+  }
+  const reservationsTag = '<script src="app-business-reservations.js"></script>';
+  const reservationsPath = join(dir, "app-business-reservations.js");
+  if (mode === "business") {
+    if (!html.includes(reservationsTag) || !existsSync(reservationsPath)) throw new Error("Business reservations module is missing from Business build");
+    const reservationsSource = readFileSync(reservationsPath, "utf8");
+    new vm.Script(reservationsSource, { filename: mode + "/app-business-reservations.js" });
+    const reservationsP2 = { views: {} };
+    const reservationsSandbox = { window: { P2: reservationsP2 }, P2: reservationsP2 };
+    vm.runInNewContext(reservationsSource, reservationsSandbox, { filename: mode + "/app-business-reservations.js" });
+    for (const name of ["rsvForm", "rsvSave", "rsvSet"]) {
+      if (typeof reservationsP2[name] !== "function") throw new Error("Business reservations API missing P2." + name);
+    }
+    if (typeof reservationsP2.views.rsv !== "function") throw new Error("Business reservations view is not registered");
+  } else if (html.includes(reservationsTag) || existsSync(reservationsPath)) {
+    throw new Error("Business reservations source leaked into POS build");
+  }
+  if (mode === "business" && !readFileSync(join(root, "pos2.js"), "utf8").includes("P2.rsvFor=function(k)")) {
+    throw new Error("Shared POS table reservation lookup was removed");
+  }
   if (mode === "business") {
     if (!html.includes(integrationsTag) || !existsSync(integrationsPath)) throw new Error("Business integrations module is missing from Business build");
     const integrationsSource = readFileSync(integrationsPath, "utf8");
@@ -152,11 +186,13 @@ for (const mode of ["pos", "business"]) {
   const dashboardTagIndex = html.indexOf(dashboardTag);
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const branchesTagIndex = html.indexOf(branchesTag);
+  const reservationsTagIndex = html.indexOf(reservationsTag);
   const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0))) {
+      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
