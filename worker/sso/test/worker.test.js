@@ -105,6 +105,28 @@ test("staging API cookie is scoped to Ordela subdomains", async (t) => {
   assert.match(r.headers.get("Set-Cookie"), /Domain=\.ordela\.my\.id/);
 });
 
+test("preview logout clears the shared Ordela subdomain cookie", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => new Response(JSON.stringify({
+    s: 200, b: { ok: true }
+  }), { status: 200 }));
+  const r = await worker.fetch(new Request("https://api-preview.ordela.my.id/api/logout", {
+    method: "POST",
+    headers: {
+      Origin: "https://pos-preview.ordela.my.id",
+      Cookie: "__Secure-ordela_session=ps_test_secret_token_123456789",
+      "Content-Type": "application/json",
+      "X-Ordela-Client": "web-v1"
+    },
+    body: "{}"
+  }), {
+    ...env,
+    ALLOWED_ORIGINS: "https://app-preview.ordela.my.id,https://pos-preview.ordela.my.id"
+  });
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("Set-Cookie"), /Domain=\\.ordela\\.my\\.id/);
+  assert.match(r.headers.get("Set-Cookie"), /Max-Age=0/);
+});
+
 test("health endpoint is available for infrastructure checks without browser Origin", async (t) => {
   t.mock.method(globalThis, "fetch", async () => new Response(JSON.stringify({
     s: 200, b: { ok: true, pos: true, sb: true }
