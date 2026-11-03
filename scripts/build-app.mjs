@@ -65,6 +65,11 @@ if (mode === "business") {
   if (!existsSync(dashboardModule)) throw new Error("Required Business dashboard module missing.");
   cpSync(dashboardModule, join(output, "app-business-dashboard.js"));
 }
+if (mode === "business") {
+  const financeModule = join(ROOT, "app-business-finance.js");
+  if (!existsSync(financeModule)) throw new Error("Required Business finance module missing.");
+  cpSync(financeModule, join(output, "app-business-finance.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
@@ -86,6 +91,11 @@ const dashboardTag = '<script src="app-business-dashboard.js"></script>';
 if (mode === "pos" && html.includes(dashboardTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(dashboardTag, ""));
+}
+const financeTag = '<script src="app-business-finance.js"></script>';
+if (mode === "pos" && html.includes(financeTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(financeTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
