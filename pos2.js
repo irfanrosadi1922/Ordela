@@ -330,6 +330,7 @@ const AIH={ // bantuan memakai aplikasi: [kata kunci, jawaban]
  absen:[['absen','absensi','payroll','gaji'],'Absensi: menu <b>Absensi</b> untuk clock in/out (lokasi dan foto). Gaji dihitung di <b>Payroll</b> (owner).']};
 function aiAnswer(raw){
   const q=aiN(raw);if(!q)return'Silakan tulis pertanyaan Anda.';
+  if(aiHas(q,'kenapa','mengapa','penyebab','analisis','analisa','rekomendasi','sarankan','strategi','menu apa','menu mana','cocok didiskon','omzet turun','omset turun','penjualan turun')&&aiHas(q,'omzet','omset','penjualan','transaksi','menu','diskon','promo','stok','laba','toko'))return null;
   const own=isOwner(),H=can('hist')||own;const r=aiRange(q);
   const gate=()=>r.need&&!H?'Data '+r.l+' butuh izin <b>Riwayat</b>. Saya bisa menjawab untuk <b>hari ini</b>.':'';
   const os=aiOrders(r),rev=os.reduce((a,b)=>a+(+b.total||0),0);
