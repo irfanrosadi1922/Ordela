@@ -393,7 +393,7 @@ async function aiCloud(q){
 }
 
 const aiTm=()=>new Date().toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
-const aiBub=m=>`<div class="cr ${m.me?'me':''}">${m.me?'':'<span class="cav"><i class="ic" data-ic="bolt"></i></span>'}<div class="cbw"><div class="cb">${m.me?esc(m.t):m.t}</div><small>${esc(m.ts||'')}</small></div></div>`;
+const aiBub=m=>`<div class="cr ${m.me?'me':''}">${m.me?'':'<span class="cav"><img class="ai-logo" src="brand/ordela-mark.svg" alt="Ordela"></span>'}<div class="cbw"><div class="cb">${m.me?esc(m.t):m.t}</div><small>${esc(m.ts||'')}</small></div></div>`;
 const AISUG=['Omzet hari ini','Menu terlaris minggu ini','Stok menipis','Jam ramai','Laba bulan ini','Pasangan menu untuk upsell','Cara split bill','Cara buka shift'];
 function aiScroll(){const l=$('#aiLog');if(l)l.scrollTop=l.scrollHeight}
 async function aiHistoryRequest(action,messages){
@@ -423,7 +423,7 @@ V.ai=function(){
   const uid=CL.on&&CL.tok&&CL.me&&CL.me.id?String(CL.me.id):'';
   if(AI.uid!==uid){AI.uid=uid;AI.msgs=[];AI.loaded=!uid;AI.loading=false;}
   const load=!!uid&&!AI.loaded&&!AI.loading;if(load)AI.loading=true;
-  el.innerHTML=`<div class="chat" id="aiChat"><div class="chh"><span class="cav lg"><i class="ic" data-ic="bolt"></i></span><div class="cht"><b>Asisten Ordela</b><small><i class="cdot"></i>Siap membantu · jawaban dari data toko ini</small></div><button class="cclr" type="button" onclick="P2.aiClear()" aria-label="Hapus percakapan" title="Hapus percakapan">Hapus</button></div>
+  el.innerHTML=`<div class="chat" id="aiChat"><div class="chh"><span class="cav lg"><img class="ai-logo" src="brand/ordela-mark.svg" alt="Ordela"></span><div class="cht"><b>Asisten Ordela</b><small><i class="cdot"></i>Siap membantu · jawaban dari data toko ini</small></div><button class="cclr" type="button" onclick="P2.aiClear()" aria-label="Hapus percakapan" title="Hapus percakapan">Hapus</button></div>
   <div class="clog" id="aiLog">${AI.loading?'<p class="hint">Memuat riwayat percakapan…</p>':AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten Ordela. Tanyakan penjualan, stok, jam ramai, atau cara memakai aplikasi. Saya hanya menampilkan data sesuai hak akses Anda.',ts:aiTm()})}</div>
   <div class="csg" id="aiSug">${AISUG.map(x=>`<button type="button" onclick="P2.aiAsk(this.textContent)">${x}</button>`).join('')}</div>
   <form class="cin" onsubmit="event.preventDefault();P2.aiSend();return false"><input id="aiIn" ${AI.loading?'disabled':''} placeholder="Tulis pertanyaan…" autocomplete="off" maxlength="200" enterkeyhint="send"><button class="csend" id="aiGo" ${AI.loading?'disabled':''} type="submit" aria-label="Kirim"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></button></form></div>`;
@@ -437,7 +437,7 @@ P2.aiAsk=async function(t){
   const add=m=>{m.ts=aiTm();AI.msgs.push(m);log.insertAdjacentHTML('beforeend',aiBub(m));aiScroll()};
   add({me:1,t});let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
   if(a===null){AI.busy=1;const go=$('#aiGo');if(go)go.disabled=true;
-    log.insertAdjacentHTML('beforeend','<div class="cr" id="aiTyp"><span class="cav"><i class="ic" data-ic="bolt"></i></span><div class="cbw"><div class="cb typ"><i></i><i></i><i></i></div></div></div>');aiScroll();
+    log.insertAdjacentHTML('beforeend','<div class="cr" id="aiTyp"><span class="cav"><img class="ai-logo" src="brand/ordela-mark.svg" alt="Ordela"></span><div class="cbw"><div class="cb typ"><i></i><i></i><i></i></div></div></div>');aiScroll();
     AI.why='';a=await aiCloud(t);const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false;if(a===null)a=AIMISS+(AI.why&&isOwner()?'<br><small style="opacity:.65">AI cloud tidak aktif: '+esc(AI.why)+'.</small>':'')}
   add({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);aiHistorySave();
   const i=$('#aiIn');if(i&&matchMedia('(hover:hover)').matches)i.focus();
