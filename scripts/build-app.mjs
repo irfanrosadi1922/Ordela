@@ -3,6 +3,25 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+function removeSectionById(source, id) {
+  const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+");
+  const opening = new RegExp("<section\\b(?=[^>]*\\bid=[\\\"']" + escaped + "[\\\"'])[^>]*>", "i");
+  const match = opening.exec(source);
+  if (!match) return source;
+  const tags = /<\\/?section\\b[^>]*>/gi;
+  tags.lastIndex = match.index;
+  let depth = 0, end = -1, tag;
+  while ((tag = tags.exec(source))) {
+    if (/^<\\//.test(tag[0])) depth--;
+    else if (!/\\/\\s*>$/.test(tag[0])) depth++;
+    if (depth === 0) { end = tags.lastIndex; break; }
+  }
+  if (end < 0) throw new Error("Unclosed app view section: " + id);
+  return source.slice(0, match.index) + source.slice(end);
+}
+
 const mode = process.argv[2];
 if (!["pos", "business"].includes(mode)) {
   throw new Error("Usage: node scripts/build-app.mjs <pos|business>");
@@ -187,6 +206,14 @@ if (mode === "business" && html.includes(kdsTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(kdsTag, ""));
 }
+const modeHtmlPath = join(output, "index.html");
+let modeHtml = readFileSync(modeHtmlPath, "utf8");
+const exclusiveViews = mode === "pos"
+  ? ["home", "inv", "usr", "pyr", "integ", "gift", "rsv", "opname", "exp", "mem", "buy", "promo", "ai", "branch"]
+  : ["pos", "table", "shift", "kds"];
+for (const view of exclusiveViews) modeHtml = removeSectionById(modeHtml, "v-" + view);
+writeFileSync(modeHtmlPath, modeHtml);
+
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
 }
