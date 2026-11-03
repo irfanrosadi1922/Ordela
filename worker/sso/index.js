@@ -39,7 +39,7 @@ function cookieValue(token, host) {
   return `${COOKIE}=${token}; Path=/; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax${domain}`;
 }
 function clearCookie(host) {
-  const domain = host === "api.ordela.my.id" ? `; Domain=${COOKIE_DOMAIN}` : "";
+  const domain = (host === "api.ordela.my.id" || host === "api-preview.ordela.my.id") ? `; Domain=${COOKIE_DOMAIN}` : "";
   return `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax${domain}`;
 }
 function validOrigin(origin, env) {
