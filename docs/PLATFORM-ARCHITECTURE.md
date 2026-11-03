@@ -23,7 +23,7 @@ Status: migration design only. Production routing and DNS are intentionally unch
 - The current repository is a static, root-level web app with a large index.html (~504 KB), a separate order.html (~51 KB), and supporting JavaScript files.
 - app.ordela.my.id currently points to GitHub Pages (irfanrosadi1922.github.io).
 - Cloudflare zone ordela.my.id is active and currently contains apex GitHub Pages A records, app/www CNAME records, and Resend email records.
-- No Cloudflare Pages projects currently exist in the account.
+- A Cloudflare Pages staging project named `ordela-platform-preview` now exists and has one successful static deployment from `feat/ordela-multi-app-platform`. No production app custom domains are attached.
 - The production branch is main. Work must be staged on a feature branch and reviewed before merge.
 
 ## Migration sequence
