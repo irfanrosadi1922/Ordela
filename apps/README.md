@@ -29,3 +29,11 @@ The build pipeline now emits two separate static artifacts from the shared root 
 Each output locks its app mode at build time, includes its own public asset tree and app metadata, and excludes repository-only content and the root `CNAME`. The existing Supabase/API session integration is retained. Run `npm run test:apps` after both builds to validate mode isolation, required assets, SSO/session code, and inline JavaScript syntax.
 
 **Important limitation:** this is an independent deployment artifact boundary, not yet independent feature source code. Both builds still derive from the shared monolithic `index.html`; feature modules must be extracted in a later phase. The two preview hostnames still need separate Cloudflare Pages projects before they can be called independently deployed applications. The current preview config must not be used for production domains.
+
+## Dedicated Cloudflare Pages preview projects
+
+Two separate Pages projects have been provisioned without changing the existing staging hostnames or production DNS:
+- `ordela-business-preview` → build command `npm run build:business`, output `dist/business`, Pages host `ordela-business-preview.pages.dev`.
+- `ordela-pos-preview` → build command `npm run build:pos`, output `dist/pos`, Pages host `ordela-pos-preview.pages.dev`.
+
+The first deployments are triggered by the next branch commit. The old `app-preview.ordela.my.id` and `pos-preview.ordela.my.id` aliases remain attached to the original shared Pages project until the new builds are deployed and browser-tested. No production hostname or DNS record was changed.
