@@ -9,6 +9,7 @@ for (const mode of ["pos", "business"]) {
   if (meta.mode !== mode || meta.buildTarget !== "preview") throw new Error("Incorrect build metadata: " + mode);
   const html = readFileSync(join(dir, "index.html"), "utf8");
   const modeConfig = readFileSync(join(dir, "app-mode.js"), "utf8");
+  new vm.Script(modeConfig, { filename: mode + "/app-mode.js" });
   if (!modeConfig.includes("window.ORDELA_APP_CONFIG") || !modeConfig.includes("posOnly") || !modeConfig.includes("businessOnly")) throw new Error("Missing extracted app-mode module: " + mode);
   if (!html.includes('<script src="app-mode.js"></script>')) throw new Error("App-mode module is not loaded before the main app: " + mode);
   if (!modeConfig.includes("var mode = '" + mode + "';")) throw new Error("Build mode not locked in app-mode.js: " + mode);
