@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const direct = ["app-mode.js", "app-access.js", "config.js", "sbapi.js", "auth.js", "apps/order/config.js", "apps/order/sbapi.js"];
+const direct = ["app-mode.js", "app-access.js", "app-navigation.js", "config.js", "sbapi.js", "auth.js", "apps/order/config.js", "apps/order/sbapi.js"];
 for (const file of direct) {
   new vm.Script(readFileSync(file, "utf8"), { filename: file });
   process.stdout.write("Syntax OK: " + file + "\n");
