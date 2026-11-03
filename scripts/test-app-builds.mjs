@@ -475,6 +475,7 @@ for (const mode of ["pos", "business"]) {
   const accessSandbox = { window: {} };
   vm.runInNewContext(accessConfig, accessSandbox, { filename: mode + "/app-access.js" });
   const permissions = accessSandbox.window.ORDELA_ACCESS_CONFIG;
+  if (permissions.viewPermissions.home !== "hist" || permissions.viewPermissions.riw !== "hist") throw new Error("Dashboard and sales history must use the dedicated history permission");
   for (const [view, permission] of Object.entries(permissions.viewPermissions)) {
     if (permission !== "#owner" && !Object.prototype.hasOwnProperty.call(permissions.permissionLabels, permission)) {
       throw new Error("View " + view + " maps to an undefined permission: " + permission);
