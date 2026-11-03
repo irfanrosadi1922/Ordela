@@ -413,6 +413,21 @@ begin
   if not (pm ? 'pos') and (cur -> 'orders') is distinct from (nxt -> 'orders') then
     return 'Akun ini tidak punya izin Kasir & Transaksi';
   end if;
+  if (cur -> 'holds') is distinct from (nxt -> 'holds') and not (pm ? 'pos') then
+    return 'Akun ini tidak punya izin Kasir & Transaksi';
+  end if;
+  if (cur -> 'seq') is distinct from (nxt -> 'seq') and not (pm ? 'pos') then
+    return 'Akun ini tidak punya izin Kasir & Transaksi';
+  end if;
+  if (cur -> 'occ') is distinct from (nxt -> 'occ') and not (pm ? 'pos') then
+    return 'Akun ini tidak punya izin Kasir & Transaksi';
+  end if;
+  if (cur -> 'kds') is distinct from (nxt -> 'kds') and not (pm ? 'co' or pm ? 'pos') then
+    return 'Akun ini tidak punya izin Layar Dapur';
+  end if;
+  if (cur -> 'voided') is distinct from (nxt -> 'voided') then
+    return 'Riwayat pembatalan transaksi hanya bisa diubah owner';
+  end if;
   if exists (select o ->> 'no', o from jsonb_array_elements(coalesce(cur -> 'orders', '[]')) o
              except select x ->> 'no', x from jsonb_array_elements(coalesce(nxt -> 'orders', '[]')) x) then
     return 'Riwayat penjualan hanya bisa ditambah, tidak boleh diubah atau dihapus (khusus owner)';
@@ -427,7 +442,7 @@ begin
     if n is null then return 'Hanya owner yang boleh menghapus menu'; end if;
     for k in select jsonb_object_keys(c) loop
       if k = 'stock' then
-        if (c -> 'stock') is distinct from (n -> 'stock') and not (pm ? 'inv' or pm ? 'opn' or pm ? 'pos') then
+        if (c -> 'stock') is distinct from (n -> 'stock') and not (pm ? 'inv' or pm ? 'opn' or pm ? 'buy' or pm ? 'pos') then
           return 'Akun ini tidak punya izin mengubah stok';
         end if;
       elsif not coalesce(pos.additive(c -> k, n -> k), false) then
