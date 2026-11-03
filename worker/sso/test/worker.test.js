@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker from "./index.js";
+import worker from "../index.js";
 
 const env = {
   PREVIEW_HOST: "ordela-sso-preview.workers.dev",
