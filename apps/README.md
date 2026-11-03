@@ -133,3 +133,8 @@ Member directory, search, member profile/history, loyalty-point configuration, m
 ## AI conversation history and authorization
 
 The setup SQL now provisions a store-scoped `pos.ai_history` table and a restricted `public.ai_chat_history` RPC. The RPC validates the active Ordela session, resolves the owner’s active branch, checks the AI Manager permission, bounds message count/size, and only grants execution to `service_role`; the Edge Function never trusts a client-supplied user or store ID. The AI history endpoint maps unauthorized/forbidden results to HTTP errors, and the Business chat renderer sanitizes stored assistant HTML through a small element allowlist before inserting it into the page. Applying this SQL and configuring the Edge Function’s `SUPABASE_SERVICE_ROLE_KEY` secret are still deployment steps; neither was changed in production.
+
+
+## POS kitchen display feature boundary
+
+The KDS ticket board, station filter, local/online ticket state updates, and timed refresh now live in `app-pos-kds.js`. The POS build includes and loads this module after the shared operational registry; the Business build excludes it. Online-order reception itself remains shared, while the kitchen execution screen is POS-only. Automated tests validate the KDS view/action API and ensure the module is absent from Business.
