@@ -1331,7 +1331,7 @@ declare
   v_msgs jsonb;
   v_item jsonb;
 begin
-  if p_action not in ('load', 'save', 'clear') then return jsonb_build_object('error', 'bad_action'); end if;
+  if p_action is null or p_action not in ('load', 'save', 'clear') then return jsonb_build_object('error', 'bad_action'); end if;
   me := pos.auth(p_token);
   if me.id is null then return jsonb_build_object('error', 'unauthorized'); end if;
   v_sid := me.store_id;
@@ -1344,7 +1344,6 @@ begin
   end if;
   if v_sid is null then return jsonb_build_object('error', 'no_store'); end if;
   perform set_config('pos.sid', v_sid::text, true);
-  select * into me from pos.users where id = me.id;
   if me.id is null or not pos.can(me, 'ai') then return jsonb_build_object('error', 'forbidden'); end if;
 
   if p_action = 'load' then
@@ -1355,12 +1354,12 @@ begin
     return jsonb_build_object('ok', true);
   end if;
 
-  if jsonb_typeof(p_messages) <> 'array' or jsonb_array_length(p_messages) > 60 or length(p_messages::text) > 100000 then
+  if jsonb_typeof(p_messages) is distinct from 'array' or jsonb_array_length(p_messages) > 60 or length(p_messages::text) > 100000 then
     return jsonb_build_object('error', 'invalid_messages');
   end if;
   for v_item in select value from jsonb_array_elements(p_messages) loop
     if jsonb_typeof(v_item) <> 'object'
-      or jsonb_typeof(v_item -> 't') <> 'string'
+      or jsonb_typeof(v_item -> 't') is distinct from 'string'
       or length(v_item ->> 't') > 2000
       or (v_item ? 'ts' and length(coalesce(v_item ->> 'ts', '')) > 32)
       or (v_item ? 'me' and jsonb_typeof(v_item -> 'me') not in ('boolean', 'number')) then
