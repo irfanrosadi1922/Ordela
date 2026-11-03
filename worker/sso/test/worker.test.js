@@ -123,7 +123,7 @@ test("preview logout clears the shared Ordela subdomain cookie", async (t) => {
     ALLOWED_ORIGINS: "https://app-preview.ordela.my.id,https://pos-preview.ordela.my.id"
   });
   assert.equal(r.status, 200);
-  assert.match(r.headers.get("Set-Cookie"), /Domain=\\.ordela\\.my\\.id/);
+  assert.ok(r.headers.get("Set-Cookie").includes("Domain=.ordela.my.id"));
   assert.match(r.headers.get("Set-Cookie"), /Max-Age=0/);
 });
 
