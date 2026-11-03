@@ -43,11 +43,18 @@ for (const file of publicFiles) {
 }
 
 const indexPath = join(output, "index.html");
-let html = readFileSync(indexPath, "utf8");
-const modeLine = "const ORDELA_APP_MODE=location.hostname==='pos-preview.ordela.my.id'?'pos':location.hostname==='app-preview.ordela.my.id'?'business':'legacy';";
-if (!html.includes(modeLine)) throw new Error("Expected staging app-mode selector not found; refusing to emit an unfiltered build.");
-html = html.replace(modeLine, "const ORDELA_APP_MODE='" + mode + "';");
-writeFileSync(indexPath, html);
+const html = readFileSync(indexPath, "utf8");
+if (!html.includes('<script src="app-mode.js"></script>')) {
+  throw new Error("App entrypoint does not load the extracted app-mode module.");
+}
+const modePath = join(output, "app-mode.js");
+let modeSource = readFileSync(modePath, "utf8");
+const hostSelector = /  var host = window\.location\.hostname;[\s\S]*?      : 'legacy';/;
+if (!hostSelector.test(modeSource)) {
+  throw new Error("Expected preview hostname selector not found; refusing to emit an unlocked app build.");
+}
+modeSource = modeSource.replace(hostSelector, "  var mode = '" + mode + "';");
+writeFileSync(modePath, modeSource);
 writeFileSync(join(output, "ordela-app.json"), JSON.stringify({
   name: mode === "pos" ? "Ordela POS" : "Ordela Business",
   mode,
