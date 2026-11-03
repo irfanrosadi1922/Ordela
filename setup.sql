@@ -238,10 +238,10 @@ end $$;
 create or replace function pos.clean_perms(j jsonb) returns jsonb language sql immutable as $$
   select coalesce(jsonb_agg(x order by o), '[]'::jsonb) from (
     select x, min(o) o from jsonb_array_elements_text(case when jsonb_typeof(j) = 'array' then j else '[]'::jsonb end) with ordinality t(x, o)
-    where x in ('pos','shift','co','kds','mem','inv','opn','buy','exp','hist','prn','set','att') group by x) s $$;
+    where x in ('pos','shift','co','kds','mem','inv','opn','buy','exp','hist','prn','set','att','ai','gift','rsv') group by x) s $;
 
 create or replace function pos.perms_of(u pos.users) returns jsonb language sql immutable as
-$$ select case when u.role = 'owner' then '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att"]'::jsonb else pos.clean_perms(u.perms) end $$;
+$ select case when u.role = 'owner' then '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att","ai","gift","rsv"]'::jsonb else pos.clean_perms(u.perms) end $;
 
 create or replace function pos.can(u pos.users, k text) returns boolean language sql immutable as
 $$ select u.role = 'owner' or pos.perms_of(u) ? k $$;
@@ -438,7 +438,8 @@ begin
   end if;
   if (cur -> 'shifts') is distinct from (nxt -> 'shifts') and not (pm ? 'shift') then return 'Akun ini tidak punya izin Shift Kasir'; end if;
   if (cur -> 'exps') is distinct from (nxt -> 'exps') and not (pm ? 'exp' or pm ? 'shift') then return 'Akun ini tidak punya izin Pengeluaran'; end if;
-  if (cur -> 'gifts') is distinct from (nxt -> 'gifts') and not (pm ? 'pos') then return 'Akun ini tidak punya izin Kasir'; end if;
+  if (cur -> 'gifts') is distinct from (nxt -> 'gifts') and not (pm ? 'gift' or pm ? 'pos') then return 'Akun ini tidak punya izin Kartu Hadiah'; end if;
+  if (cur -> 'rsv') is distinct from (nxt -> 'rsv') and not (pm ? 'rsv') then return 'Akun ini tidak punya izin Reservasi'; end if;
   if (cur -> 'buys') is distinct from (nxt -> 'buys') and not (pm ? 'buy') then return 'Akun ini tidak punya izin Pembelian'; end if;
   if (cur -> 'members') is distinct from (nxt -> 'members') and not (pm ? 'mem' or pm ? 'pos') then return 'Akun ini tidak punya izin Member'; end if;
   if (cur -> 'promos') is distinct from (nxt -> 'promos') then return 'Hanya owner yang boleh mengatur promo'; end if;
@@ -885,6 +886,7 @@ begin
   end if;
 
   if u = '/api/ai/use' and m = 'POST' then   -- kuota asisten AI per pengguna (dipanggil fungsi ai-chat sebelum menghubungi penyedia AI)
+    if not pos.can(me, 'ai') then return pos.r(403, '{"error":"Anda tidak punya izin AI Manager"}'); end if;
     if (select count(*) from pos.rl where rl.k = 'ai:' || me.id and rl.t > now() - interval '1 hour') >= 30 then
       return pos.r(429, '{"error":"Batas pertanyaan AI per jam tercapai. Coba lagi nanti."}');
     end if;
@@ -1050,7 +1052,7 @@ begin
   end if;
   if u = '/api/users' and m = 'GET' then
     if not own then return pos.r(403, '{"error":"Anda tidak punya akses untuk ini"}'); end if;
-    return pos.r(200, jsonb_build_object('perms', '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att"]'::jsonb,
+    return pos.r(200, jsonb_build_object('perms', '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att","ai","gift","rsv"]'::jsonb,
       'users', coalesce((select jsonb_agg(pos.me_view(uu) order by (uu.role = 'owner') desc, uu.username) from pos.users uu), '[]')));
   end if;
   if u = '/api/users' and m = 'POST' then
