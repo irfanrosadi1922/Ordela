@@ -422,7 +422,7 @@ begin
   if (cur -> 'occ') is distinct from (nxt -> 'occ') and not (pm ? 'co' or pm ? 'pos') then
     return 'Akun ini tidak punya izin Kasir & Transaksi';
   end if;
-  if (cur -> 'kds') is distinct from (nxt -> 'kds') and not (pm ? 'co' or pm ? 'pos') then
+  if (cur -> 'kds') is distinct from (nxt -> 'kds') and not (pm ? 'kds' or pm ? 'co' or pm ? 'pos') then
     return 'Akun ini tidak punya izin Layar Dapur';
   end if;
   if (cur -> 'voided') is distinct from (nxt -> 'voided') then
