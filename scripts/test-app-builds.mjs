@@ -22,6 +22,24 @@ for (const mode of ["pos", "business"]) {
   const dashboardPath = join(dir, "app-business-dashboard.js");
   const financeTag = '<script src="app-business-finance.js"></script>';
   const financePath = join(dir, "app-business-finance.js");
+  const aiTag = '<script src="app-business-ai.js"></script>';
+  const aiPath = join(dir, "app-business-ai.js");
+  if (mode === "business") {
+    if (!html.includes(aiTag) || !existsSync(aiPath)) throw new Error("Business AI module is missing from Business build");
+    const aiSource = readFileSync(aiPath, "utf8");
+    new vm.Script(aiSource, { filename: mode + "/app-business-ai.js" });
+    const aiP2 = { views: {}, t: {} };
+    const aiSandbox = { window: { P2: aiP2 }, P2: aiP2 };
+    vm.runInNewContext(aiSource, aiSandbox, { filename: mode + "/app-business-ai.js" });
+    for (const name of ["aiSend", "aiAsk", "aiClear", "aiAnswer", "aiCtx"]) {
+      if (typeof aiP2[name] !== "function") throw new Error("Business AI API missing P2." + name);
+    }
+    if (typeof aiP2.views.ai !== "function" || appCore.includes("const AI=")) {
+      throw new Error("Business AI feature boundary or view registration is invalid");
+    }
+  } else if (html.includes(aiTag) || existsSync(aiPath)) {
+    throw new Error("Business AI source leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(financeTag) || !existsSync(financePath)) throw new Error("Business finance module is missing from Business build");
     const financeSource = readFileSync(financePath, "utf8");
@@ -116,9 +134,10 @@ for (const mode of ["pos", "business"]) {
   const dashboardTagIndex = html.indexOf(dashboardTag);
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0))) {
+      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
