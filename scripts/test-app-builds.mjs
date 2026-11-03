@@ -110,7 +110,8 @@ for (const mode of ["pos", "business"]) {
     for (const name of ["renderInvoice", "renderInvoice0", "clearCart", "holdSave", "holdList", "holdResume", "holdDel", "applyCode", "payTotals", "payForm", "payCalc", "payRefresh", "checkout"]) {
       if (typeof checkoutSandbox.window[name] !== "function") throw new Error("POS checkout API missing " + name);
     }
-    if (appCore.includes("function payForm(") || !appCore.includes("function holdTotal(h)") ||
+    if (appCore.includes("function payForm(") || !checkoutSource.includes("function holdTotal(h)") ||
+        typeof checkoutSandbox.window.holdTotal !== "function" ||
         !appCore.includes("function promoUsed(id)") ||
         !appCore.includes("x.kind==='hold'&&ORDELA_APP_MODE==='pos'&&can('pos')?")) {
       throw new Error("POS checkout boundary or shared table/promo helper integration is invalid");
