@@ -10,6 +10,7 @@ for (const mode of ["pos", "business"]) {
   const html = readFileSync(join(dir, "index.html"), "utf8");
   if (!html.includes("const ORDELA_APP_MODE='" + mode + "';")) throw new Error("Build mode not locked: " + mode);
   if (html.includes("const ORDELA_APP_MODE=location.hostname")) throw new Error("Runtime hostname mode selector leaked into " + mode);
+  if (mode === "business" && !html.includes("if(ORDELA_APP_MODE==='business'&&canView('home'))return 'home';")) throw new Error("Business app must open its dashboard after login");
   for (const required of ["function ssCookieGet()", "function ssCookieSet(", "function ssCookieClear()", "Domain=.ordela.my.id", "function canView(v)"]) {
     if (!html.includes(required)) throw new Error("Missing required shared app behavior in " + mode + ": " + required);
   }
