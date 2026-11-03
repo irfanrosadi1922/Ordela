@@ -22,6 +22,18 @@ if (!setupSql.includes("not (pm ? 'co' or pm ? 'pos')") ||
   throw new Error("Kitchen or void-audit state is missing server-side permission enforcement");
 }
 if (!setupSql.includes("cur -> 'occ') is distinct from (nxt -> 'occ') and not (pm ? 'co' or pm ? 'pos')")) throw new Error("Kitchen table-clear permission is not reflected in the occupancy guard");
+const appSourceFiles = readdirSync(root).filter(file =>
+  file === "app-core.js" || file === "pos2.js" || /^app-(business|pos)-.+\\.js$/.test(file)
+);
+const referencedDbKeys = new Set();
+for (const file of appSourceFiles) {
+  const source = readFileSync(join(root, file), "utf8");
+  for (const match of source.matchAll(/\\bdb\\.([A-Za-z_$][\\w$]*)/g)) referencedDbKeys.add(match[1]);
+}
+const guardedDbKeys = new Set(["orders", "items", "cats", "log", "shifts", "exps", "gifts", "rsv", "buys", "members", "promos", "sups", "set", "holds", "seq", "occ", "kds", "voided", "_ts"]);
+for (const key of referencedDbKeys) {
+  if (!guardedDbKeys.has(key)) throw new Error("New db." + key + " field needs an explicit server-side authorization rule");
+}
 const ownerPermissionMatch = setupSql.match(/'perms',\s*'(\[[^']+\])'::jsonb/);
 const ownerPermissions = ownerPermissionMatch ? JSON.parse(ownerPermissionMatch[1]) : [];
 const expectedOwnerPermissions = ["pos", "shift", "co", "kds", "mem", "inv", "opn", "buy", "exp", "hist", "prn", "set", "att", "ai", "gift", "rsv"];
