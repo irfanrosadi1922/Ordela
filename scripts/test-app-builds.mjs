@@ -14,6 +14,24 @@ for (const mode of ["pos", "business"]) {
   const appCore = readFileSync(join(dir, "app-core.js"), "utf8");
   const payrollTag = '<script src="app-business-payroll.js"></script>';
   const payrollPath = join(dir, "app-business-payroll.js");
+  const inventoryTag = '<script src="app-business-inventory.js"></script>';
+  const inventoryPath = join(dir, "app-business-inventory.js");
+  if (mode === "business") {
+    if (!html.includes(inventoryTag) || !existsSync(inventoryPath)) throw new Error("Business inventory module is missing from Business build");
+    const inventorySource = readFileSync(inventoryPath, "utf8");
+    new vm.Script(inventorySource, { filename: mode + "/app-business-inventory.js" });
+    const inventorySandbox = { window: {} };
+    vm.runInNewContext(inventorySource, inventorySandbox, { filename: mode + "/app-business-inventory.js" });
+    if (!inventorySandbox.window.OP || typeof inventorySandbox.window.opnLoad !== "function" ||
+        typeof inventorySandbox.window.opnApply !== "function" || typeof inventorySandbox.window.xlsxRead !== "function") {
+      throw new Error("Business inventory feature API is incomplete");
+    }
+    if (appCore.includes("const OP=") || !appCore.includes("function renderInv()")) {
+      throw new Error("Inventory count feature boundary or shared inventory integration is invalid");
+    }
+  } else if (html.includes(inventoryTag) || existsSync(inventoryPath)) {
+    throw new Error("Business inventory source leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(payrollTag) || !existsSync(payrollPath)) throw new Error("Business payroll module is missing from Business build");
     const payrollSource = readFileSync(payrollPath, "utf8");
@@ -35,9 +53,10 @@ for (const mode of ["pos", "business"]) {
   const xlsxTagIndex = html.indexOf('<script src="app-export-xlsx.js"></script>');
   const payrollTagIndex = html.indexOf(payrollTag);
   const coreTagIndex = html.indexOf('<script src="app-core.js"></script>');
+  const inventoryTagIndex = html.indexOf(inventoryTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(xlsxTagIndex < payrollTagIndex && payrollTagIndex < coreTagIndex)) ||
-      (mode === "pos" && payrollTagIndex >= 0)) {
+      (mode === "business" && !(xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
