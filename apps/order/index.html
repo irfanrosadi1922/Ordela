@@ -549,6 +549,14 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()}
 /* ---------- mulai ---------- */
 $('#lang').innerHTML=LANGS.map(l=>`<option value="${l[0]}">${l[1]}</option>`).join('');applyStatic();
 (async function init(){
+  // Preview guard: never expose fallback/demo menu when opened without a store QR code.
+  if(!SC){
+    $('#vMenu').hidden=true;
+    $('#vLoad').hidden=false;
+    $('#vLoad').textContent='Buka halaman ini melalui QR toko yang valid untuk melihat menu dan membuat pesanan.';
+    document.title='Order · Ordela';
+    return;
+  }
   try{
     await loadMenu(true);
     $('#vLoad').hidden=true;$('#vMenu').hidden=false;
