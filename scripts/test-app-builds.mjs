@@ -62,8 +62,8 @@ for (const mode of ["pos", "business"]) {
     if (!appConfig.shared.includes(view)) throw new Error("Shared feature ownership is incomplete: " + view);
   }
 
-  if (mode === "business" && !runtimeSource.includes("if(ORDELA_APP_MODE==='business'&&canView('home'))return 'home';")) throw new Error("Business app must open its dashboard after login");
   const runtimeSource = html + "\\n" + appCore;
+  if (mode === "business" && !runtimeSource.includes("if(ORDELA_APP_MODE==='business'&&canView('home'))return 'home';")) throw new Error("Business app must open its dashboard after login");
   for (const required of ["function ssCookieGet()", "function ssCookieSet(", "function ssCookieClear()", "Domain=.ordela.my.id", "function canView(v)"]) {
     if (!runtimeSource.includes(required)) throw new Error("Missing required shared app behavior in " + mode + ": " + required);
   }
