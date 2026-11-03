@@ -11,7 +11,7 @@ for (const permission of ["'ai'", "'gift'", "'rsv'"]) {
 if (!setupSql.includes('"att","ai","gift","rsv"]\'::jsonb')) throw new Error("Owner permission set is out of sync with the app");
 if (!setupSql.includes("if not pos.can(me, 'ai') then return pos.r(403")) throw new Error("AI Manager API is missing server-side permission enforcement");
 if (!setupSql.includes("not (pm ? 'gift' or pm ? 'pos')") || !setupSql.includes("not (pm ? 'rsv')")) throw new Error("Gift or reservation writes are missing server-side permission enforcement");
-if (!setupSql.includes("'perms', '[") || !setupSql.includes('"att","ai","gift","rsv"]')) throw new Error("User administration permission catalog is out of sync");
+if (!setupSql.includes("'perms', '[\\\"pos\\\",\\\"shift\\\",\\\"co\\\",\\\"kds\\\",\\\"mem\\\",\\\"inv\\\",\\\"opn\\\",\\\"buy\\\",\\\"exp\\\",\\\"hist\\\",\\\"prn\\\",\\\"set\\\",\\\"att\\\",\\\"ai\\\",\\\"gift\\\",\\\"rsv\\\"]'::jsonb")) throw new Error("User administration permission catalog is out of sync");
 for (const mode of ["pos", "business"]) {
   const dir = join(root, "dist", mode);
   const meta = JSON.parse(readFileSync(join(dir, "ordela-app.json"), "utf8"));
@@ -58,6 +58,22 @@ for (const mode of ["pos", "business"]) {
   const giftsPath = join(dir, "app-business-gifts.js");
   const promosTag = '<script src="app-business-promos.js"></script>';
   const promosPath = join(dir, "app-business-promos.js");
+  const membersTag = '<script src="app-business-members.js"></script>';
+  const membersPath = join(dir, "app-business-members.js");
+  if (mode === "business") {
+    if (!html.includes(membersTag) || !existsSync(membersPath)) throw new Error("Business members module is missing from Business build");
+    const membersSource = readFileSync(membersPath, "utf8");
+    new vm.Script(membersSource, { filename: mode + "/app-business-members.js" });
+    const membersP2 = { views: {} };
+    const membersSandbox = { window: { P2: membersP2 }, P2: membersP2 };
+    vm.runInNewContext(membersSource, membersSandbox, { filename: mode + "/app-business-members.js" });
+    for (const name of ["MP_q", "memForm", "memSave", "memDetail", "memAdj", "memDel"]) {
+      if (typeof membersSandbox.window[name] !== "function") throw new Error("Business member API missing " + name);
+    }
+    if (typeof membersP2.views.mem !== "function") throw new Error("Business member view is not registered");
+  } else if (html.includes(membersTag) || existsSync(membersPath)) {
+    throw new Error("Business member administration leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(promosTag) || !existsSync(promosPath)) throw new Error("Business promo module is missing from Business build");
     const promosSource = readFileSync(promosPath, "utf8");
@@ -255,6 +271,7 @@ for (const mode of ["pos", "business"]) {
   const dashboardTagIndex = html.indexOf(dashboardTag);
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const membersTagIndex = html.indexOf(membersTag);
   const promosTagIndex = html.indexOf(promosTag);
   const giftsTagIndex = html.indexOf(giftsTag);
   const stocktakeTagIndex = html.indexOf(stocktakeTag);
@@ -263,8 +280,8 @@ for (const mode of ["pos", "business"]) {
   const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0))) {
+      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < membersTagIndex && membersTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0 || membersTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
