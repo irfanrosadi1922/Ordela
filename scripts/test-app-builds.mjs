@@ -4,7 +4,7 @@ import vm from "node:vm";
 
 const root = process.cwd();
 const setupSql = readFileSync(join(root, "setup.sql"), "utf8");
-const permissionAllowlist = setupSql.match(/where x in \\(([^)]*)\\) group by x\\) s \\$\\$;/)?.[1] || "";
+const permissionAllowlist = setupSql.match(/where x in \(([^)]*)\) group by x\) s \$\$;/)?.[1] || "";
 for (const permission of ["'ai'", "'gift'", "'rsv'"]) {
   if (!permissionAllowlist.includes(permission)) throw new Error("Database permission allowlist is missing " + permission);
 }
