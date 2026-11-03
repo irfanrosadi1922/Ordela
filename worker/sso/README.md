@@ -22,6 +22,12 @@ The current browser app still calls same-origin `/api/*`, stores `pos_tok`, and 
 
 The `workers.dev` preview hostname cannot share a cookie with Pages preview sites on `pages.dev`. It is suitable for gateway/API tests, not full cross-subdomain SSO validation. Full browser SSO testing requires a dedicated preview hostname under `ordela.my.id` (for example, a temporary preview subdomain) before production rollout.
 
+## Shared idle activity across app subdomains
+
+The current app-level idle timer remains enabled. Its activity timestamp is mirrored to a first-party cookie named `ordela_pos_act` scoped to `.ordela.my.id` when the page is served from an Ordela hostname. This allows activity in `app.ordela.my.id` and `pos.ordela.my.id` to update the same browser timestamp while preserving the existing owner-configured idle duration and warning UI. Logout clears the shared activity cookie.
+
+This timestamp is intentionally readable by the frontend and is only a cross-subdomain UI coordination mechanism; it is **not** an authentication credential or a server-side security boundary. The existing database session validation remains authoritative and currently rejects sessions after 12 hours without an authenticated API request. Do not describe the configurable idle timer as server-enforced. Before enabling SSO, test the shared cookie in a real browser on temporary sibling subdomains under `ordela.my.id`, including login, cross-app activity, warning countdown, logout, and idle expiry. Pages.dev and workers.dev previews cannot prove shared-domain cookie behavior.
+
 ## Tests
 Run with a recent Node.js version:
 ```sh
