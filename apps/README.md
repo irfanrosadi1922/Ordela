@@ -88,3 +88,8 @@ Owner-only user administration, custom staff roles, permission editing, account 
 ## Business dashboard feature boundary
 
 The sales dashboard now lives in `app-business-dashboard.js`: period comparisons, sales series, chart rendering, category breakdowns, and the home summary. The Business build loads it before the shared runtime; the POS build excludes the module and script reference. The small shared date-range synchronizer and generic comparison-label helper remain in the common runtime because other screens use them. The build test verifies the dashboard API, five standard period presets, shared boot integration, script order, and POS exclusion.
+
+
+## Business finance feature boundary
+
+Operating-expense entry, profit calculation, supplier management, purchases, supplier debt tracking, and purchase-driven stock updates now live in `app-business-finance.js`. The module is loaded after `pos2.js` has initialized the shared view registry, and it is included only in the Business build. Compatibility exports for profit and supplier debt remain available to existing Business-only AI and stock-count workflows. The POS build excludes the module and its script tag; the shared shift screen retains its own shift statistics implementation.
