@@ -22,6 +22,15 @@ The current browser app still calls same-origin `/api/*`, stores `pos_tok`, and 
 
 The `workers.dev` preview hostname cannot share a cookie with Pages preview sites on `pages.dev`. It is suitable for gateway/API tests, not full cross-subdomain SSO validation. Full browser SSO testing requires a dedicated preview hostname under `ordela.my.id` (for example, a temporary preview subdomain) before production rollout.
 
+## Temporary custom-domain staging
+
+- `api-preview.ordela.my.id` routes to this preview Worker and returns the health response.
+- The Worker accepts browser origins `https://app-preview.ordela.my.id` and `https://pos-preview.ordela.my.id`.
+- The staging API cookie is scoped to `.ordela.my.id` so sibling preview hostnames can share it.
+- The Pages custom-domain records have been created for the two app preview hostnames. They are still completing HTTP validation/certificate provisioning; do not call browser SSO validation complete until both Pages domains are active and tested.
+- Both app preview hostnames currently serve the same monolithic Pages project. This is only a hostname/cookie integration test; actual Business Dashboard and POS extraction remains pending.
+- No production hostname, production DNS record, production Worker, or Supabase schema was changed.
+
 ## Shared idle activity across app subdomains
 
 The current app-level idle timer remains enabled. Its activity timestamp is mirrored to a first-party cookie named `ordela_pos_act` scoped to `.ordela.my.id` when the page is served from an Ordela hostname. This allows activity in `app.ordela.my.id` and `pos.ordela.my.id` to update the same browser timestamp while preserving the existing owner-configured idle duration and warning UI. Logout clears the shared activity cookie.
