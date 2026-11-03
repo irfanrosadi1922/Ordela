@@ -118,3 +118,8 @@ The full-page barcode/manual stocktake workflow now lives in `app-business-stock
 ## Gift-card administration and POS redemption boundary
 
 Gift-card issuance, top-ups, balance history, and owner deletion now live in `app-business-gifts.js` and are loaded only in Business. The POS-facing redemption and release actions (`P2.giftUse` / `P2.giftClear`) remain in shared `pos2.js` because the checkout/payment screen depends on them. This preserves checkout behavior while removing the administration page and handlers from the POS artifact; regression tests explicitly verify both sides of this boundary.
+
+
+## Business promo administration boundary
+
+Promo and voucher administration (schedule/rules, code and automatic discounts, usage limits, activation and deletion) now lives in `app-business-promos.js`. POS discount application and invoice recalculation remain in the shared checkout runtime so the cashier can still apply eligible promotions without loading the Business management screen. The Business-only build test validates all management handlers and confirms the POS artifact excludes the administration module.
