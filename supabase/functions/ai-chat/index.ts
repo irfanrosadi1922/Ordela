@@ -11,9 +11,11 @@
 //   OpenRouter  AI_BASE_URL=https://openrouter.ai/api/v1                            AI_MODEL=<nama model>
 //   DeepSeek    AI_BASE_URL=https://api.deepseek.com/v1                             AI_MODEL=deepseek-chat
 // Alur: pengguna harus login (token sesi Ordela dicek ke database + batas 30 pertanyaan/jam) → baru diteruskan ke OpenAI.
+const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const J = { "Content-Type": "application/json" };
-const out = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: J });
+const out = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...J, ...CORS } });
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return out({ error: "gunakan POST" }, 405);
   const key = Deno.env.get("AI_API_KEY") || Deno.env.get("OPENAI_API_KEY");
   if (!key) return out({ error: "AI belum dikonfigurasi (AI_API_KEY belum diisi)" }, 501);

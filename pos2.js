@@ -302,7 +302,7 @@ V.kds=function(){
 };
 
 /* ================= ASISTEN ORDELA (berbasis aturan, berjalan di perangkat, tanpa API key) ================= */
-const AI={msgs:[],busy:0};
+const AI={msgs:[],busy:0,why:''};
 const aiN=s=>String(s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 const aiHas=(q,...w)=>w.some(x=>q.includes(x));
 function aiRange(q){
@@ -386,8 +386,10 @@ async function aiCloud(q){
   try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx()})});
     const j=await r.json().catch(()=>({}));
     if(r.ok&&j.answer)return esc(j.answer).replace(/\n/g,'<br>')+'<br><small style="opacity:.6">dijawab AI</small>';
+    AI.why=r.status===404?'fungsi ai-chat belum di-deploy (404)':r.status===501?'secret AI_API_KEY belum diisi':'';
     if(r.status===404||r.status===501)return null;   // fungsi belum dipasang / key belum diisi
-    return esc(j.error||'AI sedang tidak tersedia')}catch(e){return null}
+    if(r.status===401&&/jwt/i.test(JSON.stringify(j))){AI.why='Verify JWT pada fungsi ai-chat masih menyala';return null}
+    return esc(j.error||'AI sedang tidak tersedia')}catch(e){AI.why='fungsi ai-chat tidak terjangkau (belum di-deploy atau diblokir CORS)';return null}
 }
 
 const aiTm=()=>new Date().toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
@@ -414,7 +416,7 @@ P2.aiAsk=async function(t){
   add({me:1,t});let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
   if(a===null){AI.busy=1;const go=$('#aiGo');if(go)go.disabled=true;
     log.insertAdjacentHTML('beforeend','<div class="cr" id="aiTyp"><span class="cav"><i class="ic" data-ic="bolt"></i></span><div class="cbw"><div class="cb typ"><i></i><i></i><i></i></div></div></div>');aiScroll();
-    a=await aiCloud(t);const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false;if(a===null)a=AIMISS}
+    AI.why='';a=await aiCloud(t);const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false;if(a===null)a=AIMISS+(AI.why&&isOwner()?'<br><small style="opacity:.65">AI cloud tidak aktif: '+esc(AI.why)+'.</small>':'')}
   add({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);
   const i=$('#aiIn');if(i&&matchMedia('(hover:hover)').matches)i.focus();
 };
