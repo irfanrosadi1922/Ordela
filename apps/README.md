@@ -123,3 +123,8 @@ Gift-card issuance, top-ups, balance history, and owner deletion now live in `ap
 ## Business promo administration boundary
 
 Promo and voucher administration (schedule/rules, code and automatic discounts, usage limits, activation and deletion) now lives in `app-business-promos.js`. POS discount application and invoice recalculation remain in the shared checkout runtime so the cashier can still apply eligible promotions without loading the Business management screen. The Business-only build test validates all management handlers and confirms the POS artifact excludes the administration module.
+
+
+## Business member administration boundary
+
+Member directory, search, member profile/history, loyalty-point configuration, manual point adjustment, and member deletion now live in `app-business-members.js`. The POS checkout's member selection and point redemption/earning logic remains in the cashier runtime, while the Business-only member administration page is excluded from POS. The build tests check the Business handlers and the absence of this management module from POS.
