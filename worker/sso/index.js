@@ -35,7 +35,7 @@ function corsHeaders(origin, allowed) {
   };
 }
 function cookieValue(token, host) {
-  const domain = host === "api.ordela.my.id" ? `; Domain=${COOKIE_DOMAIN}` : "";
+  const domain = (host === "api.ordela.my.id" || host === "api-preview.ordela.my.id") ? `; Domain=${COOKIE_DOMAIN}` : "";
   return `${COOKIE}=${token}; Path=/; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax${domain}`;
 }
 function clearCookie(host) {
@@ -51,8 +51,8 @@ async function handle(request, env) {
   const url = new URL(request.url);
   const origin = request.headers.get("Origin") || "";
   const host = url.hostname;
-  const isProductionHost = host === "api.ordela.my.id";
-  if (!isProductionHost && host !== env.PREVIEW_HOST) return json({ error: "host_not_allowed" }, 421);
+  const isOrdelaApiHost = host === "api.ordela.my.id" || host === "api-preview.ordela.my.id";
+  if (!isOrdelaApiHost && host !== env.PREVIEW_HOST) return json({ error: "host_not_allowed" }, 421);
   const isServerHook = url.pathname === "/api/food/hook" && request.method === "POST";
   const isHealthCheck = url.pathname === "/api/health" && SAFE_METHODS.has(request.method);
   if (origin ? !validOrigin(origin, env) : !(isServerHook || isHealthCheck)) return json({ error: "origin_not_allowed" }, 403);
