@@ -113,3 +113,8 @@ Branch switching, consolidated branch reporting, inter-branch stock transfer, br
 ## Business stocktake page boundary
 
 The full-page barcode/manual stocktake workflow now lives in `app-business-stocktake.js`: item search, physical count entry, discrepancy filters, barcode scan, review and apply. It consumes the workbook import/report helpers from `app-business-inventory.js`, which is loaded earlier. The POS artifact excludes the stocktake page module; its checkout and ordinary inventory flows are unaffected. The inventory regression tests verify both module syntax and the required dependency order.
+
+
+## Gift-card administration and POS redemption boundary
+
+Gift-card issuance, top-ups, balance history, and owner deletion now live in `app-business-gifts.js` and are loaded only in Business. The POS-facing redemption and release actions (`P2.giftUse` / `P2.giftClear`) remain in shared `pos2.js` because the checkout/payment screen depends on them. This preserves checkout behavior while removing the administration page and handlers from the POS artifact; regression tests explicitly verify both sides of this boundary.
