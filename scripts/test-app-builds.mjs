@@ -85,7 +85,7 @@ for (const mode of ["pos", "business"]) {
         typeof kdsSandbox.window.kdsSet !== "function") {
       throw new Error("POS KDS feature API is incomplete");
     }
-    if (!appCore.includes("if(S.view==='kds')V.kds()")) throw new Error("POS KDS refresh integration is missing");
+    if (!kdsSource.includes("if(S.view==='kds')V.kds()")) throw new Error("POS KDS refresh integration is missing");
   } else if (html.includes(kdsTag) || existsSync(kdsPath)) {
     throw new Error("POS KDS source leaked into Business build");
   }
@@ -304,8 +304,6 @@ for (const mode of ["pos", "business"]) {
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
   const kdsTagIndex = html.indexOf(kdsTag);
-  const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
-  const coreTagIndex = html.indexOf('<script src="app-core.js"></script>');
   const membersTagIndex = html.indexOf(membersTag);
   const promosTagIndex = html.indexOf(promosTag);
   const giftsTagIndex = html.indexOf(giftsTag);
