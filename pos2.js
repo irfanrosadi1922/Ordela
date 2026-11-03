@@ -390,17 +390,34 @@ async function aiCloud(q){
     return esc(j.error||'AI sedang tidak tersedia')}catch(e){return null}
 }
 
+const aiTm=()=>new Date().toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
+const aiBub=m=>`<div class="cr ${m.me?'me':''}">${m.me?'':'<span class="cav"><i class="ic" data-ic="bolt"></i></span>'}<div class="cbw"><div class="cb">${m.me?esc(m.t):m.t}</div><small>${esc(m.ts||'')}</small></div></div>`;
+const AISUG=['Omzet hari ini','Menu terlaris minggu ini','Stok menipis','Jam ramai','Laba bulan ini','Pasangan menu untuk upsell','Cara split bill','Cara buka shift'];
+function aiFit(){const c=$('#aiChat');if(!c)return;const m=c.closest('.main'),bn=$('#bnav'),bh=bn&&getComputedStyle(bn).display!=='none'?bn.offsetHeight:0;
+  const top=c.getBoundingClientRect().top,bot=m?m.getBoundingClientRect().bottom:innerHeight;c.style.height=Math.max(320,bot-top-bh-10)+'px'}
+function aiScroll(){const l=$('#aiLog');if(l)l.scrollTop=l.scrollHeight}
 V.ai=function(){
   const el=$('#v-ai');if(!el)return;
-  const sug=['Omzet hari ini','Menu terlaris minggu ini','Stok menipis','Jam ramai','Laba bulan ini','Pasangan menu untuk upsell','Cara split bill','Cara buka shift'];
-  el.innerHTML=bar('<i class="ic" data-ic="bolt"></i>Asisten Ordela','<button class="btn sm sec" style="width:auto;margin:0" onclick="P2.aiClear()">Hapus</button>')+`<div class="aic" id="aiLog">${AI.msgs.length?AI.msgs.map(m=>`<div class="aib ${m.me?'me':''}">${m.me?esc(m.t):m.t}</div>`).join(''):'<div class="aib">Halo! Saya asisten Ordela. Tanya tentang penjualan, stok, atau cara memakai aplikasi. Saya menjawab dari data toko ini di perangkat Anda dan menghormati hak akses Anda.</div>'}</div>
-  <div class="aiq">${sug.map(s=>`<button class="tag" type="button" onclick="P2.aiAsk(this.textContent)">${s}</button>`).join('')}</div>
-  <form class="aif" onsubmit="event.preventDefault();P2.aiAsk(document.getElementById('aiIn').value);return false"><input class="fi" id="aiIn" placeholder="Tulis pertanyaan…" autocomplete="off" maxlength="200"><button class="btn" style="width:auto;margin:0" type="submit">Kirim</button></form>`;
-  const lg=$('#aiLog');if(lg)lg.scrollTop=lg.scrollHeight;
+  el.innerHTML=`<div class="chat" id="aiChat"><div class="chh"><span class="cav lg"><i class="ic" data-ic="bolt"></i></span><div class="cht"><b>Asisten Ordela</b><small><i class="cdot"></i>Siap membantu · jawaban dari data toko ini</small></div><button class="cclr" type="button" onclick="P2.aiClear()" aria-label="Hapus percakapan" title="Hapus percakapan">Hapus</button></div>
+  <div class="clog" id="aiLog">${AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten Ordela. Tanyakan penjualan, stok, jam ramai, atau cara memakai aplikasi. Saya hanya menampilkan data sesuai hak akses Anda.',ts:aiTm()})}</div>
+  <div class="csg" id="aiSug">${AISUG.map(x=>`<button type="button" onclick="P2.aiAsk(this.textContent)">${x}</button>`).join('')}</div>
+  <form class="cin" onsubmit="event.preventDefault();P2.aiSend();return false"><input id="aiIn" placeholder="Tulis pertanyaan…" autocomplete="off" maxlength="200" enterkeyhint="send"><button class="csend" id="aiGo" type="submit" aria-label="Kirim"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></button></form></div>`;
+  aiFit();aiScroll();
 };
-P2.aiAsk=async function(t){t=String(t||'').trim().slice(0,200);if(!t||AI.busy)return;AI.msgs.push({me:1,t});let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
-  if(a===null){AI.busy=1;AI.msgs.push({t:'<i>Berpikir…</i>'});V.ai();a=await aiCloud(t);AI.msgs.pop();AI.busy=0;if(a===null)a=AIMISS}
-  AI.msgs.push({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);V.ai();const i=$('#aiIn');if(i)i.focus()};
+window.addEventListener('resize',()=>{if(S.view==='ai')aiFit()});
+P2.aiSend=function(){const i=$('#aiIn');if(!i)return;const v=i.value;i.value='';P2.aiAsk(v)};
+P2.aiAsk=async function(t){
+  t=String(t||'').trim().slice(0,200);if(!t||AI.busy)return;
+  const log=$('#aiLog');if(!log){return}
+  if(!AI.msgs.length)log.innerHTML='';
+  const add=m=>{m.ts=aiTm();AI.msgs.push(m);log.insertAdjacentHTML('beforeend',aiBub(m));aiScroll()};
+  add({me:1,t});let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
+  if(a===null){AI.busy=1;const go=$('#aiGo');if(go)go.disabled=true;
+    log.insertAdjacentHTML('beforeend','<div class="cr" id="aiTyp"><span class="cav"><i class="ic" data-ic="bolt"></i></span><div class="cbw"><div class="cb typ"><i></i><i></i><i></i></div></div></div>');aiScroll();
+    a=await aiCloud(t);const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false;if(a===null)a=AIMISS}
+  add({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);
+  const i=$('#aiIn');if(i&&matchMedia('(hover:hover)').matches)i.focus();
+};
 P2.aiClear=function(){AI.msgs=[];V.ai()};
 P2.aiAnswer=aiAnswer;P2.aiCtx=aiCtx;
 
