@@ -11,6 +11,10 @@ for (const mode of ["pos", "business"]) {
   const modeConfig = readFileSync(join(dir, "app-mode.js"), "utf8");
   const accessConfig = readFileSync(join(dir, "app-access.js"), "utf8");
   const navigationConfig = readFileSync(join(dir, "app-navigation.js"), "utf8");
+  const appCore = readFileSync(join(dir, "app-core.js"), "utf8");
+  new vm.Script(appCore, { filename: mode + "/app-core.js" });
+  if (!html.includes('<script src="app-core.js"></script>')) throw new Error("Main app core is not loaded as an external module: " + mode);
+  if (html.includes("const $=s=>document.querySelector(s)")) throw new Error("Main app core remains duplicated inline: " + mode);
   new vm.Script(accessConfig, { filename: mode + "/app-access.js" });
   if (!accessConfig.includes("window.ORDELA_ACCESS_CONFIG") || !accessConfig.includes("viewPermissions") || !accessConfig.includes("permissionLabels")) throw new Error("Missing extracted app-access module: " + mode);
   new vm.Script(modeConfig, { filename: mode + "/app-mode.js" });
