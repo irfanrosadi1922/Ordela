@@ -110,6 +110,11 @@ if (mode === "business") {
   if (!existsSync(membersModule)) throw new Error("Required Business members module missing.");
   cpSync(membersModule, join(output, "app-business-members.js"));
 }
+if (mode === "pos") {
+  const kdsModule = join(ROOT, "app-pos-kds.js");
+  if (!existsSync(kdsModule)) throw new Error("Required POS kitchen display module missing.");
+  cpSync(kdsModule, join(output, "app-pos-kds.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
@@ -176,6 +181,11 @@ const membersTag = '<script src="app-business-members.js"></script>';
 if (mode === "pos" && html.includes(membersTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(membersTag, ""));
+}
+const kdsTag = '<script src="app-pos-kds.js"></script>';
+if (mode === "business" && html.includes(kdsTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(kdsTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
