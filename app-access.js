@@ -36,7 +36,7 @@
     viewPermissions: Object.freeze({
       ai: 'ai', riw: 'pos', integ: '#owner', pyr: '#owner', pos: 'pos', home: 'pos',
       table: 'pos', alert: 'pos', inv: 'inv', rc: 'set', prn: 'prn', set: 'set',
-      co: 'co', att: 'att', usr: '#owner', gift: 'gift', rsv: 'rsv', cd: 'pos',
+      co: 'co', att: 'att', usr: '#owner', gift: 'gift', rsv: 'rsv',
       shift: 'shift', exp: 'exp', mem: 'mem', buy: 'buy', promo: '#owner',
       kds: 'kds', opname: 'opn'
     })
