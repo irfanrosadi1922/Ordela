@@ -44,3 +44,32 @@ No Supabase schema, policies, function grants, Auth settings, data, or secrets w
 - Test owner, cashier, staff, and unauthenticated access against the same Supabase tenant.
 - Test order creation, QR generation, payment callback handling, printer connection, push notifications, email verification, password reset, and Telegram/AI integrations.
 - Deploy preview builds first; only then add custom domains and make DNS changes.
+
+
+## Follow-up audit: Pages staging pipeline and backend boundaries
+
+Follow-up date: 2026-11-04
+
+### Cloudflare Pages staging
+
+- Cloudflare project `ordela-platform-preview` is now connected to GitHub repository `irfanrosadi1922/Ordela` and branch `feat/ordela-multi-app-platform`.
+- First deployment completed successfully: `8f6b5eb5-eeed-4568-a1cb-03e9da9f29a7`.
+- Deployment URL: https://8f6b5eb5.ordela-platform-preview.pages.dev
+- Build command is empty and output directory is the repository root. This verifies the Git-connected static Pages deployment pipeline only; it does not prove that authenticated workflows or backend APIs work on the preview.
+- No custom domains were added.
+
+### Additional backend findings
+
+- `sbapi.js` intercepts same-origin `/api/*` fetches and forwards them to Supabase REST RPC `public.pos_api(jsonb)`. The browser-side Supabase publishable key is configured in `config.js`; it is not a service-role secret.
+- The standalone `server.js` is a separate Node.js server using Node's built-in SQLite database and implements its own `/api/*` endpoints. Cloudflare Pages static deployment does not run this Node server. Do not assume the SQLite server is available on the Pages host.
+- `order.html` loads `config.js`, `sbapi.js`, `qr.js`, and `qris.js`, then calls public ordering routes through the same `pos_api` RPC bridge. A dedicated Order app must preserve these dependencies and verify public menu/order/status/payment routes.
+- The root `index.html` is approximately 503 KB and includes both POS and management functionality. The current source does not contain a separate `dashboard.html`; `openDash()` points to that missing file. A safe Business/POS split requires extracting the existing view logic and validating server-side role checks, not copying the root HTML to two folders.
+- The current manifest and service worker are root-scoped. Each app origin will need a tested manifest/service-worker strategy; browser localStorage, service worker registrations, and printer permissions are not shared between subdomains.
+
+### Next implementation gates
+
+1. Map all current views, navigation actions, roles, and backend RPC routes from the existing monolith.
+2. Extract shared runtime code without changing the current production root entry point.
+3. Build an Order preview first because `order.html` is already a separate UI entry point; include its shared runtime assets and test all public RPC routes.
+4. Extract Business and POS into separate entry points only after the current screen/permission matrix is mapped.
+5. Add smoke/regression checks before attaching any custom domain.
