@@ -65,6 +65,23 @@ for (const mode of ["pos", "business"]) {
   const promosPath = join(dir, "app-business-promos.js");
   const membersTag = '<script src="app-business-members.js"></script>';
   const membersPath = join(dir, "app-business-members.js");
+  const kdsTag = '<script src="app-pos-kds.js"></script>';
+  const kdsPath = join(dir, "app-pos-kds.js");
+  if (mode === "pos") {
+    if (!html.includes(kdsTag) || !existsSync(kdsPath)) throw new Error("POS KDS module is missing from POS build");
+    const kdsSource = readFileSync(kdsPath, "utf8");
+    new vm.Script(kdsSource, { filename: mode + "/app-pos-kds.js" });
+    const kdsP2 = { views: {} };
+    const kdsSandbox = { window: { P2: kdsP2 }, P2: kdsP2, setInterval: () => 1 };
+    vm.runInNewContext(kdsSource, kdsSandbox, { filename: mode + "/app-pos-kds.js" });
+    if (typeof kdsP2.views.kds !== "function" || typeof kdsP2.kdsStn !== "function" ||
+        typeof kdsSandbox.window.kdsSet !== "function") {
+      throw new Error("POS KDS feature API is incomplete");
+    }
+    if (!appCore.includes("if(S.view==='kds')V.kds()")) throw new Error("POS KDS refresh integration is missing");
+  } else if (html.includes(kdsTag) || existsSync(kdsPath)) {
+    throw new Error("POS KDS source leaked into Business build");
+  }
   if (mode === "business") {
     if (!html.includes(membersTag) || !existsSync(membersPath)) throw new Error("Business members module is missing from Business build");
     const membersSource = readFileSync(membersPath, "utf8");
@@ -279,6 +296,9 @@ for (const mode of ["pos", "business"]) {
   const dashboardTagIndex = html.indexOf(dashboardTag);
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const kdsTagIndex = html.indexOf(kdsTag);
+  const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const coreTagIndex = html.indexOf('<script src="app-core.js"></script>');
   const membersTagIndex = html.indexOf(membersTag);
   const promosTagIndex = html.indexOf(promosTag);
   const giftsTagIndex = html.indexOf(giftsTag);
@@ -288,8 +308,8 @@ for (const mode of ["pos", "business"]) {
   const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < membersTagIndex && membersTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0 || membersTagIndex >= 0))) {
+      (mode === "business" && (kdsTagIndex >= 0 || existsSync(kdsPath)) ) || (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < membersTagIndex && membersTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0 || membersTagIndex >= 0 || !(pos2TagIndex >= 0 && pos2TagIndex < kdsTagIndex && kdsTagIndex < coreTagIndex)))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
