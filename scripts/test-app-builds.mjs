@@ -63,8 +63,9 @@ for (const mode of ["pos", "business"]) {
   }
 
   if (mode === "business" && !html.includes("if(ORDELA_APP_MODE==='business'&&canView('home'))return 'home';")) throw new Error("Business app must open its dashboard after login");
+  const runtimeSource = html + "\\n" + appCore;
   for (const required of ["function ssCookieGet()", "function ssCookieSet(", "function ssCookieClear()", "Domain=.ordela.my.id", "function canView(v)"]) {
-    if (!html.includes(required)) throw new Error("Missing required shared app behavior in " + mode + ": " + required);
+    if (!runtimeSource.includes(required)) throw new Error("Missing required shared app behavior in " + mode + ": " + required);
   }
   const scriptRe = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
   let match, count = 0;
