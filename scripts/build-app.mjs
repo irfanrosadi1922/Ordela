@@ -70,6 +70,11 @@ if (mode === "business") {
   if (!existsSync(financeModule)) throw new Error("Required Business finance module missing.");
   cpSync(financeModule, join(output, "app-business-finance.js"));
 }
+if (mode === "business") {
+  const aiModule = join(ROOT, "app-business-ai.js");
+  if (!existsSync(aiModule)) throw new Error("Required Business AI module missing.");
+  cpSync(aiModule, join(output, "app-business-ai.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
@@ -96,6 +101,11 @@ const financeTag = '<script src="app-business-finance.js"></script>';
 if (mode === "pos" && html.includes(financeTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(financeTag, ""));
+}
+const aiTag = '<script src="app-business-ai.js"></script>';
+if (mode === "pos" && html.includes(aiTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(aiTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
