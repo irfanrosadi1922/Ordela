@@ -20,6 +20,24 @@ for (const mode of ["pos", "business"]) {
   const usersPath = join(dir, "app-business-users.js");
   const dashboardTag = '<script src="app-business-dashboard.js"></script>';
   const dashboardPath = join(dir, "app-business-dashboard.js");
+  const financeTag = '<script src="app-business-finance.js"></script>';
+  const financePath = join(dir, "app-business-finance.js");
+  if (mode === "business") {
+    if (!html.includes(financeTag) || !existsSync(financePath)) throw new Error("Business finance module is missing from Business build");
+    const financeSource = readFileSync(financePath, "utf8");
+    new vm.Script(financeSource, { filename: mode + "/app-business-finance.js" });
+    const financeSandbox = { window: { P2: { views: {}, t: {} } } };
+    vm.runInNewContext(financeSource, financeSandbox, { filename: mode + "/app-business-finance.js" });
+    if (typeof financeSandbox.window.P2.views.exp !== "function" ||
+        typeof financeSandbox.window.P2.views.buy !== "function" ||
+        typeof financeSandbox.window.profit !== "function" ||
+        typeof financeSandbox.window.debtOf !== "function" ||
+        !financeSandbox.window.BP || !financeSandbox.window.EP) {
+      throw new Error("Business finance feature API is incomplete");
+    }
+  } else if (html.includes(financeTag) || existsSync(financePath)) {
+    throw new Error("Business finance source leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(dashboardTag) || !existsSync(dashboardPath)) throw new Error("Business dashboard module is missing from Business build");
     const dashboardSource = readFileSync(dashboardPath, "utf8");
@@ -96,9 +114,11 @@ for (const mode of ["pos", "business"]) {
   const inventoryTagIndex = html.indexOf(inventoryTag);
   const usersTagIndex = html.indexOf(usersTag);
   const dashboardTagIndex = html.indexOf(dashboardTag);
+  const financeTagIndex = html.indexOf(financeTag);
+  const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0))) {
+      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
