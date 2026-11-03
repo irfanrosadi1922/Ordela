@@ -853,6 +853,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
   <button data-v="home" onclick="go('home')"><i class="ic" data-ic="dash"></i>Beranda</button>
   <button data-v="pos" onclick="go('pos')"><svg class="kic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h18"/><path d="M5 17a7 7 0 0 1 14 0"/><path d="M12 8V6"/><path d="M4 20.5h16"/></svg>Kasir</button>
   <button data-v="table" onclick="go('table')"><i class="ic" data-ic="grid"></i>Meja</button>
+  <button data-v="riw" onclick="go('riw')"><i class="ic" data-ic="receipt"></i>Riwayat Pesanan</button>
   <button data-v="co" id="coNav" onclick="go('co')" hidden><i class="ic" data-ic="cart"></i>Pesanan Online <span class="nb" id="coNavN" hidden></span></button>
   <button data-v="alert" onclick="go('alert')"><i class="ic" data-ic="bell"></i>Notifikasi</button>
   <button data-v="shift" onclick="go('shift')"><i class="ic" data-ic="clock"></i>Shift Kasir</button>
@@ -890,9 +891,9 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 
 <nav class="bnav" id="bnav"><svg class="bnbg" id="bnbg" aria-hidden="true"><defs><mask id="bnmask" maskUnits="userSpaceOnUse" x="-100" y="-40" width="2000" height="300"><rect x="-100" y="-40" width="2000" height="300" fill="#fff"/><path id="bnhole" fill="#000" d=""/></mask></defs><rect id="bnrect" x="0" y="0" width="400" height="200" rx="28" ry="28" style="fill:var(--card)" mask="url(#bnmask)"/></svg><i class="bndot" id="bndot"></i>
   <button data-v="menu" onclick="go('menu')" aria-label="Menu"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.2"/><circle cx="12" cy="6" r="2.2"/><circle cx="18" cy="6" r="2.2"/><circle cx="6" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="18" cy="12" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="12" cy="18" r="2.2"/><circle cx="18" cy="18" r="2.2"/></svg></button>
-  <button data-v="table" onclick="go('table')" aria-label="Meja"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></button>
+  <button data-v="riw" onclick="go('riw')" aria-label="Riwayat"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v5h5"/><path d="M4.6 9A8.5 8.5 0 1 1 3.5 13"/><path d="M12 8v4.5l3 1.8"/></svg></button>
   <button class="home" data-v="pos" onclick="go('pos')" aria-label="Kasir"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h18"/><path d="M5 17a7 7 0 0 1 14 0"/><path d="M12 8V6"/><path d="M4 20.5h16"/></svg></button>
-  <button data-v="co" onclick="go('co')" aria-label="Pesanan"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11l2-8H6"/></svg></button>
+  <button data-v="table" onclick="go('table')" aria-label="Meja"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></button>
   <button data-v="acc" id="bnAcc" onclick="accTap()" aria-label="Akun"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></button>
 </nav>
 
@@ -970,7 +971,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
       <details class="panel" id="coDev" style="margin-top:18px"><summary>Pengaturan perangkat ini</summary><div id="coTop"></div></details>
     </section>
 
-    <section id="v-gift" hidden></section><section id="v-rsv" hidden></section><section id="v-opname" hidden></section><section id="v-integ" hidden></section><section id="v-menu" hidden></section><section id="v-shift" hidden></section><section id="v-exp" hidden></section><section id="v-buy" hidden></section><section id="v-mem" hidden></section><section id="v-promo" hidden></section><section id="v-kds" hidden></section>
+    <section id="v-gift" hidden></section><section id="v-rsv" hidden></section><section id="v-opname" hidden></section><section id="v-riw" hidden></section><section id="v-integ" hidden></section><section id="v-menu" hidden></section><section id="v-shift" hidden></section><section id="v-exp" hidden></section><section id="v-buy" hidden></section><section id="v-mem" hidden></section><section id="v-promo" hidden></section><section id="v-kds" hidden></section>
     <section id="v-att" hidden>
       <div class="bar"><h2><i class="ic" data-ic="clock"></i>Absensi</h2></div>
       <div id="attBox"></div>
@@ -1149,7 +1150,7 @@ setInterval(tick,15000);
 /* ---------- navigation ---------- */
 function toggleDrawer(){$('#drawer').classList.toggle('open');$('#scrim').classList.toggle('on',$('#drawer').classList.contains('open'))}
 function closeAll(){$('#drawer').classList.remove('open');$('#scrim').classList.remove('on')}
-const P2V=['integ','gift','rsv','opname','menu','shift','exp','buy','mem','promo','kds'];
+const P2V=['riw','integ','gift','rsv','opname','menu','shift','exp','buy','mem','promo','kds'];
 const ACCV=['acc','accset','accinfo','editacc','accphoto','pw','accver','accnt','accabout','accdel','accok'];
 function go(v){
   if(S.view==='set'&&v!=='set')S.setSub=null;
@@ -3823,7 +3824,7 @@ function coStart(){
 const PERM_LBL={pos:'Kasir & Transaksi',shift:'Shift Kasir',co:'Pesanan Online',kds:'Layar Dapur',mem:'Member',inv:'Inventori',opn:'Stok Opname',buy:'Pembelian & Pemasok',exp:'Pengeluaran',hist:'Rekap & Riwayat Penjualan',prn:'Printer',set:'Pengaturan',att:'Absensi'};
 const PERM_DESC={shift:'Buka dan tutup shift, hitung uang laci, catat kas masuk/keluar.',kds:'Lihat dan ubah status masak di Layar Dapur.',mem:'Kelola data member dan poin.',opn:'Hitung stok fisik (scan/ketik/Excel) dan terapkan selisih.',buy:'Catat pembelian barang, pemasok, dan hutang.',exp:'Catat dan lihat pengeluaran serta laba.',pos:'Operasional kasir: Kasir, Meja, Beranda, Notifikasi, dan membuat transaksi.',co:'Terima dan proses pesanan dari pelanggan.',inv:'Lihat dan ubah stok, menu bahan, dan riwayat perubahan stok.',hist:'Lihat rekap, riwayat, dan ekspor penjualan di Beranda.',prn:'Sambungkan printer dan cetak struk.',set:'Toko, desain struk, pembayaran, tampilan, data & cadangan.',att:'Absen masuk dan pulang sendiri.'};
 const PERM_SHORT={shift:'Shift',kds:'Dapur',mem:'Member',opn:'Opname',buy:'Pembelian',exp:'Pengeluaran',pos:'Kasir',co:'Pesanan Online',inv:'Inventori',hist:'Rekap',prn:'Printer',set:'Pengaturan',att:'Absensi'};
-const VIEW_PERM={integ:'#owner',pyr:'#owner',pos:'pos',home:'pos',table:'pos',alert:'pos',inv:'inv',rc:'set',prn:'prn',set:'set',co:'co',att:'att',usr:'#owner',gift:'pos',rsv:'pos',cd:'pos',shift:'shift',exp:'exp',mem:'mem',buy:'buy',promo:'#owner',kds:'kds',opname:'opn'};
+const VIEW_PERM={riw:'pos',integ:'#owner',pyr:'#owner',pos:'pos',home:'pos',table:'pos',alert:'pos',inv:'inv',rc:'set',prn:'prn',set:'set',co:'co',att:'att',usr:'#owner',gift:'pos',rsv:'pos',cd:'pos',shift:'shift',exp:'exp',mem:'mem',buy:'buy',promo:'#owner',kds:'kds',opname:'opn'};
 CL.me=null;try{CL.me=JSON.parse(localStorage.getItem('pos_me')||'null')}catch(e){}
 function setMe(m){CL.me=m||null;try{if(m)localStorage.setItem('pos_me',JSON.stringify(m));else localStorage.removeItem('pos_me')}catch(e){}}
 /* tanpa server (mode offline/standalone) tidak ada akun: semua terbuka */
@@ -3835,6 +3836,7 @@ function landing(){if(CL.on&&CL.me)return 'menu';return ['pos','home','co','inv'
 function canView(v){
   if(v==='table'&&can('co'))return true;   // server/pelayan melihat status meja dari antrean pesanan
   if(v==='home'&&can('hist'))return true;   // Rekap & Riwayat tampil di Beranda
+  if(v==='riw')return can('pos')||can('hist')||can('co');
   if(v==='acc')return true;
   if(v==='att')return CL.on&&can('att');
   if(v==='branch')return CL.on&&isOwner();
