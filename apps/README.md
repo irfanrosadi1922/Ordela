@@ -128,3 +128,8 @@ Promo and voucher administration (schedule/rules, code and automatic discounts, 
 ## Business member administration boundary
 
 Member directory, search, member profile/history, loyalty-point configuration, manual point adjustment, and member deletion now live in `app-business-members.js`. The POS checkout's member selection and point redemption/earning logic remains in the cashier runtime, while the Business-only member administration page is excluded from POS. The build tests check the Business handlers and the absence of this management module from POS.
+
+
+## AI conversation history and authorization
+
+The setup SQL now provisions a store-scoped `pos.ai_history` table and a restricted `public.ai_chat_history` RPC. The RPC validates the active Ordela session, resolves the owner’s active branch, checks the AI Manager permission, bounds message count/size, and only grants execution to `service_role`; the Edge Function never trusts a client-supplied user or store ID. The AI history endpoint maps unauthorized/forbidden results to HTTP errors, and the Business chat renderer sanitizes stored assistant HTML through a small element allowlist before inserting it into the page. Applying this SQL and configuring the Edge Function’s `SUPABASE_SERVICE_ROLE_KEY` secret are still deployment steps; neither was changed in production.
