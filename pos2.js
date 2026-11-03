@@ -420,6 +420,20 @@ function aiCtx(){
   L.push('MENU & HARGA: '+db.items.filter(i=>!i.bundle&&!i.ns).slice(0,50).map(i=>i.name+' harga '+i.price+' modal '+(i.cost??'tidak diisi')+' stok '+(i.stock??'tidak diisi')).join('; '));
   return L.join('\\n').slice(0,5900);
 }
+function aiFormat(raw){
+  const inline=s=>esc(s).replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>').replace(/\\*(.+?)\\*/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  const lines=String(raw||'').replace(/\\r/g,'').split('\\n');
+  const out=[];let list='',items=[];
+  const flush=()=>{if(!items.length)return;out.push('<'+list+' style="margin:6px 0 10px;padding-left:22px">'+items.map(x=>'<li style="margin:4px 0">'+inline(x)+'</li>').join('')+'</'+list+'>');items=[];list='';};
+  for(const rawLine of lines){
+    const line=rawLine.trim();if(!line){flush();continue;}let m;
+    if((m=line.match(/^#{1,3}\\s+(.+)$/))){flush();out.push('<div style="font-weight:750;font-size:1.04em;margin:12px 0 5px">'+inline(m[1])+'</div>');continue;}
+    if((m=line.match(/^[-•*]\\s+(.+)$/))){if(list!=='ul'){flush();list='ul';}items.push(m[1]);continue;}
+    if((m=line.match(/^\\d+[.)]\\s+(.+)$/))){if(list!=='ol'){flush();list='ol';}items.push(m[1]);continue;}
+    flush();out.push('<p style="margin:5px 0 8px;line-height:1.55">'+inline(line)+'</p>');
+  }
+  flush();return out.join('');
+}
 async function aiCloud(q){
   const C=window.POS_SB;if(!(C&&C.url)||!(CL.on&&CL.tok))return null;
   // AI.msgs sudah berisi pesan pengguna terbaru. Bersihkan markup tampilan
@@ -431,7 +445,7 @@ async function aiCloud(q){
   }).filter(m=>m.content);
   try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx(),messages:history})});
     const j=await r.json().catch(()=>({}));
-    if(r.ok&&j.answer)return esc(j.answer).replace(/\n/g,'<br>')+'<br><small style="opacity:.6">dijawab AI</small>';
+    if(r.ok&&j.answer)return aiFormat(j.answer)+'<small style="display:block;opacity:.58;margin-top:8px">✦ Ordela AI</small>';
     AI.why=r.status===404?'fungsi ai-chat belum di-deploy (404)':r.status===501?'secret AI_API_KEY belum diisi':'';
     if(r.status===404||r.status===501)return null;   // fungsi belum dipasang / key belum diisi
     if(r.status===401&&/jwt/i.test(JSON.stringify(j))){AI.why='Verify JWT pada fungsi ai-chat masih menyala';return null}
