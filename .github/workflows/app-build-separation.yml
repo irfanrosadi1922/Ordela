@@ -1,0 +1,25 @@
+name: App build separation checks
+
+on:
+  push:
+    branches:
+      - feat/ordela-multi-app-platform
+  pull_request:
+    branches:
+      - main
+      - feat/ordela-multi-app-platform
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build POS frontend
+        run: npm run build:pos
+      - name: Build Business frontend
+        run: npm run build:business
+      - name: Validate independent outputs
+        run: npm run test:apps

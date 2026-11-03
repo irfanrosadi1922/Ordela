@@ -108,6 +108,16 @@ create table if not exists pos.stores(
   code text not null unique,                 -- kode publik toko (untuk tautan/QR pemesanan online)
   name text not null, owner_id bigint, created_at timestamptz not null default now());
 alter table pos.stores enable row level security;
+
+-- Riwayat Asisten Ordela per pengguna dan toko aktif (akses hanya melalui RPC service-role yang memvalidasi sesi).
+create table if not exists pos.ai_history(
+  store_id bigint not null references pos.stores(id) on delete cascade,
+  uid bigint not null references pos.t_users(id) on delete cascade,
+  messages jsonb not null default '[]'::jsonb check (jsonb_typeof(messages) = 'array'),
+  updated_at timestamptz not null default now(),
+  primary key (store_id, uid)
+);
+alter table pos.ai_history enable row level security;
 alter table pos.stores add column if not exists grp bigint;   -- toko pusat (grup cabang); null = toko mandiri/pusat
 alter table pos.sessions add column if not exists act_sid bigint;   -- cabang yang sedang dibuka sesi owner
 alter table pos.t_users add column if not exists store_id bigint references pos.stores(id);
@@ -238,10 +248,10 @@ end $$;
 create or replace function pos.clean_perms(j jsonb) returns jsonb language sql immutable as $$
   select coalesce(jsonb_agg(x order by o), '[]'::jsonb) from (
     select x, min(o) o from jsonb_array_elements_text(case when jsonb_typeof(j) = 'array' then j else '[]'::jsonb end) with ordinality t(x, o)
-    where x in ('pos','shift','co','kds','mem','inv','opn','buy','exp','hist','prn','set','att') group by x) s $$;
+    where x in ('pos','shift','co','kds','mem','inv','opn','buy','exp','hist','prn','set','att','ai','gift','rsv') group by x) s $$;
 
 create or replace function pos.perms_of(u pos.users) returns jsonb language sql immutable as
-$$ select case when u.role = 'owner' then '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att"]'::jsonb else pos.clean_perms(u.perms) end $$;
+$$ select case when u.role = 'owner' then '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att","ai","gift","rsv"]'::jsonb else pos.clean_perms(u.perms) end $$;
 
 create or replace function pos.can(u pos.users, k text) returns boolean language sql immutable as
 $$ select u.role = 'owner' or pos.perms_of(u) ? k $$;
@@ -403,6 +413,21 @@ begin
   if not (pm ? 'pos') and (cur -> 'orders') is distinct from (nxt -> 'orders') then
     return 'Akun ini tidak punya izin Kasir & Transaksi';
   end if;
+  if (cur -> 'holds') is distinct from (nxt -> 'holds') and not (pm ? 'pos') then
+    return 'Akun ini tidak punya izin Kasir & Transaksi';
+  end if;
+  if (cur -> 'seq') is distinct from (nxt -> 'seq') and not (pm ? 'pos') then
+    return 'Akun ini tidak punya izin Kasir & Transaksi';
+  end if;
+  if (cur -> 'occ') is distinct from (nxt -> 'occ') and not (pm ? 'co' or pm ? 'pos') then
+    return 'Akun ini tidak punya izin Kasir & Transaksi';
+  end if;
+  if (cur -> 'kds') is distinct from (nxt -> 'kds') and not (pm ? 'kds' or pm ? 'co' or pm ? 'pos') then
+    return 'Akun ini tidak punya izin Layar Dapur';
+  end if;
+  if (cur -> 'voided') is distinct from (nxt -> 'voided') then
+    return 'Riwayat pembatalan transaksi hanya bisa diubah owner';
+  end if;
   if exists (select o ->> 'no', o from jsonb_array_elements(coalesce(cur -> 'orders', '[]')) o
              except select x ->> 'no', x from jsonb_array_elements(coalesce(nxt -> 'orders', '[]')) x) then
     return 'Riwayat penjualan hanya bisa ditambah, tidak boleh diubah atau dihapus (khusus owner)';
@@ -416,7 +441,11 @@ begin
     select x into n from jsonb_array_elements(nxt -> 'items') x where x ->> 'id' = c ->> 'id' limit 1;
     if n is null then return 'Hanya owner yang boleh menghapus menu'; end if;
     for k in select jsonb_object_keys(c) loop
-      if k <> 'stock' and not coalesce(pos.additive(c -> k, n -> k), false) then
+      if k = 'stock' then
+        if (c -> 'stock') is distinct from (n -> 'stock') and not (pm ? 'inv' or pm ? 'opn' or pm ? 'buy' or pm ? 'pos') then
+          return 'Akun ini tidak punya izin mengubah stok';
+        end if;
+      elsif not coalesce(pos.additive(c -> k, n -> k), false) then
         return 'Hanya owner yang boleh mengubah menu/harga: ' || coalesce(c ->> 'name', c ->> 'id');
       end if;
     end loop;
@@ -424,6 +453,7 @@ begin
   select coalesce(jsonb_agg(x order by x), '[]') into cs from jsonb_array_elements(coalesce(cur -> 'cats', '[]')) x;
   select coalesce(jsonb_agg(x order by x), '[]') into ns from jsonb_array_elements(coalesce(nxt -> 'cats', '[]')) x;
   if cs <> ns then return 'Hanya owner yang boleh mengubah kategori'; end if;
+  if (cur -> 'log') is distinct from (nxt -> 'log') and not (pm ? 'inv' or pm ? 'opn' or pm ? 'pos') then return 'Akun ini tidak punya izin riwayat stok'; end if;
   -- riwayat stok: catatan baru harus atas nama pengguna itu sendiri, catatan lama tidak boleh dihapus
   select count(*) into a from (select x from jsonb_array_elements(coalesce(nxt -> 'log', '[]')) x
     except select y from jsonb_array_elements(coalesce(cur -> 'log', '[]')) y) t;
@@ -438,7 +468,8 @@ begin
   end if;
   if (cur -> 'shifts') is distinct from (nxt -> 'shifts') and not (pm ? 'shift') then return 'Akun ini tidak punya izin Shift Kasir'; end if;
   if (cur -> 'exps') is distinct from (nxt -> 'exps') and not (pm ? 'exp' or pm ? 'shift') then return 'Akun ini tidak punya izin Pengeluaran'; end if;
-  if (cur -> 'gifts') is distinct from (nxt -> 'gifts') and not (pm ? 'pos') then return 'Akun ini tidak punya izin Kasir'; end if;
+  if (cur -> 'gifts') is distinct from (nxt -> 'gifts') and not (pm ? 'gift' or pm ? 'pos') then return 'Akun ini tidak punya izin Kartu Hadiah'; end if;
+  if (cur -> 'rsv') is distinct from (nxt -> 'rsv') and not (pm ? 'rsv') then return 'Akun ini tidak punya izin Reservasi'; end if;
   if (cur -> 'buys') is distinct from (nxt -> 'buys') and not (pm ? 'buy') then return 'Akun ini tidak punya izin Pembelian'; end if;
   if (cur -> 'members') is distinct from (nxt -> 'members') and not (pm ? 'mem' or pm ? 'pos') then return 'Akun ini tidak punya izin Member'; end if;
   if (cur -> 'promos') is distinct from (nxt -> 'promos') then return 'Hanya owner yang boleh mengatur promo'; end if;
@@ -885,6 +916,7 @@ begin
   end if;
 
   if u = '/api/ai/use' and m = 'POST' then   -- kuota asisten AI per pengguna (dipanggil fungsi ai-chat sebelum menghubungi penyedia AI)
+    if not pos.can(me, 'ai') then return pos.r(403, '{"error":"Anda tidak punya izin AI Manager"}'); end if;
     if (select count(*) from pos.rl where rl.k = 'ai:' || me.id and rl.t > now() - interval '1 hour') >= 30 then
       return pos.r(429, '{"error":"Batas pertanyaan AI per jam tercapai. Coba lagi nanti."}');
     end if;
@@ -1050,7 +1082,7 @@ begin
   end if;
   if u = '/api/users' and m = 'GET' then
     if not own then return pos.r(403, '{"error":"Anda tidak punya akses untuk ini"}'); end if;
-    return pos.r(200, jsonb_build_object('perms', '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att"]'::jsonb,
+    return pos.r(200, jsonb_build_object('perms', '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att","ai","gift","rsv"]'::jsonb,
       'users', coalesce((select jsonb_agg(pos.me_view(uu) order by (uu.role = 'owner') desc, uu.username) from pos.users uu), '[]')));
   end if;
   if u = '/api/users' and m = 'POST' then
@@ -1302,6 +1334,63 @@ exception when others then
   return pos.r(500, jsonb_build_object('error', 'server error',
     'detail', case when exists (select 1 from pos.meta where k = 'debug') then sqlerrm end));
 end $$;
+
+-- Riwayat AI hanya dapat diakses melalui Edge Function dengan service-role key.
+-- Token sesi tetap diverifikasi di database; identitas toko/cabang tidak diterima dari klien.
+create or replace function public.ai_chat_history(p_token text, p_action text, p_messages jsonb default '[]'::jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$;
+declare
+  me pos.users;
+  v_sid bigint;
+  v_act bigint;
+  v_msgs jsonb;
+  v_item jsonb;
+begin
+  if p_action is null or p_action not in ('load', 'save', 'clear') then return jsonb_build_object('error', 'bad_action'); end if;
+  me := pos.auth(p_token);
+  if me.id is null then return jsonb_build_object('error', 'unauthorized'); end if;
+  v_sid := me.store_id;
+  if me.role = 'owner' and v_sid is not null then
+    select act_sid into v_act from pos.sessions where th = encode(extensions.digest(p_token, 'sha256'), 'hex');
+    if v_act is not null and exists (
+      select 1 from pos.stores x
+      where x.id = v_act and x.grp = coalesce((select g.grp from pos.stores g where g.id = v_sid), v_sid)
+    ) then v_sid := v_act; end if;
+  end if;
+  if v_sid is null then return jsonb_build_object('error', 'no_store'); end if;
+  perform set_config('pos.sid', v_sid::text, true);
+  if me.id is null or not pos.can(me, 'ai') then return jsonb_build_object('error', 'forbidden'); end if;
+
+  if p_action = 'load' then
+    select messages into v_msgs from pos.ai_history where store_id = v_sid and uid = me.id;
+    return coalesce(v_msgs, '[]'::jsonb);
+  elsif p_action = 'clear' then
+    delete from pos.ai_history where store_id = v_sid and uid = me.id;
+    return jsonb_build_object('ok', true);
+  end if;
+
+  if jsonb_typeof(p_messages) is distinct from 'array' then
+    return jsonb_build_object('error', 'invalid_messages');
+  end if;
+  if jsonb_array_length(p_messages) > 60 or length(p_messages::text) > 100000 then
+    return jsonb_build_object('error', 'invalid_messages');
+  end if;
+  for v_item in select value from jsonb_array_elements(p_messages) loop
+    if jsonb_typeof(v_item) <> 'object'
+      or jsonb_typeof(v_item -> 't') is distinct from 'string'
+      or length(v_item ->> 't') > 2000
+      or (v_item ? 'ts' and length(coalesce(v_item ->> 'ts', '')) > 32)
+      or (v_item ? 'me' and jsonb_typeof(v_item -> 'me') not in ('boolean', 'number')) then
+      return jsonb_build_object('error', 'invalid_message');
+    end if;
+  end loop;
+  insert into pos.ai_history(store_id, uid, messages, updated_at)
+  values (v_sid, me.id, p_messages, now())
+  on conflict (store_id, uid) do update set messages = excluded.messages, updated_at = excluded.updated_at;
+  return jsonb_build_object('ok', true);
+end $$;
+revoke all on function public.ai_chat_history(text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.ai_chat_history(text, text, jsonb) to service_role;
 
 -- ------------------------------------------------------------ Integrasi Center (per toko, kredensial terenkripsi)
 create or replace function pos.ikey() returns text language plpgsql as $$

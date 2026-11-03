@@ -9,5 +9,10 @@
     "@capacitor-community/bluetooth-le": "^6.0.0",
     "@capacitor/push-notifications": "^6.0.0",
     "@capacitor/local-notifications": "^6.0.0"
+  },
+  "scripts": {
+    "build:pos": "node scripts/build-app.mjs pos",
+    "build:business": "node scripts/build-app.mjs business",
+    "test:apps": "node scripts/test-app-builds.mjs"
   }
 }

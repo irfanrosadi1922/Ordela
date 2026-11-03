@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ordela staging SSO check</title></head>
+<body>
+<h1>Ordela staging integration check</h1>
+<pre id="result">Running checks…</pre>
+<script>
+(function () {
+  var out = document.getElementById('result');
+  var params = new URLSearchParams(location.search);
+  if (params.has('frame')) {
+    var shared = document.cookie.split(';').some(function (x) { return x.trim().indexOf('ordela_pos_act=') === 0; });
+    out.textContent = 'Sibling cookie visible: ' + (shared ? 'PASS' : 'FAIL');
+    parent.postMessage({ type: 'ordela-cookie-check', shared: shared }, 'https://app-preview.ordela.my.id');
+    return;
+  }
+  document.cookie = 'ordela_pos_act=' + Date.now() + '; Domain=.ordela.my.id; Path=/; Max-Age=60; Secure; SameSite=Lax';
+  var results = { api: 'pending', sharedCookie: 'pending' };
+  function render() { out.textContent = JSON.stringify(results, null, 2); }
+  fetch('https://api-preview.ordela.my.id/api/health', { credentials: 'include', cache: 'no-store' })
+    .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+    .then(function (x) { results.api = x.status === 200 && x.body && x.body.ok ? 'PASS' : 'FAIL (' + x.status + ')'; render(); })
+    .catch(function (e) { results.api = 'FAIL (' + String(e) + ')'; render(); });
+  window.addEventListener('message', function (e) {
+    if (e.origin !== 'https://pos-preview.ordela.my.id' || !e.data || e.data.type !== 'ordela-cookie-check') return;
+    results.sharedCookie = e.data.shared ? 'PASS' : 'FAIL';
+    render();
+  });
+  var frame = document.createElement('iframe');
+  frame.title = 'Sibling subdomain cookie test';
+  frame.style.display = 'none';
+  frame.src = 'https://pos-preview.ordela.my.id/apps/staging/sso-check.html?frame=1&t=' + Date.now();
+  document.body.appendChild(frame);
+  render();
+})();
+</script>
+</body>
+</html>
