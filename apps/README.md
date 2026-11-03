@@ -46,7 +46,7 @@ Each output locks its app mode at build time, carries its own public assets and 
 
 The hostname-to-app-mode selection and the POS-only/Business-only route classification now live in the standalone `app-mode.js` module. The root entrypoint loads this module before the main application script, and both dedicated build artifacts include it. The POS and Business build scripts lock the selected mode inside the copied module at build time; regression checks validate that the selector is locked and that the module is loaded by the entrypoint.
 
-This is the first safe source extraction, not the completion of feature-source separation. The navigation route lists for secondary and account views live in `app-navigation.js`. The former large inline application runtime has been extracted to `app-core.js` and is loaded synchronously at the same point in the document to preserve script order. The runtime still contains mixed POS and Business behavior; feature-specific code must be split in small dependency-aware slices with regression tests.
+This is the first safe source extraction, not the completion of feature-source separation. The navigation route lists for secondary and account views live in `app-navigation.js`. The former large inline application runtime has been extracted to `app-core.js` and is loaded synchronously at the same point in the document to preserve script order. Both workspace builds include this runtime, and the build tests syntax-check it and verify that shared session and Business landing behavior remain present. The runtime still contains mixed POS and Business behavior; feature-specific code must be split in small dependency-aware slices with regression tests.
 
 ## Feature ownership and access map
 
