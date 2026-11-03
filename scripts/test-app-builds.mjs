@@ -9,9 +9,12 @@ for (const mode of ["pos", "business"]) {
   if (meta.mode !== mode || meta.buildTarget !== "preview") throw new Error("Incorrect build metadata: " + mode);
   const html = readFileSync(join(dir, "index.html"), "utf8");
   const modeConfig = readFileSync(join(dir, "app-mode.js"), "utf8");
+  const accessConfig = readFileSync(join(dir, "app-access.js"), "utf8");
+  new vm.Script(accessConfig, { filename: mode + "/app-access.js" });
+  if (!accessConfig.includes("window.ORDELA_ACCESS_CONFIG") || !accessConfig.includes("viewPermissions") || !accessConfig.includes("permissionLabels")) throw new Error("Missing extracted app-access module: " + mode);
   new vm.Script(modeConfig, { filename: mode + "/app-mode.js" });
   if (!modeConfig.includes("window.ORDELA_APP_CONFIG") || !modeConfig.includes("posOnly") || !modeConfig.includes("businessOnly")) throw new Error("Missing extracted app-mode module: " + mode);
-  if (!html.includes('<script src="app-mode.js"></script>')) throw new Error("App-mode module is not loaded before the main app: " + mode);
+  if (!html.includes('<script src="app-mode.js"></script>') || !html.includes('<script src="app-access.js"></script>')) throw new Error("App configuration modules are not loaded before the main app: " + mode);
   if (!modeConfig.includes("var mode = '" + mode + "';")) throw new Error("Build mode not locked in app-mode.js: " + mode);
   if (modeConfig.includes("window.location.hostname")) throw new Error("Runtime hostname selector leaked into " + mode);
   if (mode === "business" && !html.includes("if(ORDELA_APP_MODE==='business'&&canView('home'))return 'home';")) throw new Error("Business app must open its dashboard after login");
