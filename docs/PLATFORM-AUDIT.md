@@ -73,3 +73,14 @@ Follow-up date: 2026-11-04
 3. Build an Order preview first because `order.html` is already a separate UI entry point; include its shared runtime assets and test all public RPC routes.
 4. Extract Business and POS into separate entry points only after the current screen/permission matrix is mapped.
 5. Add smoke/regression checks before attaching any custom domain.
+
+
+### Order preview browser smoke test (2026-11-04)
+
+- Cloudflare Pages deployment for `apps/order` completed successfully (deployment `d7b16ed8-6425-4427-9802-f121efb7f30c`).
+- Cloudflare Browser Rendering fetched the deployed root with HTTP 200 and executed the page JavaScript.
+- Before adding a guard, opening the page without a store code displayed the backend's fallback/demo store menu (labelled “Samehada”). This is not the user's live store data.
+- Added a preview-only guard: without a valid store query parameter `s`, the preview now displays an instruction to open the page through a store QR code and hides the fallback menu.
+- Re-tested the stable Pages host: HTTP 200, title `Order · Ordela`, guard message visible, menu hidden, and demo item content absent.
+- This does not validate a real tenant's QR, order submission, status polling, or payment. Those flows require a real store code and must be tested before adding `order.ordela.my.id`.
+- Browser Rendering returned a rate-limit response on a later asset-check batch; no further repeated calls were made.
