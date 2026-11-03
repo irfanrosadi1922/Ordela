@@ -45,7 +45,14 @@ Deno.serve(async (req: Request) => {
       }),
     });
     const j = await r.json();
-    if (!r.ok) return out({ error: r.status === 429 ? "Kuota/saldo penyedia AI habis atau terlalu cepat. Cek akun penyedia AI Anda." : "Penyedia AI menolak permintaan" }, 502);
+    if (!r.ok) {
+      const raw = String(j?.error?.message ?? j?.message ?? (typeof j?.error === "string" ? j.error : "")).replace(/[\r\n]+/g, " ").slice(0, 140);
+      const why: Record<number, string> = {
+        400: "permintaan tidak valid (cek AI_MODEL)", 401: "API key salah/tidak berlaku (cek AI_API_KEY)", 402: "saldo penyedia AI habis (isi saldo)",
+        403: "akses ditolak (key tidak punya izin atau wilayah diblokir)", 404: "alamat/model tidak ditemukan (cek AI_BASE_URL dan AI_MODEL)", 429: "kuota habis atau terlalu cepat",
+      };
+      return out({ error: `Penyedia AI menolak (${r.status}): ${why[r.status] ?? "kesalahan penyedia"}${raw ? " — " + raw : ""}` }, 502);
+    }
     const a = j?.choices?.[0]?.message?.content;
     return out({ answer: String(a ?? "").slice(0, 2000) });
   } catch { return out({ error: "AI tidak merespons, coba lagi" }, 504); } finally { clearTimeout(to); }
