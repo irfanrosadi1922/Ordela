@@ -83,3 +83,8 @@ Stock-count import and adjustment now live in `app-business-inventory.js`. The B
 ## Business user administration feature boundary
 
 Owner-only user administration, custom staff roles, permission editing, account activation/deletion, password resets, and the user audit log now live in `app-business-users.js`. Only the Business artifact contains and loads this module. The shared runtime retains the small role-key/role-label helpers because the account profile screens in both applications display the signed-in user's role. Tests verify the module's exported handlers, preserve the shared role-label dependency, and ensure the POS artifact contains neither the module nor its script reference.
+
+
+## Business dashboard feature boundary
+
+The sales dashboard now lives in `app-business-dashboard.js`: period comparisons, sales series, chart rendering, category breakdowns, and the home summary. The Business build loads it before the shared runtime; the POS build excludes the module and script reference. The small shared date-range synchronizer and generic comparison-label helper remain in the common runtime because other screens use them. The build test verifies the dashboard API, five standard period presets, shared boot integration, script order, and POS exclusion.
