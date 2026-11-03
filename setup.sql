@@ -416,7 +416,11 @@ begin
     select x into n from jsonb_array_elements(nxt -> 'items') x where x ->> 'id' = c ->> 'id' limit 1;
     if n is null then return 'Hanya owner yang boleh menghapus menu'; end if;
     for k in select jsonb_object_keys(c) loop
-      if k <> 'stock' and not coalesce(pos.additive(c -> k, n -> k), false) then
+      if k = 'stock' then
+        if (c -> 'stock') is distinct from (n -> 'stock') and not (pm ? 'inv' or pm ? 'opn' or pm ? 'pos') then
+          return 'Akun ini tidak punya izin mengubah stok';
+        end if;
+      elsif not coalesce(pos.additive(c -> k, n -> k), false) then
         return 'Hanya owner yang boleh mengubah menu/harga: ' || coalesce(c ->> 'name', c ->> 'id');
       end if;
     end loop;
@@ -424,6 +428,7 @@ begin
   select coalesce(jsonb_agg(x order by x), '[]') into cs from jsonb_array_elements(coalesce(cur -> 'cats', '[]')) x;
   select coalesce(jsonb_agg(x order by x), '[]') into ns from jsonb_array_elements(coalesce(nxt -> 'cats', '[]')) x;
   if cs <> ns then return 'Hanya owner yang boleh mengubah kategori'; end if;
+  if (cur -> 'log') is distinct from (nxt -> 'log') and not (pm ? 'inv' or pm ? 'opn' or pm ? 'pos') then return 'Akun ini tidak punya izin riwayat stok'; end if;
   -- riwayat stok: catatan baru harus atas nama pengguna itu sendiri, catatan lama tidak boleh dihapus
   select count(*) into a from (select x from jsonb_array_elements(coalesce(nxt -> 'log', '[]')) x
     except select y from jsonb_array_elements(coalesce(cur -> 'log', '[]')) y) t;
