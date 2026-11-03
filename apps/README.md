@@ -73,3 +73,8 @@ The dependency-light XLSX ZIP/CRC/XML builder now lives in `app-export-xlsx.js`,
 ## Business payroll feature boundary
 
 Owner payroll and attendance reporting now live in `app-business-payroll.js`, not in the shared runtime. The Business build includes and loads this feature module after the shared XLSX utility; the POS build excludes both its script tag and source file. The module exposes the existing payroll state and UI handlers for the shared navigation integration, while keeping payroll calculations, salary records, payslip actions, and owner attendance exports together. Automated build tests execute the module in isolation, verify its public API, and fail if the Business module leaks into the POS artifact. Employee self-service attendance capture and shift configuration remain in the shared runtime for now; they are not claimed as separated by this change.
+
+
+## Business inventory stock-count feature boundary
+
+Stock-count import and adjustment now live in `app-business-inventory.js`. The Business artifact includes this module after the shared XLSX utility and payroll feature; the POS artifact removes its script tag and does not contain the module. The feature owns CSV/XLSX parsing, template generation, discrepancy review, applying stock corrections, and the result report. Shared inventory listing and normal stock editing remain in the common runtime; the module boundary does not replace server-side permission checks.
