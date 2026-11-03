@@ -80,6 +80,16 @@ if (mode === "business") {
   if (!existsSync(integrationsModule)) throw new Error("Required Business integrations module missing.");
   cpSync(integrationsModule, join(output, "app-business-integrations.js"));
 }
+if (mode === "business") {
+  const branchesModule = join(ROOT, "app-business-branches.js");
+  if (!existsSync(branchesModule)) throw new Error("Required Business branches module missing.");
+  cpSync(branchesModule, join(output, "app-business-branches.js"));
+}
+if (mode === "business") {
+  const reservationsModule = join(ROOT, "app-business-reservations.js");
+  if (!existsSync(reservationsModule)) throw new Error("Required Business reservations module missing.");
+  cpSync(reservationsModule, join(output, "app-business-reservations.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
@@ -116,6 +126,16 @@ const integrationsTag = '<script src="app-business-integrations.js"></script>';
 if (mode === "pos" && html.includes(integrationsTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(integrationsTag, ""));
+}
+const branchesTag = '<script src="app-business-branches.js"></script>';
+if (mode === "pos" && html.includes(branchesTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(branchesTag, ""));
+}
+const reservationsTag = '<script src="app-business-reservations.js"></script>';
+if (mode === "pos" && html.includes(reservationsTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(reservationsTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
