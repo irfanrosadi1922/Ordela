@@ -17,6 +17,27 @@ for (const mode of ["pos", "business"]) {
   if (!html.includes('<script src="app-mode.js"></script>') || !html.includes('<script src="app-access.js"></script>')) throw new Error("App configuration modules are not loaded before the main app: " + mode);
   if (!modeConfig.includes("var mode = '" + mode + "';")) throw new Error("Build mode not locked in app-mode.js: " + mode);
   if (modeConfig.includes("window.location.hostname")) throw new Error("Runtime hostname selector leaked into " + mode);
+  const accessSandbox = { window: {} };
+  vm.runInNewContext(accessConfig, accessSandbox, { filename: mode + "/app-access.js" });
+  const permissions = accessSandbox.window.ORDELA_ACCESS_CONFIG;
+  for (const [view, permission] of Object.entries(permissions.viewPermissions)) {
+    if (permission !== "#owner" && !Object.prototype.hasOwnProperty.call(permissions.permissionLabels, permission)) {
+      throw new Error("View " + view + " maps to an undefined permission: " + permission);
+    }
+  }
+  const modeSandbox = { window: { location: { hostname: "build.invalid" } } };
+  vm.runInNewContext(modeConfig, modeSandbox, { filename: mode + "/app-mode.js" });
+  const appConfig = modeSandbox.window.ORDELA_APP_CONFIG;
+  const allGroups = [...appConfig.posOnly, ...appConfig.businessOnly, ...appConfig.shared];
+  if (new Set(allGroups).size !== allGroups.length) throw new Error("App route groups overlap: " + mode);
+  if (!appConfig.posOnly.includes("pos") || !appConfig.posOnly.includes("table") || !appConfig.posOnly.includes("shift") || !appConfig.posOnly.includes("kds")) throw new Error("POS feature ownership is incomplete: " + mode);
+  for (const view of ["home", "inv", "usr", "pyr", "integ", "gift", "rsv", "opname", "exp", "mem", "buy", "promo", "ai", "branch"]) {
+    if (!appConfig.businessOnly.includes(view)) throw new Error("Business feature ownership is incomplete: " + view);
+  }
+  for (const view of ["menu", "riw", "co", "alert", "att", "set", "rc", "prn"]) {
+    if (!appConfig.shared.includes(view)) throw new Error("Shared feature ownership is incomplete: " + view);
+  }
+
   if (mode === "business" && !html.includes("if(ORDELA_APP_MODE==='business'&&canView('home'))return 'home';")) throw new Error("Business app must open its dashboard after login");
   for (const required of ["function ssCookieGet()", "function ssCookieSet(", "function ssCookieClear()", "Domain=.ordela.my.id", "function canView(v)"]) {
     if (!html.includes(required)) throw new Error("Missing required shared app behavior in " + mode + ": " + required);
