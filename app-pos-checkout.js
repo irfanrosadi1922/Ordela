@@ -67,7 +67,8 @@
     S.cart={};S.cm={};S.dVal=0;S.promoId=null;save();closeModal();renderGrid();renderInvoice();renderCats();toast('Pesanan ditahan')
   }
   
-  function holdList(){
+  function holdTotal(h){let t=0;for(const k in h.cart){const i=find(bid(k));if(!i)continue;const m=(h.cm||{})[k];t+=(i.price+(m?m.sel.reduce((a,x)=>a+(+x.p||0),0):0))*h.cart[k]}return t}
+function holdList(){
     const l=holdsOpen();
     openModal(`<h3>Pesanan Ditahan</h3>`+(l.length?l.map(h=>`<div class="tbo"><div class="tbh"><b>${h.tbl?'Meja '+esc(h.tbl)+' · ':''}${esc(h.cust||'Tanpa nama')}</b><span class="pst w">${Object.values(h.cart).reduce((a,b)=>a+b,0)} item</span></div>
       <small>${esc(ago(h.t))}${h.by?' · '+esc(h.by):''} · ${money(holdTotal(h))}</small>
@@ -250,6 +251,7 @@
     checkout: checkout,
     fmtDT: fmtDT,
     holdsOpen: holdsOpen,
+    holdTotal: holdTotal,
     memOpen: memOpen
   });
 })(window);
