@@ -23,12 +23,12 @@ if (!setupSql.includes("not (pm ? 'co' or pm ? 'pos')") ||
 }
 if (!setupSql.includes("cur -> 'occ') is distinct from (nxt -> 'occ') and not (pm ? 'co' or pm ? 'pos')")) throw new Error("Kitchen table-clear permission is not reflected in the occupancy guard");
 const appSourceFiles = readdirSync(root).filter(file =>
-  file === "app-core.js" || file === "pos2.js" || /^app-(business|pos)-.+\\.js$/.test(file)
+  file === "app-core.js" || file === "pos2.js" || /^app-(business|pos)-.+\.js$/.test(file)
 );
 const referencedDbKeys = new Set();
 for (const file of appSourceFiles) {
   const source = readFileSync(join(root, file), "utf8");
-  for (const match of source.matchAll(/\\bdb\\.([A-Za-z_$][\\w$]*)/g)) referencedDbKeys.add(match[1]);
+  for (const match of source.matchAll(/\bdb\.([A-Za-z_$][\w$]*)/g)) referencedDbKeys.add(match[1]);
 }
 const guardedDbKeys = new Set(["orders", "items", "cats", "log", "shifts", "exps", "gifts", "rsv", "buys", "members", "promos", "sups", "set", "holds", "seq", "occ", "kds", "voided", "_ts"]);
 for (const key of referencedDbKeys) {
