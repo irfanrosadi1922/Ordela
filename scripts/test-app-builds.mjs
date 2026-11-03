@@ -16,6 +16,13 @@ const ownerPermissionMatch = setupSql.match(/'perms',\s*'(\[[^']+\])'::jsonb/);
 const ownerPermissions = ownerPermissionMatch ? JSON.parse(ownerPermissionMatch[1]) : [];
 const expectedOwnerPermissions = ["pos", "shift", "co", "kds", "mem", "inv", "opn", "buy", "exp", "hist", "prn", "set", "att", "ai", "gift", "rsv"];
 if (JSON.stringify(ownerPermissions) !== JSON.stringify(expectedOwnerPermissions)) throw new Error("User administration permission catalog is out of sync");
+if (!setupSql.includes("create table if not exists pos.ai_history") ||
+    !setupSql.includes("create or replace function public.ai_chat_history") ||
+    !setupSql.includes("grant execute on function public.ai_chat_history(text, text, jsonb) to service_role;") ||
+    !setupSql.includes("revoke all on function public.ai_chat_history(text, text, jsonb) from public, anon, authenticated;") ||
+    !setupSql.includes("if me.id is null or not pos.can(me, 'ai')")) {
+  throw new Error("AI conversation history storage or server-side access control is incomplete");
+}
 
 for (const mode of ["pos", "business"]) {
   const dir = join(root, "dist", mode);
