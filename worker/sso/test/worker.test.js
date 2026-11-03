@@ -84,3 +84,12 @@ test("production cookie is scoped to Ordela subdomains", async (t) => {
   assert.equal(r.status, 200);
   assert.match(r.headers.get("Set-Cookie"), /Domain=\.ordela\.my\.id/);
 });
+
+test("health endpoint is available for infrastructure checks without browser Origin", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => new Response(JSON.stringify({
+    s: 200, b: { ok: true, pos: true, sb: true }
+  }), { status: 200 }));
+  const r = await worker.fetch(new Request("https://ordela-sso-preview.workers.dev/api/health"), env);
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { ok: true, pos: true, sb: true });
+});
