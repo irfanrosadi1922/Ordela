@@ -16,6 +16,27 @@ for (const mode of ["pos", "business"]) {
   const payrollPath = join(dir, "app-business-payroll.js");
   const inventoryTag = '<script src="app-business-inventory.js"></script>';
   const inventoryPath = join(dir, "app-business-inventory.js");
+  const usersTag = '<script src="app-business-users.js"></script>';
+  const usersPath = join(dir, "app-business-users.js");
+  if (mode === "business") {
+    if (!html.includes(usersTag) || !existsSync(usersPath)) throw new Error("Business users module is missing from Business build");
+    const usersSource = readFileSync(usersPath, "utf8");
+    new vm.Script(usersSource, { filename: mode + "/app-business-users.js" });
+    const usersSandbox = { window: {} };
+    vm.runInNewContext(usersSource, usersSandbox, { filename: mode + "/app-business-users.js" });
+    if (!usersSandbox.window.USR || !usersSandbox.window.ULOG ||
+        typeof usersSandbox.window.renderUsr !== "function" ||
+        typeof usersSandbox.window.usrSave !== "function" ||
+        typeof usersSandbox.window.usrRoleOptions !== "function") {
+      throw new Error("Business users feature API is incomplete");
+    }
+    if (appCore.includes("const USR=") || !appCore.includes("function usrRoleLabel(s){") ||
+        !appCore.includes("if(S.view==='usr')renderUsr();")) {
+      throw new Error("Business users feature boundary or shared role-label integration is invalid");
+    }
+  } else if (html.includes(usersTag) || existsSync(usersPath)) {
+    throw new Error("Business users source leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(inventoryTag) || !existsSync(inventoryPath)) throw new Error("Business inventory module is missing from Business build");
     const inventorySource = readFileSync(inventoryPath, "utf8");
@@ -54,9 +75,10 @@ for (const mode of ["pos", "business"]) {
   const payrollTagIndex = html.indexOf(payrollTag);
   const coreTagIndex = html.indexOf('<script src="app-core.js"></script>');
   const inventoryTagIndex = html.indexOf(inventoryTag);
+  const usersTagIndex = html.indexOf(usersTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0))) {
+      (mode === "business" && !(xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
