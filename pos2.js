@@ -421,15 +421,15 @@ function aiCtx(){
   return L.join('\\n').slice(0,5900);
 }
 function aiFormat(raw){
-  const inline=s=>esc(s).replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>').replace(/\\*(.+?)\\*/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>');
-  const lines=String(raw||'').replace(/\\r/g,'').split('\\n');
+  const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  const lines=String(raw||'').replace(/\r/g,'').split('\n');
   const out=[];let list='',items=[];
   const flush=()=>{if(!items.length)return;out.push('<'+list+' style="margin:6px 0 10px;padding-left:22px">'+items.map(x=>'<li style="margin:4px 0">'+inline(x)+'</li>').join('')+'</'+list+'>');items=[];list='';};
   for(const rawLine of lines){
     const line=rawLine.trim();if(!line){flush();continue;}let m;
-    if((m=line.match(/^#{1,3}\\s+(.+)$/))){flush();out.push('<div style="font-weight:750;font-size:1.04em;margin:12px 0 5px">'+inline(m[1])+'</div>');continue;}
-    if((m=line.match(/^[-•*]\\s+(.+)$/))){if(list!=='ul'){flush();list='ul';}items.push(m[1]);continue;}
-    if((m=line.match(/^\\d+[.)]\\s+(.+)$/))){if(list!=='ol'){flush();list='ol';}items.push(m[1]);continue;}
+    if((m=line.match(/^#{1,3}\s+(.+)$/))){flush();out.push('<div style="font-weight:750;font-size:1.04em;margin:12px 0 5px">'+inline(m[1])+'</div>');continue;}
+    if((m=line.match(/^[-•*]\s+(.+)$/))){if(list!=='ul'){flush();list='ul';}items.push(m[1]);continue;}
+    if((m=line.match(/^\d+[.)]\s+(.+)$/))){if(list!=='ol'){flush();list='ol';}items.push(m[1]);continue;}
     flush();out.push('<p style="margin:5px 0 8px;line-height:1.55">'+inline(line)+'</p>');
   }
   flush();return out.join('');
