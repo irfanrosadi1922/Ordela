@@ -29,6 +29,16 @@ for (const mode of ["pos", "business"]) {
   const meta = JSON.parse(readFileSync(join(dir, "ordela-app.json"), "utf8"));
   if (meta.mode !== mode || meta.buildTarget !== "preview") throw new Error("Incorrect build metadata: " + mode);
   const html = readFileSync(join(dir, "index.html"), "utf8");
+  const builtViewIds = new Set([...html.matchAll(/<section\\b[^>]*\\bid=["']v-([^"']+)["'][^>]*>/gi)].map(match => match[1]));
+  const exclusiveViews = mode === "pos"
+    ? ["home", "inv", "usr", "pyr", "integ", "gift", "rsv", "opname", "exp", "mem", "buy", "promo", "ai"]
+    : ["pos", "table", "shift", "kds"];
+  for (const view of exclusiveViews) {
+    if (builtViewIds.has(view)) throw new Error("Foreign workspace page leaked into " + mode + " HTML: " + view);
+  }
+  for (const view of ["riw", "co", "alert", "att", "set", "rc", "prn"]) {
+    if (!builtViewIds.has(view)) throw new Error("Shared page missing from " + mode + " HTML: " + view);
+  }
   const modeConfig = readFileSync(join(dir, "app-mode.js"), "utf8");
   const accessConfig = readFileSync(join(dir, "app-access.js"), "utf8");
   const navigationConfig = readFileSync(join(dir, "app-navigation.js"), "utf8");
