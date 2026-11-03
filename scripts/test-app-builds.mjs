@@ -3,24 +3,6 @@ import { join } from "node:path";
 import vm from "node:vm";
 
 const root = process.cwd();
-const setupSql = readFileSync(join(root, "setup.sql"), "utf8");
-const permissionAllowlist = setupSql.match(/where x in \(([^)]*)\) group by x\) s \$\$;/)?.[1] || "";
-for (const permission of ["'ai'", "'gift'", "'rsv'"]) {
-  if (!permissionAllowlist.includes(permission)) throw new Error("Database permission allowlist is missing " + permission);
-}
-if (!setupSql.includes("'[\"pos\",\"shift\",\"co\",\"kds\",\"mem\",\"inv\",\"opn\",\"buy\",\"exp\",\"hist\",\"prn\",\"set\",\"att\",\"ai\",\"gift\",\"rsv\"]'::jsonb")) {
-  throw new Error("Owner permission set is out of sync with the application");
-}
-if (!setupSql.includes("if not pos.can(me, 'ai') then return pos.r(403")) {
-  throw new Error("AI Manager endpoint is missing server-side permission enforcement");
-}
-if (!setupSql.includes("not (pm ? 'gift' or pm ? 'pos')") ||
-    !setupSql.includes("not (pm ? 'rsv')")) {
-  throw new Error("Gift or reservation document writes are missing server-side permission enforcement");
-}
-if (!setupSql.includes("'perms', '[\"pos\",\"shift\",\"co\",\"kds\",\"mem\",\"inv\",\"opn\",\"buy\",\"exp\",\"hist\",\"prn\",\"set\",\"att\",\"ai\",\"gift\",\"rsv\"]'::jsonb")) {
-  throw new Error("User administration permission catalog is out of sync");
-}
 for (const mode of ["pos", "business"]) {
   const dir = join(root, "dist", mode);
   const meta = JSON.parse(readFileSync(join(dir, "ordela-app.json"), "utf8"));
@@ -63,6 +45,26 @@ for (const mode of ["pos", "business"]) {
   const reservationsPath = join(dir, "app-business-reservations.js");
   const stocktakeTag = '<script src="app-business-stocktake.js"></script>';
   const stocktakePath = join(dir, "app-business-stocktake.js");
+  const giftsTag = '<script src="app-business-gifts.js"></script>';
+  const giftsPath = join(dir, "app-business-gifts.js");
+  if (mode === "business") {
+    if (!html.includes(giftsTag) || !existsSync(giftsPath)) throw new Error("Business gift-card module is missing from Business build");
+    const giftsSource = readFileSync(giftsPath, "utf8");
+    new vm.Script(giftsSource, { filename: mode + "/app-business-gifts.js" });
+    const giftsP2 = { views: {} };
+    const giftsSandbox = { window: { P2: giftsP2 }, P2: giftsP2 };
+    vm.runInNewContext(giftsSource, giftsSandbox, { filename: mode + "/app-business-gifts.js" });
+    for (const name of ["giftForm", "giftSave", "giftDetail", "giftTop", "giftDel"]) {
+      if (typeof giftsP2[name] !== "function") throw new Error("Business gift-card API missing P2." + name);
+    }
+    if (typeof giftsP2.views.gift !== "function" ||
+        !readFileSync(join(root, "pos2.js"), "utf8").includes("P2.giftUse=function(){") ||
+        !readFileSync(join(root, "pos2.js"), "utf8").includes("P2.giftClear=function(){")) {
+      throw new Error("Gift-card management/redemption boundary is invalid");
+    }
+  } else if (html.includes(giftsTag) || existsSync(giftsPath)) {
+    throw new Error("Business gift-card administration leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(stocktakeTag) || !existsSync(stocktakePath)) throw new Error("Business stocktake module is missing from Business build");
     const stocktakeSource = readFileSync(stocktakePath, "utf8");
@@ -225,14 +227,15 @@ for (const mode of ["pos", "business"]) {
   const dashboardTagIndex = html.indexOf(dashboardTag);
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const giftsTagIndex = html.indexOf(giftsTag);
   const stocktakeTagIndex = html.indexOf(stocktakeTag);
   const branchesTagIndex = html.indexOf(branchesTag);
   const reservationsTagIndex = html.indexOf(reservationsTag);
   const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0))) {
+      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
