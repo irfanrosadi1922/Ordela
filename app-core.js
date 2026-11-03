@@ -3153,7 +3153,7 @@ const cmpM=n=>{const s=db.set,v=cmp(n);return s.curPos==='after'?v+' '+s.cur:s.c
 const inR=(x,f,t)=>{const k=dkey(x.t);return(!f||k>=f)&&(!t||k<=t)};
 function dl(a,b){if(!b)return a?'<span class="dlt up">▲ baru</span>':'<span class="dlt">—</span>';const p=(a-b)/b*100;return`<span class="dlt ${p>=0?'up':'dn'}">${p>=0?'▲':'▼'} ${Math.abs(p).toFixed(0)}%</span>`}
 function promoUsed(id){let n=0;for(const o of db.orders)if(o.promo&&o.promo.id===id)n++;return n}
-function holdTotal(h){let t=0;for(const k in h.cart){const i=find(bid(k));if(!i)continue;const m=(h.cm||{})[k];t+=(i.price+(m?m.sel.reduce((a,x)=>a+(+x.p||0),0):0))*h.cart[k]}return t}
+
 function locTbl(k){const o=[];
   (db.holds||[]).filter(h=>!h.del&&h.tbl&&(!k||tkey(h.tbl)===tkey(k))).forEach(h=>o.push({kind:'hold',tbl:h.tbl,id:h.id,t:h.t,by:h.by,cust:h.cust,n:Object.values(h.cart).reduce((a,b)=>a+b,0),total:holdTotal(h)}));
   (db.occ||[]).filter(x=>!x.del&&(!k||tkey(x.tbl)===tkey(k))).forEach(x=>o.push({kind:'occ',tbl:x.tbl,id:x.id,t:x.t,by:x.by,cust:x.cust,no:x.no,total:x.total}));
