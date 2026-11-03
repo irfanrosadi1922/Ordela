@@ -140,6 +140,6 @@ The setup SQL now provisions a store-scoped `pos.ai_history` table and a restric
 The KDS ticket board, station filter, local/online ticket state updates, and timed refresh now live in `app-pos-kds.js`. The POS build includes and loads this module after the shared operational registry; the Business build excludes it. Online-order reception itself remains shared, while the kitchen execution screen is POS-only. Automated tests validate the KDS view/action API and ensure the module is absent from Business.
 
 
-## Workspace HTML page separation
+## POS shift screen boundary
 
-The build now prunes full `section#v-*` page roots from the opposite workspace: POS output omits Business pages, and Business output omits POS cashier/table/shift/KDS pages. Shared account, attendance, online-order, settings, history, receipt-design and printer sections remain in both outputs. The build test parses the emitted section IDs and fails if a foreign workspace page leaks into an artifact or a required shared page is removed. The legacy root `index.html` is not modified by this build-time pruning; only `dist/pos` and `dist/business` are transformed.
+The cashier shift screen, opening/closing cash drawer, cash-in/cash-out forms, variance calculation, and shift detail view now live in `app-pos-shift.js`, included only in the POS artifact. The lightweight `window.shiftCur` lookup and shift statistics remain in the shared operational registry because Business expense/purchase records can be associated with a currently active cashier shift. Tests check the POS module API and preserve the shared lookup.
