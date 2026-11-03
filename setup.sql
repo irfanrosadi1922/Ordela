@@ -238,10 +238,10 @@ end $$;
 create or replace function pos.clean_perms(j jsonb) returns jsonb language sql immutable as $$
   select coalesce(jsonb_agg(x order by o), '[]'::jsonb) from (
     select x, min(o) o from jsonb_array_elements_text(case when jsonb_typeof(j) = 'array' then j else '[]'::jsonb end) with ordinality t(x, o)
-    where x in ('pos','shift','co','kds','mem','inv','opn','buy','exp','hist','prn','set','att','ai','gift','rsv') group by x) s $;
+    where x in ('pos','shift','co','kds','mem','inv','opn','buy','exp','hist','prn','set','att','ai','gift','rsv') group by x) s $$;
 
 create or replace function pos.perms_of(u pos.users) returns jsonb language sql immutable as
-$ select case when u.role = 'owner' then '["pos","shift","co","kds","mem","inv","opn","buy","exp","hist","prn","set","att","ai","gift","rsv"]'::jsonb else pos.clean_perms(u.perms) end $;
+$$ select case when u.role = 'owner' then '["pos","shift","co","kds","mem","inv","opn','buy','exp','hist','prn','set','att','ai','gift','rsv"]'::jsonb else pos.clean_perms(u.perms) end $$;
 
 create or replace function pos.can(u pos.users, k text) returns boolean language sql immutable as
 $$ select u.role = 'owner' or pos.perms_of(u) ? k $$;
