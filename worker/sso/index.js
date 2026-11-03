@@ -54,7 +54,8 @@ async function handle(request, env) {
   const isProductionHost = host === "api.ordela.my.id";
   if (!isProductionHost && host !== env.PREVIEW_HOST) return json({ error: "host_not_allowed" }, 421);
   const isServerHook = url.pathname === "/api/food/hook" && request.method === "POST";
-  if (origin ? !validOrigin(origin, env) : !isServerHook) return json({ error: "origin_not_allowed" }, 403);
+  const isHealthCheck = url.pathname === "/api/health" && SAFE_METHODS.has(request.method);
+  if (origin ? !validOrigin(origin, env) : !(isServerHook || isHealthCheck)) return json({ error: "origin_not_allowed" }, 403);
 
   const cors = origin ? corsHeaders(origin, (env.ALLOWED_ORIGINS || "").split(",")) : {};
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
