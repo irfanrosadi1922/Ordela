@@ -11,6 +11,7 @@ if (!["pos", "business"].includes(mode)) {
 const output = join(ROOT, "dist", mode);
 const publicFiles = [
   "app-access.js",
+  "app-core.js",
   "app-mode.js",
   "app-navigation.js",
   "auth.js",
