@@ -47,3 +47,19 @@ Each output locks its app mode at build time, carries its own public assets and 
 The hostname-to-app-mode selection and the POS-only/Business-only route classification now live in the standalone `app-mode.js` module. The root entrypoint loads this module before the main application script, and both dedicated build artifacts include it. The POS and Business build scripts lock the selected mode inside the copied module at build time; regression checks validate that the selector is locked and that the module is loaded by the entrypoint.
 
 This is the first safe source extraction, not the completion of feature-source separation. The remaining UI, navigation, state, and feature implementations still reside in the large root `index.html` bundle and must be moved in small dependency-aware slices with tests.
+
+## Feature ownership and access map
+
+The shared app-mode configuration defines the route ownership boundary:
+
+| Workspace | Routes / features |
+| --- | --- |
+| POS | Kasir/transaksi, Meja, Shift Kasir, Layar Dapur |
+| Business | Beranda/analitik, Inventori, Pengguna, Payroll, Integrasi, Kartu Hadiah, Reservasi, Stok Opname, Pengeluaran & Laba, Member, Pembelian & Pemasok, Promo, AI Manager, Cabang |
+| Shared | Menu Utama, Riwayat Pesanan, Pesanan Online, Notifikasi, Absensi, Pengaturan, Desain Struk, Printer |
+
+Shared routes still apply each user's permission checks. Business-only and POS-only classification controls which app exposes a route; it is not an authorization boundary.
+
+The shared `app-access.js` module owns permission labels, descriptions, short labels, and the view-to-permission map. AI Manager, Kartu Hadiah, and Reservasi now have dedicated permission keys (`ai`, `gift`, and `rsv`) instead of inheriting the broad cashier permission. Owner-only areas remain owner-only. The build regression test evaluates the access module and fails if a mapped permission has no corresponding label, if route groups overlap, or if a required feature is missing from its workspace group.
+
+**Security note:** current per-user permission checks are still enforced in the existing frontend logic and existing API behavior. The route map and client-side checks do not prove database-level enforcement for each operation. Before general release, every sensitive read/write must be verified against server-side role and tenant policies.
