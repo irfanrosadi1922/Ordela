@@ -361,7 +361,11 @@ function aiAnswer(raw){
     const l=Object.entries(pair).sort((a,b)=>b[1]-a[1]).slice(0,5);return l.length?'Pasangan menu yang sering dibeli bersama — tawarkan saat melayani:<br>'+l.map(([n,c])=>`• <b>${esc(n)}</b> (${c}×)`).join('<br>'):'Belum cukup data transaksi untuk melihat pasangan menu.'}
   const dm=raw.match(/deskripsi(?: menu)?\s+(.+)/i);
   if(dm&&aiHas(q,'deskripsi')){const n=dm[1].trim().slice(0,40);return`Contoh deskripsi untuk <b>${esc(n)}</b>:<br>“${esc(n)} dibuat segar setiap hari dengan bahan pilihan — gurih, pas di lidah, dan cocok dinikmati kapan saja.”<br><small>Sesuaikan dengan rasa dan bahan asli menu Anda.</small>`}
-  for(const k in AIH)if(aiHas(q,...AIH[k][0]))return AIH[k][1];
+  for(const k in AIH)if(aiHas(q,...AIH[k][0])){
+     // Pertanyaan rekomendasi menu diskon adalah analisis sales, bukan panduan membuat promo.
+     if(k==='promo'&&aiHas(q,'menu apa','menu mana','rekomendasi','sarankan','sebaiknya','harus didiskon','perlu didiskon','cocok didiskon','yang didiskon','menu untuk diskon'))continue;
+     return AIH[k][1];
+   }
   return null;
 }
 const AIMISS='Maaf, saya belum paham pertanyaan itu. Coba: “omzet hari ini”, “menu terlaris minggu ini”, “stok menipis”, “jam ramai”, “laba bulan ini”, “cara split bill”, atau “pasangan menu untuk upsell”.';
@@ -373,6 +377,9 @@ function aiCtx(){
   L.push('Hari ini: '+st({f:t,t}));
   if(H){L.push('Kemarin: '+st({f:d(1),t:d(1)}));L.push('7 hari: '+st({f:d(6),t}));L.push('30 hari: '+st({f:d(29),t}));
     const os=aiOrders({f:d(29),t}),top=aiTop(os).slice(0,10);if(top.length)L.push('Terlaris 30 hari: '+top.map(x=>`${x.n} (${x.q}x, ${Math.round(x.v)})`).join('; '));
+     const sold={};os.forEach(o=>(o.lines||[]).forEach(l=>{const n=l.bn||l.name;if(n)sold[n]=(sold[n]||0)+(+l.qty||0)}));
+     const slow=db.items.filter(i=>!i.bundle&&!i.ns).map(i=>({n:i.name,q:sold[i.name]||0,p:+i.price||0})).sort((a,b)=>a.q-b.q).slice(0,10);
+     if(slow.length)L.push('Penjualan terendah 30 hari (termasuk menu tanpa penjualan): '+slow.map(x=>`${x.n} (${x.q} terjual; harga ${Math.round(x.p)})`).join('; '));
     const h=Array(24).fill(0);os.forEach(o=>h[new Date(o.t).getHours()]++);L.push('Transaksi per jam (0-23): '+h.join(','));
     const pm={};os.forEach(o=>{pm[o.method||'Lain']=(pm[o.method||'Lain']||0)+(+o.total||0)});L.push('Metode bayar 30 hari: '+Object.entries(pm).map(([k,v])=>k+' '+Math.round(v)).join('; '));
     const ty={};os.forEach(o=>{ty[o.type||'-']=(ty[o.type||'-']||0)+1});L.push('Tipe pesanan 30 hari: '+Object.entries(ty).map(([k,v])=>k+' '+v).join('; '))}
