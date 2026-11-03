@@ -2,7 +2,7 @@
 (function (window) {
   'use strict';
   const P2=window.P2;
-  const locEsc=v=>String(v==null?'':v);
+  const tkey=t=>String(t==null?'':t).trim().toUpperCase();
   function locTbl(k){const o=[];
     (db.holds||[]).filter(h=>!h.del&&h.tbl&&(!k||tkey(h.tbl)===tkey(k))).forEach(h=>o.push({kind:'hold',tbl:h.tbl,id:h.id,t:h.t,by:h.by,cust:h.cust,n:Object.values(h.cart).reduce((a,b)=>a+b,0),total:holdTotal(h)}));
     (db.occ||[]).filter(x=>!x.del&&(!k||tkey(x.tbl)===tkey(k))).forEach(x=>o.push({kind:'occ',tbl:x.tbl,id:x.id,t:x.t,by:x.by,cust:x.cust,no:x.no,total:x.total}));
