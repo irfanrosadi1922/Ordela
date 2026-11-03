@@ -3867,7 +3867,7 @@ function isOwner(){return !CL.on||(!!CL.me&&CL.me.role==='owner')}
 function can(p){return !CL.on||(!!CL.me&&(CL.me.role==='owner'||(CL.me.perms||[]).includes(p)))}
 /* karyawan yang HANYA punya izin Absensi: tidak boleh memakai Kasir, Meja, Beranda, atau Notifikasi (tidak ada transaksi) */
 function attOnly(){const m=CL.on&&CL.me;if(!m||m.role==='owner')return false;const p=m.perms||[];return p.length>0&&p.every(x=>x==='att')}
-function landing(){if(CL.on&&CL.me)return 'menu';const order=ORDELA_APP_MODE==='business'?['home','co','inv','att','set','prn','pos']:['pos','co','att','set','prn','home','inv'];return order.find(v=>canView(v))||'acc'}
+function landing(){if(CL.on&&CL.me){if(ORDELA_APP_MODE==='business'&&canView('home'))return 'home';return 'menu'}const order=ORDELA_APP_MODE==='business'?['home','co','inv','att','set','prn','pos']:['pos','co','att','set','prn','home','inv'];return order.find(v=>canView(v))||'acc'}
 function canView(v){
   if(ORDELA_APP_MODE==='pos'&&ORDELA_BUSINESS_ONLY.has(v))return false;
   if(ORDELA_APP_MODE==='business'&&ORDELA_POS_ONLY.has(v))return false;
