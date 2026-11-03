@@ -8,6 +8,11 @@ for (const file of direct) {
 }
 for (const file of ["index.html", "apps/order/index.html"]) {
   const html = readFileSync(file, "utf8");
+  if (file === "index.html") {
+    for (const required of ["function ssCookieGet()", "function ssCookieSet(", "function ssCookieClear()", "Domain=.ordela.my.id", "ssCookieGet()"]) {
+      if (!html.includes(required)) throw new Error("Missing shared idle-session behavior: " + required);
+    }
+  }
   const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
   let match, count = 0;
   while ((match = re.exec(html))) {
