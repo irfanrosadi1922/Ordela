@@ -18,6 +18,25 @@ for (const mode of ["pos", "business"]) {
   const inventoryPath = join(dir, "app-business-inventory.js");
   const usersTag = '<script src="app-business-users.js"></script>';
   const usersPath = join(dir, "app-business-users.js");
+  const dashboardTag = '<script src="app-business-dashboard.js"></script>';
+  const dashboardPath = join(dir, "app-business-dashboard.js");
+  if (mode === "business") {
+    if (!html.includes(dashboardTag) || !existsSync(dashboardPath)) throw new Error("Business dashboard module is missing from Business build");
+    const dashboardSource = readFileSync(dashboardPath, "utf8");
+    new vm.Script(dashboardSource, { filename: mode + "/app-business-dashboard.js" });
+    const dashboardSandbox = { window: {} };
+    vm.runInNewContext(dashboardSource, dashboardSandbox, { filename: mode + "/app-business-dashboard.js" });
+    const dashboardApi = dashboardSandbox.window;
+    for (const name of ["salesSeries", "hrPrev", "hrLabel", "areaChart", "donutSvg", "histJump", "renderHome"]) {
+      if (typeof dashboardApi[name] !== "function") throw new Error("Business dashboard API missing " + name);
+    }
+    if (!Array.isArray(dashboardApi.HR_PRE) || dashboardApi.HR_PRE.length !== 5 || typeof dashboardApi.KI !== "function" ||
+        appCore.includes("function renderHome(") || !appCore.includes("if(S.view==='home')renderHome();")) {
+      throw new Error("Business dashboard feature boundary or shared boot integration is invalid");
+    }
+  } else if (html.includes(dashboardTag) || existsSync(dashboardPath)) {
+    throw new Error("Business dashboard source leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(usersTag) || !existsSync(usersPath)) throw new Error("Business users module is missing from Business build");
     const usersSource = readFileSync(usersPath, "utf8");
@@ -77,8 +96,8 @@ for (const mode of ["pos", "business"]) {
   const inventoryTagIndex = html.indexOf(inventoryTag);
   const usersTagIndex = html.indexOf(usersTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0))) {
+      (mode === "business" && !(xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
