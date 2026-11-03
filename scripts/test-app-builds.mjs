@@ -47,6 +47,25 @@ for (const mode of ["pos", "business"]) {
   const stocktakePath = join(dir, "app-business-stocktake.js");
   const giftsTag = '<script src="app-business-gifts.js"></script>';
   const giftsPath = join(dir, "app-business-gifts.js");
+  const promosTag = '<script src="app-business-promos.js"></script>';
+  const promosPath = join(dir, "app-business-promos.js");
+  if (mode === "business") {
+    if (!html.includes(promosTag) || !existsSync(promosPath)) throw new Error("Business promo module is missing from Business build");
+    const promosSource = readFileSync(promosPath, "utf8");
+    new vm.Script(promosSource, { filename: mode + "/app-business-promos.js" });
+    const promosP2 = { views: {} };
+    const promosSandbox = { window: { P2: promosP2 }, P2: promosP2 };
+    vm.runInNewContext(promosSource, promosSandbox, { filename: mode + "/app-business-promos.js" });
+    if (typeof promosP2.views.promo !== "function" ||
+        typeof promosSandbox.window.promoForm !== "function" ||
+        typeof promosSandbox.window.PF_day !== "function" ||
+        typeof promosSandbox.window.promoSave !== "function" ||
+        typeof promosSandbox.window.promoDel !== "function") {
+      throw new Error("Business promo feature API is incomplete");
+    }
+  } else if (html.includes(promosTag) || existsSync(promosPath)) {
+    throw new Error("Business promo administration leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(giftsTag) || !existsSync(giftsPath)) throw new Error("Business gift-card module is missing from Business build");
     const giftsSource = readFileSync(giftsPath, "utf8");
@@ -227,6 +246,7 @@ for (const mode of ["pos", "business"]) {
   const dashboardTagIndex = html.indexOf(dashboardTag);
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const promosTagIndex = html.indexOf(promosTag);
   const giftsTagIndex = html.indexOf(giftsTag);
   const stocktakeTagIndex = html.indexOf(stocktakeTag);
   const branchesTagIndex = html.indexOf(branchesTag);
@@ -234,8 +254,8 @@ for (const mode of ["pos", "business"]) {
   const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0))) {
+      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
