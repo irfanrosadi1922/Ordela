@@ -362,8 +362,34 @@ function aiAnswer(raw){
   const dm=raw.match(/deskripsi(?: menu)?\s+(.+)/i);
   if(dm&&aiHas(q,'deskripsi')){const n=dm[1].trim().slice(0,40);return`Contoh deskripsi untuk <b>${esc(n)}</b>:<br>“${esc(n)} dibuat segar setiap hari dengan bahan pilihan — gurih, pas di lidah, dan cocok dinikmati kapan saja.”<br><small>Sesuaikan dengan rasa dan bahan asli menu Anda.</small>`}
   for(const k in AIH)if(aiHas(q,...AIH[k][0]))return AIH[k][1];
-  return'Maaf, saya belum paham pertanyaan itu. Coba: “omzet hari ini”, “menu terlaris minggu ini”, “stok menipis”, “jam ramai”, “laba bulan ini”, “cara split bill”, atau “pasangan menu untuk upsell”.';
+  return null;
 }
+const AIMISS='Maaf, saya belum paham pertanyaan itu. Coba: “omzet hari ini”, “menu terlaris minggu ini”, “stok menipis”, “jam ramai”, “laba bulan ini”, “cara split bill”, atau “pasangan menu untuk upsell”.';
+/* ringkasan data (hanya angka agregat, tanpa nama/HP pelanggan) untuk AI cloud, sesuai hak akses */
+function aiCtx(){
+  const own=isOwner(),H=can('hist')||own,L=[];const st=(r)=>{const os=aiOrders(r),v=os.reduce((a,b)=>a+(+b.total||0),0);return`${os.length} transaksi, omzet ${Math.round(v)}`};
+  const d=n=>dkey(Date.now()-n*864e5),t=dkey(Date.now());
+  L.push('Toko: '+(db.set&&db.set.store||'-')+'. Mata uang rupiah.');
+  L.push('Hari ini: '+st({f:t,t}));
+  if(H){L.push('Kemarin: '+st({f:d(1),t:d(1)}));L.push('7 hari: '+st({f:d(6),t}));L.push('30 hari: '+st({f:d(29),t}));
+    const os=aiOrders({f:d(29),t}),top=aiTop(os).slice(0,10);if(top.length)L.push('Terlaris 30 hari: '+top.map(x=>`${x.n} (${x.q}x, ${Math.round(x.v)})`).join('; '));
+    const h=Array(24).fill(0);os.forEach(o=>h[new Date(o.t).getHours()]++);L.push('Transaksi per jam (0-23): '+h.join(','));
+    const pm={};os.forEach(o=>{pm[o.method||'Lain']=(pm[o.method||'Lain']||0)+(+o.total||0)});L.push('Metode bayar 30 hari: '+Object.entries(pm).map(([k,v])=>k+' '+Math.round(v)).join('; '));
+    const ty={};os.forEach(o=>{ty[o.type||'-']=(ty[o.type||'-']||0)+1});L.push('Tipe pesanan 30 hari: '+Object.entries(ty).map(([k,v])=>k+' '+v).join('; '))}
+  if(own||can('hist')){const os=aiOrders({f:d(29),t}),cost=os.reduce((a,o)=>a+(o.lines||[]).reduce((z,l)=>z+(+l.cost||0)*(+l.qty||0),0),0),rv=os.reduce((a,b)=>a+(+b.total||0),0);L.push(`Laba kotor 30 hari: ${Math.round(rv-cost)} (modal ${Math.round(cost)})`)}
+  if(own||can('inv')){const it=db.items.filter(i=>!i.bundle&&!i.ns);L.push('Stok habis: '+(it.filter(i=>i.stock<=0).map(i=>i.name).slice(0,15).join(', ')||'-'));L.push('Stok menipis: '+(it.filter(i=>i.stock>0&&i.stock<=i.min).map(i=>i.name+' ('+i.stock+')').slice(0,15).join(', ')||'-'))}
+  L.push('Menu ('+db.items.length+'): '+db.items.slice(0,40).map(i=>i.name+' '+i.price).join('; '));
+  return L.join('\n').slice(0,5800);
+}
+async function aiCloud(q){
+  const C=window.POS_SB;if(!(C&&C.url)||!(CL.on&&CL.tok))return null;
+  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx()})});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.answer)return esc(j.answer).replace(/\n/g,'<br>')+'<br><small style="opacity:.6">dijawab AI</small>';
+    if(r.status===404||r.status===501)return null;   // fungsi belum dipasang / key belum diisi
+    return esc(j.error||'AI sedang tidak tersedia')}catch(e){return null}
+}
+
 V.ai=function(){
   const el=$('#v-ai');if(!el)return;
   const sug=['Omzet hari ini','Menu terlaris minggu ini','Stok menipis','Jam ramai','Laba bulan ini','Pasangan menu untuk upsell','Cara split bill','Cara buka shift'];
@@ -372,9 +398,11 @@ V.ai=function(){
   <form class="aif" onsubmit="event.preventDefault();P2.aiAsk(document.getElementById('aiIn').value);return false"><input class="fi" id="aiIn" placeholder="Tulis pertanyaan…" autocomplete="off" maxlength="200"><button class="btn" style="width:auto;margin:0" type="submit">Kirim</button></form>`;
   const lg=$('#aiLog');if(lg)lg.scrollTop=lg.scrollHeight;
 };
-P2.aiAsk=function(t){t=String(t||'').trim().slice(0,200);if(!t)return;AI.msgs.push({me:1,t});let a;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}AI.msgs.push({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);V.ai();const i=$('#aiIn');if(i)i.focus()};
+P2.aiAsk=async function(t){t=String(t||'').trim().slice(0,200);if(!t||AI.busy)return;AI.msgs.push({me:1,t});let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
+  if(a===null){AI.busy=1;AI.msgs.push({t:'<i>Berpikir…</i>'});V.ai();a=await aiCloud(t);AI.msgs.pop();AI.busy=0;if(a===null)a=AIMISS}
+  AI.msgs.push({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);V.ai();const i=$('#aiIn');if(i)i.focus()};
 P2.aiClear=function(){AI.msgs=[];V.ai()};
-P2.aiAnswer=aiAnswer;
+P2.aiAnswer=aiAnswer;P2.aiCtx=aiCtx;
 
 /* ================= RIWAYAT PESANAN ================= */
 const RW={r:'today',q:'',n:30};

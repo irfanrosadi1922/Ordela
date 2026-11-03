@@ -884,6 +884,14 @@ begin
     return pos.r(200, pos.me_self(me));
   end if;
 
+  if u = '/api/ai/use' and m = 'POST' then   -- kuota asisten AI per pengguna (dipanggil fungsi ai-chat sebelum menghubungi penyedia AI)
+    if (select count(*) from pos.rl where rl.k = 'ai:' || me.id and rl.t > now() - interval '1 hour') >= 30 then
+      return pos.r(429, '{"error":"Batas pertanyaan AI per jam tercapai. Coba lagi nanti."}');
+    end if;
+    insert into pos.rl(k, ip) values ('ai:' || me.id, '-');
+    return pos.r(200, jsonb_build_object('ok', true, 'role', me.role));
+  end if;
+
   if u like '/api/integrations%' then
     declare v_k text; v_old jsonb; v_cfg jsonb; v_ev text[]; v_en boolean; v_row pos.t_integ; v_st text; v_rid bigint; v_hook text; v_food boolean; v_o jsonb;
     begin
