@@ -60,6 +60,11 @@ if (mode === "business") {
   if (!existsSync(usersModule)) throw new Error("Required Business users module missing.");
   cpSync(usersModule, join(output, "app-business-users.js"));
 }
+if (mode === "business") {
+  const dashboardModule = join(ROOT, "app-business-dashboard.js");
+  if (!existsSync(dashboardModule)) throw new Error("Required Business dashboard module missing.");
+  cpSync(dashboardModule, join(output, "app-business-dashboard.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
@@ -76,6 +81,11 @@ const usersTag = '<script src="app-business-users.js"></script>';
 if (mode === "pos" && html.includes(usersTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(usersTag, ""));
+}
+const dashboardTag = '<script src="app-business-dashboard.js"></script>';
+if (mode === "pos" && html.includes(dashboardTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(dashboardTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
