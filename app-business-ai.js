@@ -158,8 +158,22 @@
       return esc(j.error||'Maaf, jawaban AI kosong. Coba kirim sekali lagi.')}catch(e){AI.why=e&&e.name==='AbortError'?'permintaan melewati batas waktu 35 detik':'fungsi ai-chat tidak terjangkau (periksa koneksi atau CORS)';return null}finally{clearTimeout(timer)}
   }
   
+  function aiSafeHtml(raw){
+    const root=document.createElement('div');root.innerHTML=String(raw||'');
+    const allowed=new Set(['B','STRONG','EM','I','CODE','BR','P','UL','OL','LI','SMALL','DIV']);
+    const clean=node=>{
+      Array.from(node.childNodes).forEach(child=>{
+        if(child.nodeType===1){
+          if(!allowed.has(child.tagName)){child.replaceWith(document.createTextNode(child.textContent||''));return}
+          Array.from(child.attributes).forEach(a=>child.removeAttribute(a.name));
+          clean(child);
+        }else if(child.nodeType!==3)child.remove();
+      });
+    };
+    clean(root);return root.innerHTML;
+  }
   const aiTm=()=>new Date().toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
-  const aiBub=m=>`<div class="cr ${m.me?'me':''}">${m.me?'':'<span class="cav"><img class="ai-logo" src="brand/ordela-mark.svg" alt="Ordela"></span>'}<div class="cbw"><div class="cb">${m.me?esc(m.t):m.t}</div><small>${esc(m.ts||'')}</small></div></div>`;
+  const aiBub=m=>`<div class="cr ${m.me?'me':''}">${m.me?'':'<span class="cav"><img class="ai-logo" src="brand/ordela-mark.svg" alt="Ordela"></span>'}<div class="cbw"><div class="cb">${m.me?esc(m.t):aiSafeHtml(m.t)}</div><small>${esc(m.ts||'')}</small></div></div>`;
   const AISUG=['Omzet hari ini','Menu terlaris minggu ini','Stok menipis','Jam ramai','Laba bulan ini','Pasangan menu untuk upsell','Cara split bill','Cara buka shift'];
   function aiScroll(){const l=$('#aiLog');if(l)l.scrollTop=l.scrollHeight}
   async function aiHistoryRequest(action,messages){
