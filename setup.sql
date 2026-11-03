@@ -40,11 +40,17 @@ create table if not exists pos.sessions(
   th text primary key,                    -- sha256 dari token; token asli tidak disimpan
   uid bigint not null references pos.t_users(id) on delete cascade,
   exp timestamptz not null);
+create table if not exists pos.sso_codes(
+  ch text primary key,                       -- sha256 dari kode sekali pakai
+  uid bigint not null references pos.t_users(id) on delete cascade,
+  aud text not null, exp timestamptz not null, used boolean not null default false);
+alter table pos.sso_codes enable row level security;
 alter table pos.t_users add column if not exists email text not null default '';
 alter table pos.t_users add column if not exists phone text not null default '';
 alter table pos.t_users add column if not exists photo text not null default '';
 alter table pos.t_users add column if not exists single boolean;            -- null = otomatis (karyawan: ya, owner: tidak)
 alter table pos.sessions add column if not exists seen_at timestamptz not null default now();   -- terakhir dipakai; sesi mati bila 12 jam tidak ada permintaan
+alter table pos.sessions add column if not exists aud text not null default 'all';   -- 'all' = sesi penuh (login langsung / pusat identitas); 'kasir' | 'admin' | 'dapur' = sesi terbatas per aplikasi (SSO)
 alter table pos.sessions add column if not exists kicked_at timestamptz;   -- diisi saat perangkat ini dikeluarkan karena login di perangkat lain
 create index if not exists sessions_uid on pos.sessions(uid);
 -- ---- pendaftaran mandiri (Supabase Auth): kolom tambahan, peran 'new' = sudah daftar tetapi belum punya toko
@@ -344,10 +350,11 @@ create or replace function pos.expired(tok text) returns boolean language sql st
   select tok is not null and length(tok) between 20 and 200 and exists (select 1 from pos.sessions s
     where s.th = encode(extensions.digest(tok, 'sha256'), 'hex') and s.exp > now() and s.kicked_at is null and s.seen_at <= now() - interval '12 hours') $$;
 
-create or replace function pos.new_session(uid bigint) returns text language plpgsql as $$
+drop function if exists pos.new_session(bigint);
+create or replace function pos.new_session(uid bigint, p_aud text default 'all') returns text language plpgsql as $$
 declare t text := 'ps' || encode(extensions.gen_random_bytes(24), 'hex');
 begin
-  insert into pos.sessions(th, uid, exp) values (encode(extensions.digest(t, 'sha256'), 'hex'), uid, now() + interval '14 days');
+  insert into pos.sessions(th, uid, exp, aud) values (encode(extensions.digest(t, 'sha256'), 'hex'), uid, now() + interval '14 days', p_aud);
   if random() < 0.1 then delete from pos.sessions where exp < now() or kicked_at < now() - interval '7 days' or seen_at < now() - interval '3 days'; end if;
   return t;
 end $$;
@@ -594,6 +601,24 @@ begin
   return pos.r(200, jsonb_build_object('token', pos.new_session(u.id), 'days', 14, 'me', pos.me_self(u)));
 end $$;
 
+-- ------------------------------------------------------------ SSO antar aplikasi (kasir / admin / dapur)
+-- Siapa yang boleh membuka aplikasi tertentu
+create or replace function pos.aud_user_ok(u pos.users, p_aud text) returns boolean language sql immutable as $$
+  select case p_aud
+    when 'kasir' then u.role = 'owner' or pos.perms_of(u) ?| array['pos', 'shift', 'co']
+    when 'dapur' then u.role = 'owner' or pos.perms_of(u) ? 'kds'
+    when 'admin' then u.role = 'owner' or pos.perms_of(u) ?| array['hist', 'set', 'inv', 'opn', 'buy', 'exp', 'mem', 'att', 'prn']
+    else false end $$;
+-- Rute API yang boleh dipakai sesi terbatas (daftar putih untuk dapur, daftar tolak area admin untuk kasir)
+create or replace function pos.aud_route_ok(p_aud text, p_m text, p_u text) returns boolean language sql immutable as $$
+  select case p_aud
+    when 'all' then true
+    when 'admin' then p_u not like '/api/sso/%'
+    when 'dapur' then p_u in ('/api/me', '/api/logout', '/api/data', '/api/version') or p_u like '/api/co%'
+    when 'kasir' then not (p_u like '/api/sso/%' or p_u like '/api/integrations%' or p_u like '/api/branches%' or p_u = '/api/users' or p_u like '/api/payroll%'
+                           or p_u = '/api/audit' or p_u like '/api/snapshots%' or p_u = '/api/store/setup' or p_u = '/api/export')
+    else false end $$;
+
 -- ------------------------------------------------------------ router utama
 
 -- ---------------------------------------------------------------- absensi karyawan
@@ -752,8 +777,45 @@ begin
 
   if u = '/api/food/hook' and m = 'POST' then return pos.food_hook(b ->> 'k', b - 'k'); end if;
 
+  if u = '/api/sso/redeem' and m = 'POST' then   -- tukar kode sekali pakai (dari pusat identitas) menjadi sesi terbatas untuk aplikasi ini
+    declare v_aud text := b ->> 'aud'; v_ch text; v_cr pos.sso_codes; v_us pos.users; v_n int;
+    begin
+      if not pos.rate('ssor', 60, interval '10 minutes') then return pos.r(429, '{"error":"Terlalu banyak percobaan. Coba lagi nanti."}'); end if;
+      if v_aud not in ('kasir', 'admin', 'dapur') or jsonb_typeof(b -> 'code') <> 'string' or length(b ->> 'code') not between 20 and 100 then return pos.r(400, '{"error":"permintaan tidak valid"}'); end if;
+      v_ch := encode(extensions.digest(b ->> 'code', 'sha256'), 'hex');
+      update pos.sso_codes set used = true where ch = v_ch and not used and exp > now() and aud = v_aud returning * into v_cr;
+      if v_cr.ch is null then return pos.r(401, '{"error":"kode tidak valid atau sudah kedaluwarsa"}'); end if;
+      select t.* into v_us from pos.t_users t where t.id = v_cr.uid;
+      if v_us.id is null or not v_us.active or not pos.aud_user_ok(v_us, v_aud) then return pos.r(403, '{"error":"Akun tidak punya akses ke aplikasi ini"}'); end if;
+      if coalesce(v_us.single, v_us.role <> 'owner') then
+        update pos.sessions set kicked_at = now() where uid = v_us.id and aud = v_aud and kicked_at is null;
+        get diagnostics v_n = row_count;
+      end if;
+      perform set_config('pos.sid', coalesce(v_us.store_id, 0)::text, true);
+      perform pos.audit(v_us.id, v_us.username, 'sso-masuk', v_aud);
+      return pos.r(200, jsonb_build_object('token', pos.new_session(v_us.id, v_aud), 'days', 14, 'aud', v_aud, 'me', pos.me_self(v_us)));
+    end;
+  end if;
+
   me := pos.auth(t);
   if me.id is null then return pos.r(401, case when pos.kicked(t) then '{"error":"kicked"}'::jsonb when pos.expired(t) then '{"error":"expired"}'::jsonb else '{"error":"unauthorized"}'::jsonb end); end if;
+  declare v_sa text;
+  begin
+    select ss.aud into v_sa from pos.sessions ss where ss.th = encode(extensions.digest(t, 'sha256'), 'hex');
+    if coalesce(v_sa, 'all') <> 'all' and not pos.aud_route_ok(v_sa, m, u) then return pos.r(403, '{"error":"Fitur ini tidak tersedia di aplikasi ini"}'); end if;
+  end;
+  if u = '/api/sso/issue' and m = 'POST' then   -- terbitkan kode sekali pakai (60 detik) untuk membuka aplikasi lain; hanya dari sesi penuh
+    declare v_aud text := b ->> 'aud'; v_raw text;
+    begin
+      if not pos.rate('ssoi', 60, interval '10 minutes') then return pos.r(429, '{"error":"Terlalu banyak percobaan. Coba lagi nanti."}'); end if;
+      if v_aud not in ('kasir', 'admin', 'dapur') then return pos.r(400, '{"error":"aplikasi tidak dikenal"}'); end if;
+      if not pos.aud_user_ok(me, v_aud) then return pos.r(403, '{"error":"Akun tidak punya akses ke aplikasi ini"}'); end if;
+      v_raw := 'sc' || encode(extensions.gen_random_bytes(24), 'hex');
+      insert into pos.sso_codes(ch, uid, aud, exp) values (encode(extensions.digest(v_raw, 'sha256'), 'hex'), me.id, v_aud, now() + interval '60 seconds');
+      if random() < 0.1 then delete from pos.sso_codes where exp < now() - interval '1 hour'; end if;
+      return pos.r(200, jsonb_build_object('code', v_raw, 'aud', v_aud));
+    end;
+  end if;
   if me.role = 'owner' and me.store_id is not null then
     select ss.act_sid into v_act from pos.sessions ss where ss.th = encode(extensions.digest(t, 'sha256'), 'hex');
     if v_act is not null and v_act <> me.store_id and exists (select 1 from pos.stores x where x.id = v_act and x.grp = coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id)) then
@@ -766,7 +828,8 @@ begin
     return pos.r(403, '{"error":"Siapkan toko Anda dulu","code":"no-store"}');
   end if;
 
-  if u = '/api/logout' and m = 'POST' then   -- keluar: sesi ini dihapus di server
+  if u = '/api/logout' and m = 'POST' then   -- keluar: sesi ini dihapus di server ('all': keluar dari semua aplikasi)
+    if b ->> 'all' = 'true' then delete from pos.sessions where uid = me.id; end if;
     delete from pos.sessions where th = encode(extensions.digest(t, 'sha256'), 'hex');
     perform pos.audit(me.id, me.username, 'logout', '');
     return pos.r(200, '{"ok":true}');
