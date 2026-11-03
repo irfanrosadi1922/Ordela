@@ -17,14 +17,33 @@ const out = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return out({ error: "gunakan POST" }, 405);
+  let b: { t?: string; q?: string; ctx?: string; action?: string; messages?: unknown };
+  try { b = await req.json(); } catch { return out({ error: "JSON tidak valid" }, 400); }
+  const t = String(b.t ?? "");
+  if (!t) return out({ error: "token kosong" }, 400);
+
+  // Riwayat disimpan server-side dan hanya dapat diakses setelah sesi Ordela diverifikasi.
+  if (["history_load", "history_save", "history_clear"].includes(String(b.action || ""))) {
+    const base = Deno.env.get("SUPABASE_URL")!;
+    const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!service) return out({ error: "Konfigurasi penyimpanan riwayat belum tersedia" }, 503);
+    const payload: Record<string, unknown> = { p_token: t, p_action: b.action === "history_load" ? "load" : b.action === "history_save" ? "save" : "clear" };
+    if (b.action === "history_save") payload.p_messages = b.messages;
+    const hr = await fetch(base + "/rest/v1/rpc/ai_chat_history", {
+      method: "POST",
+      headers: { ...J, apikey: service, Authorization: `Bearer ${service}` },
+      body: JSON.stringify(payload),
+    });
+    const hj = await hr.json().catch(() => null);
+    if (!hr.ok) return out({ error: hr.status === 401 ? "Sesi tidak valid" : "Gagal memproses riwayat chat" }, hr.status === 401 ? 401 : 500);
+    return out({ messages: b.action === "history_load" ? (Array.isArray(hj) ? hj : []) : undefined, ok: b.action !== "history_load" });
+  }
+
   const key = Deno.env.get("AI_API_KEY") || Deno.env.get("OPENAI_API_KEY");
   if (!key) return out({ error: "AI belum dikonfigurasi (AI_API_KEY belum diisi)" }, 501);
-  let b: { t?: string; q?: string; ctx?: string };
-  try { b = await req.json(); } catch { return out({ error: "JSON tidak valid" }, 400); }
   const q = String(b.q ?? "").trim().slice(0, 300);
   const ctx = String(b.ctx ?? "").slice(0, 6000);
-  const t = String(b.t ?? "");
-  if (!q || !t) return out({ error: "pertanyaan/token kosong" }, 400);
+  if (!q) return out({ error: "pertanyaan kosong" }, 400);
   const base = Deno.env.get("SUPABASE_URL")!, anon = Deno.env.get("SUPABASE_ANON_KEY")!;
   const u = await fetch(`${base}/rest/v1/rpc/pos_api`, {
     method: "POST", headers: { ...J, apikey: anon, Authorization: `Bearer ${anon}` },
