@@ -6,7 +6,7 @@
   const shiftStats=P2.t.shiftStats;
   const live=a=>(a||[]).filter(x=>!x.del);
   const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  const myUid=()=>CL.on&&CL.me?CL.me.id:'';
+  const myUid=()=>(CL.on&&CL.me)?String(CL.me.id):'local';
   const myName=()=>(CL.on&&CL.me)?CL.me.name:'Owner';
   const nowIso=()=>new Date().toISOString();
   const num=v=>Math.max(0,+v||0);
