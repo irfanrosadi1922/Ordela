@@ -25,7 +25,7 @@ body{position:fixed;inset:0;width:100%}
 body{font-family:'Poppins','Segoe UI',system-ui,-apple-system,Roboto,sans-serif;color:var(--tx);background:var(--bg)}
 button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 input,select,textarea{font:inherit;color:inherit}
-.app{display:flex;height:100vh;height:100dvh;height:var(--appH,100dvh);overflow:hidden}
+.app{display:flex;height:100vh;height:100dvh;height:var(--appH,100dvh);overflow:hidden;transform:translate3d(0,var(--vvTop,0px),0);will-change:transform}
 .main{flex:1;min-width:0;padding:0 max(18px,env(safe-area-inset-right,0px)) calc(90px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
 /* header */
 .top{display:flex;gap:10px;align-items:center;margin-bottom:8px;position:sticky;top:0;z-index:30;background:var(--bg);padding:max(16px,env(safe-area-inset-top,0px)) 0 10px;box-shadow:0 0 0 100vmax var(--bg);clip-path:inset(0 -100vmax)}
@@ -852,7 +852,9 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
   function fit(){
     var vv=window.visualViewport;
     var h=vv&&vv.height?vv.height:window.innerHeight;
+    var top=vv&&typeof vv.offsetTop==='number'?vv.offsetTop:0;
     if(h>0)document.documentElement.style.setProperty('--appH',Math.round(h)+'px');
+    document.documentElement.style.setProperty('--vvTop',Math.max(0,Math.round(top))+'px');
   }
   function schedule(){
     if(raf)cancelAnimationFrame(raf);
