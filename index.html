@@ -3161,7 +3161,7 @@ function orderDrag(e){
 
 /* ---------- online: sinkron otomatis ke server ---------- */
 var CL={on:!!globalThis.POS_CLOUD,tok:'',ver:0,dirty:false,st:'off',busy:false,again:false,last:0,t:null,pt:null};
-try{CL.tok=localStorage.getItem('pos_tok')||'';const m=JSON.parse(localStorage.getItem('pos_sync')||'{}');CL.ver=m.ver||0;CL.dirty=!!m.dirty}catch(e){}
+try{CL.tok=window.POS_SSO_API?'sso-cookie':(localStorage.getItem('pos_tok')||'');if(window.POS_SSO_API)localStorage.removeItem('pos_tok');const m=JSON.parse(localStorage.getItem('pos_sync')||'{}');CL.ver=m.ver||0;CL.dirty=!!m.dirty}catch(e){}
 function devTag(){let d='';try{d=localStorage.getItem('pos_dev')||''}catch(e){}if(!d){d=Math.random().toString(36).replace(/[^a-z0-9]/g,'').slice(0,3).toUpperCase().padEnd(3,'X');try{localStorage.setItem('pos_dev',d)}catch(e){}}return d}
 function persistMeta(){try{localStorage.setItem('pos_sync',JSON.stringify({ver:CL.ver,dirty:CL.dirty}))}catch(e){}}
 function schedSync(){clearTimeout(CL.t);CL.t=setTimeout(syncNow,700)}
@@ -3856,7 +3856,7 @@ const PERM_LBL={pos:'Kasir & Transaksi',shift:'Shift Kasir',co:'Pesanan Online',
 const PERM_DESC={shift:'Buka dan tutup shift, hitung uang laci, catat kas masuk/keluar.',kds:'Lihat dan ubah status masak di Layar Dapur.',mem:'Kelola data member dan poin.',opn:'Hitung stok fisik (scan/ketik/Excel) dan terapkan selisih.',buy:'Catat pembelian barang, pemasok, dan hutang.',exp:'Catat dan lihat pengeluaran serta laba.',pos:'Operasional kasir: Kasir, Meja, Beranda, Notifikasi, dan membuat transaksi.',co:'Terima dan proses pesanan dari pelanggan.',inv:'Lihat dan ubah stok, menu bahan, dan riwayat perubahan stok.',hist:'Lihat rekap, riwayat, dan ekspor penjualan di Beranda.',prn:'Sambungkan printer dan cetak struk.',set:'Toko, desain struk, pembayaran, tampilan, data & cadangan.',att:'Absen masuk dan pulang sendiri.'};
 const PERM_SHORT={shift:'Shift',kds:'Dapur',mem:'Member',opn:'Opname',buy:'Pembelian',exp:'Pengeluaran',pos:'Kasir',co:'Pesanan Online',inv:'Inventori',hist:'Rekap',prn:'Printer',set:'Pengaturan',att:'Absensi'};
 const VIEW_PERM={ai:'pos',riw:'pos',integ:'#owner',pyr:'#owner',pos:'pos',home:'pos',table:'pos',alert:'pos',inv:'inv',rc:'set',prn:'prn',set:'set',co:'co',att:'att',usr:'#owner',gift:'pos',rsv:'pos',cd:'pos',shift:'shift',exp:'exp',mem:'mem',buy:'buy',promo:'#owner',kds:'kds',opname:'opn'};
-CL.me=null;try{CL.me=JSON.parse(localStorage.getItem('pos_me')||'null')}catch(e){}
+CL.me=null;try{if(window.POS_SSO_API)localStorage.removeItem('pos_me');else CL.me=JSON.parse(localStorage.getItem('pos_me')||'null')}catch(e){}
 function setMe(m){CL.me=m||null;try{if(m)localStorage.setItem('pos_me',JSON.stringify(m));else localStorage.removeItem('pos_me')}catch(e){}}
 /* tanpa server (mode offline/standalone) tidak ada akun: semua terbuka */
 function isOwner(){return !CL.on||(!!CL.me&&CL.me.role==='owner')}
@@ -3945,8 +3945,8 @@ async function doLogin(){
     if(r.status===403){err.textContent=j.error||'Akun tidak aktif';return}
     if(r.status===429){err.textContent='Terlalu banyak percobaan. Coba lagi beberapa menit lagi.';return}
     if(!r.ok)throw 0;
-    CL.tok=j.token;setMe(j.me);await localOwnerGuard(j.me);
-    try{localStorage.setItem('pos_tok',CL.tok);localStorage.setItem('pos_user',un)}catch(e){}
+    CL.tok=window.POS_SSO_API?'sso-cookie':j.token;setMe(j.me);await localOwnerGuard(j.me);
+    try{if(!window.POS_SSO_API)localStorage.setItem('pos_tok',CL.tok);else localStorage.removeItem('pos_tok');localStorage.setItem('pos_user',un)}catch(e){}
     $('#loginPw').value='';$('#login').hidden=true;ssStamp();ssWarnHide();
     applyAccess();if(!canView(S.view)||S.view==='acc')go(landing());else render();
     syncNow();
@@ -4428,7 +4428,7 @@ async function changePw(){
     const r=await api('/api/me/password',{method:'POST',body:JSON.stringify({old:o,new:n})});
     const j=await r.json();
     if(!r.ok){e.textContent=j.error||'Gagal';return}
-    CL.tok=j.token;try{localStorage.setItem('pos_tok',CL.tok)}catch(x){}
+    CL.tok=window.POS_SSO_API?'sso-cookie':j.token;try{if(!window.POS_SSO_API)localStorage.setItem('pos_tok',CL.tok);else localStorage.removeItem('pos_tok')}catch(x){}
     ['pwOld','pwNew','pwNew2'].forEach(i=>{const e=$('#'+i);if(e)e.value=''});$('#pwErr').textContent='';const pb=$('#pwPage');if(pb)pb.dataset.built='';accDone('Kata Sandi Berhasil Diubah','Gunakan kata sandi baru saat Anda masuk berikutnya.');
   }catch(x){if(x.message!=='auth')e.textContent='Tidak bisa terhubung ke server'}
 }
