@@ -7,7 +7,6 @@
   const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const num=v=>Math.max(0,+v||0);
   const bar=(t,btn)=>'<div class="bar"><h2>'+t+'</h2>'+(btn||'')+'</div>';
-  const DAYS=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
   /* ================= PROMO & VOUCHER (owner) ================= */
   const DAYS=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
   V.promo=function(){
