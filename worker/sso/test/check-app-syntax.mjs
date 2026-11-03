@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const direct = ["app-mode.js", "app-access.js", "app-navigation.js", "app-export-xlsx.js", "app-business-payroll.js", "app-business-inventory.js", "app-business-users.js", "app-business-dashboard.js", "app-business-finance.js", "app-business-ai.js", "app-business-integrations.js", "app-business-branches.js", "app-business-reservations.js", "app-business-stocktake.js", "app-business-gifts.js", "app-business-promos.js", "app-business-members.js", "app-pos-kds.js", "app-core.js", "config.js", "sbapi.js", "auth.js", "apps/order/config.js", "apps/order/sbapi.js"];
+const direct = ["app-mode.js", "app-access.js", "app-navigation.js", "app-export-xlsx.js", "app-business-payroll.js", "app-business-inventory.js", "app-business-users.js", "app-business-dashboard.js", "app-business-finance.js", "app-business-ai.js", "app-business-integrations.js", "app-business-branches.js", "app-business-reservations.js", "app-business-stocktake.js", "app-business-gifts.js", "app-business-promos.js", "app-business-members.js", "app-pos-shift.js", "app-pos-kds.js", "app-core.js", "config.js", "sbapi.js", "auth.js", "apps/order/config.js", "apps/order/sbapi.js"];
 for (const file of direct) {
   new vm.Script(readFileSync(file, "utf8"), { filename: file });
   process.stdout.write("Syntax OK: " + file + "\n");
