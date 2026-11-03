@@ -443,13 +443,14 @@ async function aiCloud(q){
     if(!m.me){const el=document.createElement('div');el.innerHTML=content;content=el.textContent||el.innerText||'';content=content.replace(/dijawab AI\s*$/i,'').trim();}
     return {role:m.me?'user':'assistant',content:content.slice(0,2000)};
   }).filter(m=>m.content);
-  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx(),messages:history})});
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),35000);
+  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',signal:ctrl.signal,headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx(),messages:history})});
     const j=await r.json().catch(()=>({}));
-    if(r.ok&&j.answer)return aiFormat(j.answer)+'<small style="display:block;opacity:.58;margin-top:8px">✦ Ordela AI</small>';
+    if(r.ok&&typeof j.answer==='string'&&j.answer.trim())return aiFormat(j.answer)+'<small style="display:block;opacity:.58;margin-top:8px">✦ Ordela AI</small>';
     AI.why=r.status===404?'fungsi ai-chat belum di-deploy (404)':r.status===501?'secret AI_API_KEY belum diisi':'';
-    if(r.status===404||r.status===501)return null;   // fungsi belum dipasang / key belum diisi
+    if(r.status===404||r.status===501)return null;
     if(r.status===401&&/jwt/i.test(JSON.stringify(j))){AI.why='Verify JWT pada fungsi ai-chat masih menyala';return null}
-    return esc(j.error||'AI sedang tidak tersedia')}catch(e){AI.why='fungsi ai-chat tidak terjangkau (belum di-deploy atau diblokir CORS)';return null}
+    return esc(j.error||'Maaf, jawaban AI kosong. Coba kirim sekali lagi.')}catch(e){AI.why=e&&e.name==='AbortError'?'permintaan melewati batas waktu 35 detik':'fungsi ai-chat tidak terjangkau (periksa koneksi atau CORS)';return null}finally{clearTimeout(timer)}
 }
 
 const aiTm=()=>new Date().toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
@@ -498,7 +499,7 @@ P2.aiAsk=async function(t){
   add({me:1,t});let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
   if(a===null){AI.busy=1;const go=$('#aiGo');if(go)go.disabled=true;
     log.insertAdjacentHTML('beforeend','<div class="cr" id="aiTyp"><span class="cav"><img class="ai-logo" src="brand/ordela-mark.svg" alt="Ordela"></span><div class="cbw"><div class="cb typ"><i></i><i></i><i></i></div></div></div>');aiScroll();
-    AI.why='';a=await aiCloud(t);const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false;if(a===null)a=AIMISS+(AI.why&&isOwner()?'<br><small style="opacity:.65">AI cloud tidak aktif: '+esc(AI.why)+'.</small>':'')}
+    AI.why='';try{a=await aiCloud(t)}catch(e){AI.why='terjadi kesalahan saat menghubungi AI';a=null}finally{const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false}if(a===null)a='Maaf, aku belum berhasil menghubungi AI. Coba kirim lagi sebentar ya.'+(AI.why&&isOwner()?'<br><small style="opacity:.65">Detail: '+esc(AI.why)+'.</small>':'')}
   add({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);aiHistorySave();
   const i=$('#aiIn');if(i&&matchMedia('(hover:hover)').matches)i.focus();
 };
