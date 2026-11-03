@@ -43,6 +43,27 @@ for (const mode of ["pos", "business"]) {
   }
   const reservationsTag = '<script src="app-business-reservations.js"></script>';
   const reservationsPath = join(dir, "app-business-reservations.js");
+  const stocktakeTag = '<script src="app-business-stocktake.js"></script>';
+  const stocktakePath = join(dir, "app-business-stocktake.js");
+  if (mode === "business") {
+    if (!html.includes(stocktakeTag) || !existsSync(stocktakePath)) throw new Error("Business stocktake module is missing from Business build");
+    const stocktakeSource = readFileSync(stocktakePath, "utf8");
+    new vm.Script(stocktakeSource, { filename: mode + "/app-business-stocktake.js" });
+    const stocktakeP2 = { views: {} };
+    const stocktakeSandbox = { window: { P2: stocktakeP2 }, P2: stocktakeP2 };
+    vm.runInNewContext(stocktakeSource, stocktakeSandbox, { filename: mode + "/app-business-stocktake.js" });
+    for (const name of ["opnReset", "opF", "opSet", "opEnter", "opScan", "opReview"]) {
+      if (typeof stocktakeP2[name] !== "function") throw new Error("Business stocktake API missing P2." + name);
+    }
+    if (typeof stocktakeP2.views.opname !== "function" || typeof stocktakeSandbox.window.OPN_q !== "function") {
+      throw new Error("Business stocktake view/search API is incomplete");
+    }
+    if (!readFileSync(join(root, "app-business-inventory.js"), "utf8").includes("window.OP = OP;")) {
+      throw new Error("Business stocktake dependency on inventory workbook module is missing");
+    }
+  } else if (html.includes(stocktakeTag) || existsSync(stocktakePath)) {
+    throw new Error("Business stocktake source leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(reservationsTag) || !existsSync(reservationsPath)) throw new Error("Business reservations module is missing from Business build");
     const reservationsSource = readFileSync(reservationsPath, "utf8");
@@ -186,13 +207,14 @@ for (const mode of ["pos", "business"]) {
   const dashboardTagIndex = html.indexOf(dashboardTag);
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const stocktakeTagIndex = html.indexOf(stocktakeTag);
   const branchesTagIndex = html.indexOf(branchesTag);
   const reservationsTagIndex = html.indexOf(reservationsTag);
   const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0))) {
+      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
