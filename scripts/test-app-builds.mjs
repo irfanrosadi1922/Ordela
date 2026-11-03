@@ -41,6 +41,9 @@ for (const mode of ["pos", "business"]) {
     if (permission !== "#owner" && !Object.prototype.hasOwnProperty.call(permissions.permissionLabels, permission)) {
       throw new Error("View " + view + " maps to an undefined permission: " + permission);
     }
+    if (!html.includes('id="v-' + view + '"')) {
+      throw new Error("Permission map points to a missing page section: " + view + " (" + mode + ")");
+    }
   }
   const modeSandbox = { window: { location: { hostname: "build.invalid" } } };
   vm.runInNewContext(modeConfig, modeSandbox, { filename: mode + "/app-mode.js" });
