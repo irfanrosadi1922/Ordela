@@ -301,6 +301,81 @@ V.kds=function(){
   el.innerHTML=bar('<i class="ic" data-ic="cook"></i>Layar Dapur')+(own?`<div class="panel" style="margin-bottom:10px"><label class="tgl"><input type="checkbox" ${db.set.kdsOn?'checked':''} onchange="db.set.kdsOn=this.checked;save()"><span>Kirim pesanan kasir ke dapur<small>Setiap transaksi di kasir otomatis muncul di layar ini.</small></span></label><label class="tgl"><input type="checkbox" ${db.set.stSplit?'checked':''} onchange="db.set.stSplit=this.checked;save()"><span>Cetak tiket terpisah per stasiun<small>Item Dapur dan Bar dicetak di slip berbeda (atur stasiun di data menu).</small></span></label></div>`:'')+(sts.length?`<div class="itabs"><button class="${KF.s===''?'on':''}" onclick="P2.kdsStn('')">Semua</button>${sts.map(s=>`<button class="${KF.s===s?'on':''}" onclick="P2.kdsStn('${esc(s).replace(/'/g,"")}')">${esc(s)}</button>`).join('')}</div>`:'')+`<div class="kdg">${[0,1,2].map(k=>`<div class="kdcol"><h3>${KS[k]} <b>${col(k).length}</b></h3>${col(k).map(card).join('')||'<p class="hint">Kosong</p>'}</div>`).join('')}</div>`;
 };
 
+/* ================= ASISTEN ORDELA (berbasis aturan, berjalan di perangkat, tanpa API key) ================= */
+const AI={msgs:[],busy:0};
+const aiN=s=>String(s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+const aiHas=(q,...w)=>w.some(x=>q.includes(x));
+function aiRange(q){
+  const d=n=>dkey(Date.now()-n*864e5),t=dkey(Date.now());
+  if(aiHas(q,'kemarin'))return{k:'yest',l:'kemarin',f:d(1),t:d(1),need:1};
+  if(aiHas(q,'minggu','7 hari','tujuh hari'))return{k:'w',l:'7 hari terakhir',f:d(6),t:t,need:1};
+  if(aiHas(q,'bulan','30 hari'))return{k:'m',l:'30 hari terakhir',f:d(29),t:t,need:1};
+  if(aiHas(q,'tahun'))return{k:'y',l:'365 hari terakhir',f:d(364),t:t,need:1};
+  return{k:'t',l:'hari ini',f:t,t:t,need:0};
+}
+const aiOrders=r=>db.orders.filter(x=>{const k=dkey(x.t);return k>=r.f&&k<=r.t});
+function aiTop(os,by){const m={};os.forEach(o=>(o.lines||[]).forEach(l=>{const n=l.bn||l.name;if(!n)return;const e=m[n]||(m[n]={n,q:0,v:0});e.q+=+l.qty||0;e.v+=(+l.qty||0)*(+l.price||0)}));return Object.values(m).sort((a,b)=>by==='v'?b.v-a.v:b.q-a.q)}
+const AIH={ // bantuan memakai aplikasi: [kata kunci, jawaban]
+ split:[['split','pisah tagihan','bagi tagihan','patungan'],'Split bill: di layar Bayar tekan <b>Pisah tagihan per item</b>, pilih item untuk tamu pertama, bayar, lalu sisanya muncul otomatis untuk dibayar berikutnya.'],
+ shift:[['shift','laci','buka kasir','tutup kasir','kas awal'],'Shift: buka menu <b>Shift Kasir</b> → isi kas awal → <b>Mulai Shift</b>. Saat selesai, hitung uang laci dan tutup shift; selisih kas dihitung otomatis.'],
+ menu:[['tambah menu','tambah item','menu baru','produk baru','tambah produk'],'Tambah menu: buka <b>Inventori</b> → tombol tambah item → isi nama, harga, modal, stok, kategori (opsional foto, stasiun Dapur/Bar, satuan beli) → Simpan.'],
+ opname:[['opname','hitung stok','cek stok fisik'],'Stok opname: menu <b>Stok Opname</b> → masukkan atau scan hitungan fisik tiap item → <b>Tinjau</b> selisih → Terapkan. Perubahan tercatat di riwayat stok.'],
+ gift:[['kartu hadiah','gift','voucher'],'Kartu hadiah: menu <b>Kartu Hadiah</b> → <b>Jual Kartu</b> (kode + nominal). Saat pembayaran, masukkan kode kartu di kolom kartu hadiah; saldo terpotong otomatis.'],
+ rsv:[['reservasi','booking meja','pesan meja'],'Reservasi: menu <b>Reservasi</b> → tambah (nama, meja, jam, jumlah orang). Meja yang dipesan tampil biru di halaman Meja.'],
+ cabang:[['cabang','hapus cabang','toko baru'],'Cabang: <b>Menu Utama → Cabang</b>. Tiap cabang punya menu, stok, dan karyawan sendiri. Owner pusat bisa pindah cabang, melihat laporan gabungan, transfer stok, dan menghapus cabang (wajib sandi).'],
+ print:[['printer','cetak','struk','bluetooth'],'Printer: menu <b>Printer</b> → sambungkan printer Bluetooth/USB → tes cetak. Tiket dapur bisa dipisah per stasiun di Layar Dapur.'],
+ meja:[['meja','dine in','pindah meja'],'Meja: isi nomor meja saat mengambil pesanan di kasir; meja otomatis tampil terisi di halaman <b>Meja</b> sampai dikosongkan.'],
+ online:[['gofood','grabfood','shopeefood','ojol','online food','integrasi'],'Online food: <b>Menu Utama → Integrasi</b> → Connect platform → salin URL penerima → daftarkan di platform/mitra Anda. Pesanan masuk di <b>Pesanan Online</b>.'],
+ promo:[['promo','diskon','kode promo'],'Promo: menu <b>Promo</b> (owner) → buat promo persen/nominal, periode dan kode. Dipakai di layar Bayar.'],
+ absen:[['absen','absensi','payroll','gaji'],'Absensi: menu <b>Absensi</b> untuk clock in/out (lokasi dan foto). Gaji dihitung di <b>Payroll</b> (owner).']};
+function aiAnswer(raw){
+  const q=aiN(raw);if(!q)return'Silakan tulis pertanyaan Anda.';
+  const own=isOwner(),H=can('hist')||own;const r=aiRange(q);
+  const gate=()=>r.need&&!H?'Data '+r.l+' butuh izin <b>Riwayat</b>. Saya bisa menjawab untuk <b>hari ini</b>.':'';
+  const os=aiOrders(r),rev=os.reduce((a,b)=>a+(+b.total||0),0);
+  if(aiHas(q,'halo','hai','hello','selamat')&&q.split(' ').length<4)return'Halo! Saya asisten Ordela. Tanya omzet, menu terlaris, stok menipis, jam ramai, atau cara memakai fitur.';
+  if(aiHas(q,'terlaris','laris','best seller','paling banyak','populer','sering dibeli')&&!aiHas(q,'kategori','bayar','pembayaran','metode','qris','tunai')){const g=gate();if(g)return g;const t=aiTop(os,aiHas(q,'omzet','pendapatan')?'v':'q').slice(0,5);
+    return t.length?`Menu terlaris ${r.l}:<br>`+t.map((x,i)=>`${i+1}. <b>${esc(x.n)}</b> — ${x.q} terjual · ${money(x.v)}`).join('<br>'):'Belum ada penjualan '+r.l+'.'}
+  if(aiHas(q,'kurang laku','paling sepi','tidak laku','jarang')){const g=gate();if(g)return g;const m={};db.items.filter(i=>!i.bundle).forEach(i=>m[i.name]=0);aiTop(os).forEach(x=>{if(x.n in m)m[x.n]=x.q});
+    const l=Object.entries(m).sort((a,b)=>a[1]-b[1]).slice(0,5);return l.length?`Menu paling sepi ${r.l}:<br>`+l.map(([n,v],i)=>`${i+1}. <b>${esc(n)}</b> — ${v} terjual`).join('<br>')+'<br><small>Pertimbangkan promo atau ubah posisi menu.</small>':'Belum ada menu.'}
+  if(aiHas(q,'kategori')){const g=gate();if(g)return g;const m={};os.forEach(o=>(o.lines||[]).forEach(l=>{const it=find(l.id),c=(it&&it.cat)||'Lainnya';m[c]=(m[c]||0)+(+l.qty||0)*(+l.price||0)}));
+    const l=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,5);return l.length?`Pendapatan per kategori ${r.l}:<br>`+l.map(([n,v])=>`• <b>${esc(n)}</b> — ${money(v)}`).join('<br>'):'Belum ada penjualan '+r.l+'.'}
+  if(aiHas(q,'jam ramai','ramai','sepi jam','jam sibuk','peak')){const g=gate();if(g)return g;const h=Array(24).fill(0);os.forEach(o=>h[new Date(o.t).getHours()]++);const mx=Math.max(...h);if(!mx)return'Belum ada transaksi '+r.l+'.';
+    const top=h.map((n,i)=>[i,n]).filter(z=>z[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([i,n])=>`<b>${String(i).padStart(2,'0')}.00–${String(i+1).padStart(2,'0')}.00</b> (${n} transaksi)`);return`Jam paling ramai ${r.l}: `+top.join(', ')}
+  if(aiHas(q,'metode','bayar','qris','tunai','cash')&&aiHas(q,'berapa','paling','dominan','pembayaran','metode','qris','tunai')&&!aiHas(q,'cara')){const g=gate();if(g)return g;const m={};os.forEach(o=>{const k=o.method||'Lainnya';m[k]=(m[k]||0)+(+o.total||0)});const l=Object.entries(m).sort((a,b)=>b[1]-a[1]);
+    return l.length?`Pembayaran ${r.l}:<br>`+l.map(([n,v])=>`• <b>${esc(n)}</b> — ${money(v)}`).join('<br>'):'Belum ada transaksi '+r.l+'.'}
+  if(aiHas(q,'stok','habis','menipis','hampir')&&!aiHas(q,'opname')){if(!(can('inv')||own))return'Informasi stok butuh izin <b>Inventori</b>.';
+    const it=db.items.filter(i=>!i.bundle&&!i.ns),out=it.filter(i=>i.stock<=0),low=it.filter(i=>i.stock>0&&i.stock<=i.min);
+    if(!out.length&&!low.length)return'Semua stok aman 👍';return(out.length?`<b>Habis (${out.length}):</b> ${out.slice(0,10).map(i=>esc(i.name)).join(', ')}<br>`:'')+(low.length?`<b>Menipis (${low.length}):</b> ${low.slice(0,10).map(i=>esc(i.name)+' ('+i.stock+')').join(', ')}`:'')}
+  if(aiHas(q,'laba','untung','profit','margin')){if(!own&&!can('hist'))return'Laba hanya untuk owner atau yang punya izin Riwayat.';const g=gate();if(g)return g;
+    const cost=os.reduce((a,o)=>a+(o.lines||[]).reduce((z,l)=>z+(+l.cost||0)*(+l.qty||0),0),0);return`Laba kotor ${r.l}: <b>${money(rev-cost)}</b> (omzet ${money(rev)} − modal ${money(cost)}${rev?' · margin '+Math.round((rev-cost)/rev*100)+'%':''}).`}
+  if(aiHas(q,'pengeluaran','biaya','kas keluar')){if(!(can('exp')||own))return'Pengeluaran butuh izin <b>Pengeluaran</b>.';const g=gate();if(g)return g;const e=(db.exps||[]).filter(x=>!x.del&&x.dir!=='in'&&x.cat!=='Kas masuk'&&dkey(x.t)>=r.f&&dkey(x.t)<=r.t);return`Pengeluaran ${r.l}: <b>${money(e.reduce((a,b)=>a+(+b.amt||0),0))}</b> (${e.length} catatan).`}
+  if(aiHas(q,'member','pelanggan setia','langganan')){if(!(can('mem')||own))return'Data member butuh izin <b>Member</b>.';const m={};db.orders.forEach(o=>{if(o.mem&&o.mem.name)m[o.mem.name]=(m[o.mem.name]||0)+(+o.total||0)});const l=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    return l.length?'Member teratas (belanja):<br>'+l.map(([n,v],i)=>`${i+1}. <b>${esc(n)}</b> — ${money(v)}`).join('<br>'):'Belum ada transaksi dengan member.'}
+  if(aiHas(q,'omzet','pendapatan','penjualan','pemasukan','transaksi','rata rata','rata2','turun','naik')){const g=gate();if(g)return g;
+    let s=`Penjualan ${r.l}: <b>${money(rev)}</b> dari <b>${os.length}</b> transaksi${os.length?' · rata-rata '+money(rev/os.length)+' per transaksi':''}.`;
+    if(r.k==='t'||r.k==='yest'){const p=aiOrders({f:dkey(Date.now()-(r.k==='t'?1:2)*864e5),t:dkey(Date.now()-(r.k==='t'?1:2)*864e5)});const pr=p.reduce((a,b)=>a+(+b.total||0),0);if(H&&pr)s+=`<br>Dibanding hari sebelumnya (${money(pr)}): <b>${rev>=pr?'naik ':'turun '}${Math.abs(Math.round((rev-pr)/pr*100))}%</b>.`}
+    return s}
+  if(aiHas(q,'shift')&&aiHas(q,'berjalan','aktif','sekarang','status')){const c=shiftCur();return c?'Shift sedang berjalan sejak '+esc(dstr(c.t||c.start)):'Tidak ada shift yang berjalan.'}
+  if(aiHas(q,'upsell','rekomendasi','tawarkan','paket','sering bareng','berpasangan','pasangan')){const g=gate();if(g)return g;const pair={};db.orders.slice(0,400).forEach(o=>{const n=[...new Set((o.lines||[]).map(l=>l.bn||l.name).filter(Boolean))];for(let i=0;i<n.length;i++)for(let j=i+1;j<n.length;j++){const k=[n[i],n[j]].sort().join(' + ');pair[k]=(pair[k]||0)+1}});
+    const l=Object.entries(pair).sort((a,b)=>b[1]-a[1]).slice(0,5);return l.length?'Pasangan menu yang sering dibeli bersama — tawarkan saat melayani:<br>'+l.map(([n,c])=>`• <b>${esc(n)}</b> (${c}×)`).join('<br>'):'Belum cukup data transaksi untuk melihat pasangan menu.'}
+  const dm=raw.match(/deskripsi(?: menu)?\s+(.+)/i);
+  if(dm&&aiHas(q,'deskripsi')){const n=dm[1].trim().slice(0,40);return`Contoh deskripsi untuk <b>${esc(n)}</b>:<br>“${esc(n)} dibuat segar setiap hari dengan bahan pilihan — gurih, pas di lidah, dan cocok dinikmati kapan saja.”<br><small>Sesuaikan dengan rasa dan bahan asli menu Anda.</small>`}
+  for(const k in AIH)if(aiHas(q,...AIH[k][0]))return AIH[k][1];
+  return'Maaf, saya belum paham pertanyaan itu. Coba: “omzet hari ini”, “menu terlaris minggu ini”, “stok menipis”, “jam ramai”, “laba bulan ini”, “cara split bill”, atau “pasangan menu untuk upsell”.';
+}
+V.ai=function(){
+  const el=$('#v-ai');if(!el)return;
+  const sug=['Omzet hari ini','Menu terlaris minggu ini','Stok menipis','Jam ramai','Laba bulan ini','Pasangan menu untuk upsell','Cara split bill','Cara buka shift'];
+  el.innerHTML=bar('<i class="ic" data-ic="bolt"></i>Asisten Ordela','<button class="btn sm sec" style="width:auto;margin:0" onclick="P2.aiClear()">Hapus</button>')+`<div class="aic" id="aiLog">${AI.msgs.length?AI.msgs.map(m=>`<div class="aib ${m.me?'me':''}">${m.me?esc(m.t):m.t}</div>`).join(''):'<div class="aib">Halo! Saya asisten Ordela. Tanya tentang penjualan, stok, atau cara memakai aplikasi. Saya menjawab dari data toko ini di perangkat Anda dan menghormati hak akses Anda.</div>'}</div>
+  <div class="aiq">${sug.map(s=>`<button class="tag" type="button" onclick="P2.aiAsk(this.textContent)">${s}</button>`).join('')}</div>
+  <form class="aif" onsubmit="event.preventDefault();P2.aiAsk(document.getElementById('aiIn').value);return false"><input class="fi" id="aiIn" placeholder="Tulis pertanyaan…" autocomplete="off" maxlength="200"><button class="btn" style="width:auto;margin:0" type="submit">Kirim</button></form>`;
+  const lg=$('#aiLog');if(lg)lg.scrollTop=lg.scrollHeight;
+};
+P2.aiAsk=function(t){t=String(t||'').trim().slice(0,200);if(!t)return;AI.msgs.push({me:1,t});let a;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}AI.msgs.push({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);V.ai();const i=$('#aiIn');if(i)i.focus()};
+P2.aiClear=function(){AI.msgs=[];V.ai()};
+P2.aiAnswer=aiAnswer;
+
 /* ================= RIWAYAT PESANAN ================= */
 const RW={r:'today',q:'',n:30};
 V.riw=function(){
@@ -627,7 +702,7 @@ V.menu=function(){
   const el=$('#v-menu');if(!el)return;
   const h=new Date().getHours(),g=h>=4&&h<11?'Selamat pagi':h<15?'Selamat siang':h<18?'Selamat sore':'Selamat malam';
   const nm=(CL.on&&CL.me&&CL.me.name)||'Owner';
-  const G=[['Operasional',[['pos','Kasir','receipt','#ef4444'],['table','Meja','grid','#f59e0b'],['riw','Riwayat Pesanan','list','#8b5cf6'],['co','Pesanan Online','cart','#0ea5e9'],['kds','Layar Dapur','cook','#f97316'],['rsv','Reservasi','cal','#0ea5e9'],['gift','Kartu Hadiah','gift','#f43f5e'],['cd','Layar Pelanggan','dash','#0891b2'],['shift','Shift Kasir','clock','#8b5cf6'],['alert','Notifikasi','bell','#ec4899']]],
+  const G=[['Operasional',[['pos','Kasir','receipt','#ef4444'],['table','Meja','grid','#f59e0b'],['riw','Riwayat Pesanan','list','#8b5cf6'],['ai','Asisten','bolt','#7c3aed'],['co','Pesanan Online','cart','#0ea5e9'],['kds','Layar Dapur','cook','#f97316'],['rsv','Reservasi','cal','#0ea5e9'],['gift','Kartu Hadiah','gift','#f43f5e'],['cd','Layar Pelanggan','dash','#0891b2'],['shift','Shift Kasir','clock','#8b5cf6'],['alert','Notifikasi','bell','#ec4899']]],
    ['Penjualan & Pelanggan',[['home','Beranda & Laporan','dash','#10b981'],['mem','Member','users','#14b8a6'],['promo','Promo','bolt','#eab308'],['exp','Pengeluaran','card','#64748b']]],
    ['Produk & Stok',[['inv','Inventori','box','#3b82f6'],['opname','Stok Opname','check','#0d9488'],['buy','Pembelian','download','#6366f1']]],
    ['Tim & Toko',[['att','Absensi','clock','#06b6d4'],['usr','Pengguna','users','#a855f7'],['pyr','Payroll','card','#22c55e'],['branch','Cabang','bank','#d946ef'],['integ','Integrasi','plug','#0ea5e9'],['prn','Printer','print','#475569'],['set','Pengaturan','sliders','#6b7280'],['acc','Akun Saya','key','#111827']]]];
