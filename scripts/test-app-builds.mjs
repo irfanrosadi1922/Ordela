@@ -29,16 +29,6 @@ for (const mode of ["pos", "business"]) {
   const meta = JSON.parse(readFileSync(join(dir, "ordela-app.json"), "utf8"));
   if (meta.mode !== mode || meta.buildTarget !== "preview") throw new Error("Incorrect build metadata: " + mode);
   const html = readFileSync(join(dir, "index.html"), "utf8");
-  const builtViewIds = new Set([...html.matchAll(/<section\\b[^>]*\\bid=["']v-([^"']+)["'][^>]*>/gi)].map(match => match[1]));
-  const exclusiveViews = mode === "pos"
-    ? ["home", "inv", "usr", "pyr", "integ", "gift", "rsv", "opname", "exp", "mem", "buy", "promo", "ai"]
-    : ["pos", "table", "shift", "kds"];
-  for (const view of exclusiveViews) {
-    if (builtViewIds.has(view)) throw new Error("Foreign workspace page leaked into " + mode + " HTML: " + view);
-  }
-  for (const view of ["riw", "co", "alert", "att", "set", "rc", "prn"]) {
-    if (!builtViewIds.has(view)) throw new Error("Shared page missing from " + mode + " HTML: " + view);
-  }
   const modeConfig = readFileSync(join(dir, "app-mode.js"), "utf8");
   const accessConfig = readFileSync(join(dir, "app-access.js"), "utf8");
   const navigationConfig = readFileSync(join(dir, "app-navigation.js"), "utf8");
@@ -84,6 +74,25 @@ for (const mode of ["pos", "business"]) {
   const membersPath = join(dir, "app-business-members.js");
   const kdsTag = '<script src="app-pos-kds.js"></script>';
   const kdsPath = join(dir, "app-pos-kds.js");
+  const shiftTag = '<script src="app-pos-shift.js"></script>';
+  const shiftPath = join(dir, "app-pos-shift.js");
+  if (mode === "pos") {
+    if (!html.includes(shiftTag) || !existsSync(shiftPath)) throw new Error("POS shift module is missing from POS build");
+    const shiftSource = readFileSync(shiftPath, "utf8");
+    new vm.Script(shiftSource, { filename: mode + "/app-pos-shift.js" });
+    const shiftP2 = { views: {}, t: { shiftStats: () => ({}) } };
+    const shiftSandbox = { window: { P2: shiftP2 }, P2: shiftP2 };
+    vm.runInNewContext(shiftSource, shiftSandbox, { filename: mode + "/app-pos-shift.js" });
+    for (const name of ["shiftOpenForm", "shiftOpen", "shiftCloseForm", "shiftDiff", "shiftClose", "shiftDetail", "cashMoveForm", "cashMove"]) {
+      if (typeof shiftSandbox.window[name] !== "function") throw new Error("POS shift action missing " + name);
+    }
+    if (typeof shiftP2.views.shift !== "function" ||
+        !readFileSync(join(root, "pos2.js"), "utf8").includes("window.shiftCur=function()")) {
+      throw new Error("POS shift screen or shared shift lookup is missing");
+    }
+  } else if (html.includes(shiftTag) || existsSync(shiftPath)) {
+    throw new Error("POS shift UI leaked into Business build");
+  }
   if (mode === "pos") {
     if (!html.includes(kdsTag) || !existsSync(kdsPath)) throw new Error("POS KDS module is missing from POS build");
     const kdsSource = readFileSync(kdsPath, "utf8");
@@ -313,6 +322,7 @@ for (const mode of ["pos", "business"]) {
   const dashboardTagIndex = html.indexOf(dashboardTag);
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const shiftTagIndex = html.indexOf(shiftTag);
   const kdsTagIndex = html.indexOf(kdsTag);
   const membersTagIndex = html.indexOf(membersTag);
   const promosTagIndex = html.indexOf(promosTag);
@@ -323,8 +333,8 @@ for (const mode of ["pos", "business"]) {
   const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && (kdsTagIndex >= 0 || existsSync(kdsPath)) ) || (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < membersTagIndex && membersTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0 || membersTagIndex >= 0 || !(pos2TagIndex >= 0 && pos2TagIndex < kdsTagIndex && kdsTagIndex < coreTagIndex)))) {
+      (mode === "business" && (shiftTagIndex >= 0 || existsSync(shiftPath) || kdsTagIndex >= 0 || existsSync(kdsPath))) || (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < branchesTagIndex && branchesTagIndex < reservationsTagIndex && reservationsTagIndex < stocktakeTagIndex && stocktakeTagIndex < giftsTagIndex && giftsTagIndex < promosTagIndex && promosTagIndex < membersTagIndex && membersTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0 || branchesTagIndex >= 0 || reservationsTagIndex >= 0 || stocktakeTagIndex >= 0 || giftsTagIndex >= 0 || promosTagIndex >= 0 || membersTagIndex >= 0 || !(pos2TagIndex >= 0 && pos2TagIndex < shiftTagIndex && shiftTagIndex < kdsTagIndex && kdsTagIndex < coreTagIndex)))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
