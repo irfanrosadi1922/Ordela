@@ -689,6 +689,8 @@ create table if not exists pos.t_integ(
   events text[] not null default '{sale,order}', status text not null default 'baru',
   last_at timestamptz, last_req bigint, updated_at timestamptz not null default now(),
   primary key (store_id, kind));
+alter table pos.t_integ add column if not exists hh text;
+create unique index if not exists integ_hh on pos.t_integ(hh) where hh is not null;
 alter table pos.t_integ enable row level security;
 
 create or replace function pos.route(m text, u text, q jsonb, b jsonb, t text) returns jsonb language plpgsql as $$
@@ -744,6 +746,8 @@ begin
     end if;
     if m = 'GET' then return pos.r(200, pos.cust_view(r)); end if;
   end if;
+
+  if u = '/api/food/hook' and m = 'POST' then return pos.food_hook(b ->> 'k', b - 'k'); end if;
 
   me := pos.auth(t);
   if me.id is null then return pos.r(401, case when pos.kicked(t) then '{"error":"kicked"}'::jsonb when pos.expired(t) then '{"error":"expired"}'::jsonb else '{"error":"unauthorized"}'::jsonb end); end if;
@@ -881,7 +885,7 @@ begin
   end if;
 
   if u like '/api/integrations%' then
-    declare v_k text; v_old jsonb; v_cfg jsonb; v_ev text[]; v_en boolean; v_row pos.t_integ; v_st text; v_rid bigint;
+    declare v_k text; v_old jsonb; v_cfg jsonb; v_ev text[]; v_en boolean; v_row pos.t_integ; v_st text; v_rid bigint; v_hook text; v_food boolean; v_o jsonb;
     begin
       if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
       if m = 'GET' and u = '/api/integrations' then return pos.r(200, jsonb_build_object('items', pos.integ_list())); end if;
@@ -890,16 +894,26 @@ begin
       v_k := b ->> 'kind';
       if pos.integ_fields(v_k) is null then return pos.r(400, '{"error":"Layanan tidak dikenal"}'); end if;
       select * into v_row from pos.t_integ where store_id = pos.sid() and kind = v_k;
+      v_food := v_k in ('gofood', 'grabfood', 'shopeefood');
       if u = '/api/integrations' and m = 'PUT' then
         v_old := case when v_row.kind is null then '{}'::jsonb else pos.integ_dec(v_row.cfg) end;
         begin v_cfg := pos.integ_clean(v_k, b, v_old);
         exception when raise_exception then return pos.r(400, jsonb_build_object('error', sqlerrm)); end;
         v_ev := coalesce((select array_agg(e) from jsonb_array_elements_text(case when jsonb_typeof(b -> 'events') = 'array' then b -> 'events' else '["sale","order"]'::jsonb end) e where e in ('sale', 'order')), '{}');
+        if v_food then v_ev := '{}'; end if;
         v_en := coalesce((b ->> 'enabled')::boolean, true);
-        insert into pos.t_integ(store_id, kind, cfg, enabled, events, status, updated_at) values (pos.sid(), v_k, pos.integ_enc(v_cfg), v_en, v_ev, 'baru', now())
-          on conflict (store_id, kind) do update set cfg = excluded.cfg, enabled = excluded.enabled, events = excluded.events, status = 'baru', updated_at = now();
+        if v_food and v_row.hh is null then v_hook := 'oh_' || encode(extensions.gen_random_bytes(24), 'hex'); end if;
+        insert into pos.t_integ(store_id, kind, cfg, enabled, events, status, updated_at, hh) values (pos.sid(), v_k, pos.integ_enc(v_cfg), v_en, v_ev, case when v_food then 'menunggu' else 'baru' end, now(), case when v_hook is null then null else encode(extensions.digest(v_hook, 'sha256'), 'hex') end)
+          on conflict (store_id, kind) do update set cfg = excluded.cfg, enabled = excluded.enabled, events = excluded.events, status = case when v_food then pos.t_integ.status else 'baru' end, updated_at = now();
         perform pos.audit(me.id, me.username, 'integrasi-simpan', v_k);
-        return pos.r(200, jsonb_build_object('ok', true, 'items', pos.integ_list()));
+        return pos.r(200, jsonb_build_object('ok', true, 'items', pos.integ_list()) || case when v_hook is null then '{}'::jsonb else jsonb_build_object('hook', v_hook) end);
+      end if;
+      if u = '/api/integrations/hook' then
+        if not v_food or v_row.kind is null then return pos.r(404, '{"error":"Hubungkan platform dulu"}'); end if;
+        v_hook := 'oh_' || encode(extensions.gen_random_bytes(24), 'hex');
+        update pos.t_integ set hh = encode(extensions.digest(v_hook, 'sha256'), 'hex') where store_id = pos.sid() and kind = v_k;
+        perform pos.audit(me.id, me.username, 'integrasi-token', v_k);
+        return pos.r(200, jsonb_build_object('ok', true, 'hook', v_hook, 'items', pos.integ_list()));
       end if;
       if u = '/api/integrations/delete' then
         delete from pos.t_integ where store_id = pos.sid() and kind = v_k;
@@ -908,6 +922,12 @@ begin
       end if;
       if u = '/api/integrations/test' then
         if v_row.kind is null then return pos.r(404, '{"error":"Belum disambungkan"}'); end if;
+        if v_food then
+          v_o := pos.food_ingest(v_k, jsonb_build_object('id', 'TES-' || to_char(now(), 'HH24MISS'), 'customer_name', 'Tes ' || pos.food_label(v_k), 'note', 'Pesanan contoh dari Integrasi Center - boleh dibatalkan',
+            'items', jsonb_build_array(jsonb_build_object('name', 'Item Contoh', 'qty', 1, 'price', 10000))));
+          if (v_o ->> 's')::int <> 200 then return pos.r(502, jsonb_build_object('error', coalesce(v_o ->> 'error', 'Gagal'))); end if;
+          return pos.r(200, jsonb_build_object('ok', true, 'items', pos.integ_list()));
+        end if;
         select name into v_st from pos.stores where id = pos.sid();
         begin
           v_rid := pos.integ_send(v_k, pos.integ_dec(v_row.cfg), 'test', pos.integ_msg('test', '{}', coalesce(v_st, 'Ordela')), '{}', coalesce(v_st, 'Ordela'));
@@ -1294,12 +1314,10 @@ $$ select extensions.pgp_sym_decrypt(c, pos.ikey())::jsonb $$;
 -- definisi layanan: kolom [nama, rahasia?, wajib?]
 create or replace function pos.integ_fields(kind text) returns jsonb language sql immutable as $$
   select case kind
-    when 'telegram' then '[["token",true,true],["chat",false,true]]'
-    when 'slack' then '[["url",true,true]]'
-    when 'discord' then '[["url",true,true]]'
+    when 'gofood' then '[["merchant",false,true],["key",true,false]]'
+    when 'grabfood' then '[["merchant",false,true],["key",true,false]]'
+    when 'shopeefood' then '[["merchant",false,true],["key",true,false]]'
     when 'webhook' then '[["url",true,true],["secret",true,false]]'
-    when 'whatsapp' then '[["token",true,true],["target",false,true]]'
-    when 'email' then '[["key",true,true],["from",false,true],["to",false,true]]'
   end::jsonb $$;
 
 -- https saja, tanpa IP/localhost/host internal (cegah SSRF ke jaringan dalam)
@@ -1328,23 +1346,12 @@ begin
     if length(v) > 500 then raise exception 'Isian "%" terlalu panjang', nm; end if;
     o := o || jsonb_build_object(nm, v);
   end loop;
-  if kind = 'telegram' then
-    if o ->> 'token' !~ '^[0-9]{5,15}:[A-Za-z0-9_-]{20,60}$' then raise exception 'Token bot Telegram tidak valid (contoh 123456:ABC...)'; end if;
-    if o ->> 'chat' !~ '^(-?[0-9]{5,16}|@[A-Za-z0-9_]{4,40})$' then raise exception 'Chat ID Telegram tidak valid'; end if;
-  elsif kind = 'slack' then
-    if not pos.integ_url_ok(o ->> 'url', '^hooks\.slack\.com$') or o ->> 'url' !~ '^https://hooks\.slack\.com/services/' then raise exception 'URL harus webhook Slack (https://hooks.slack.com/services/...)'; end if;
-  elsif kind = 'discord' then
-    if not pos.integ_url_ok(o ->> 'url', '^(discord|discordapp)\.com$') or o ->> 'url' !~ '^https://[a-z]+\.com/api/webhooks/' then raise exception 'URL harus webhook Discord (https://discord.com/api/webhooks/...)'; end if;
+  if kind in ('gofood', 'grabfood', 'shopeefood') then
+    if o ->> 'merchant' !~ '^[A-Za-z0-9_.:-]{3,60}$' then raise exception 'Merchant/Store ID tidak valid (3-60 huruf, angka, - _ . :)'; end if;
+    if o ->> 'key' <> '' and length(o ->> 'key') < 6 then raise exception 'API key terlalu pendek'; end if;
   elsif kind = 'webhook' then
     if not pos.integ_url_ok(o ->> 'url') then raise exception 'URL webhook harus https dan alamat publik (bukan IP/localhost)'; end if;
     if o ->> 'secret' <> '' and length(o ->> 'secret') < 8 then raise exception 'Secret minimal 8 karakter'; end if;
-  elsif kind = 'whatsapp' then
-    if length(o ->> 'token') < 8 then raise exception 'Token Fonnte tidak valid'; end if;
-    if o ->> 'target' !~ '^[0-9]{8,16}(,[0-9]{8,16}){0,4}$' then raise exception 'Nomor WhatsApp: angka saja (628...), pisahkan koma bila lebih dari satu'; end if;
-  elsif kind = 'email' then
-    if o ->> 'key' !~ '^re_[A-Za-z0-9_-]{10,100}$' then raise exception 'API key Resend harus diawali re_'; end if;
-    if o ->> 'to' !~ '^[^@[:space:],]+@[^@[:space:],]+\.[^@[:space:],]+$' then raise exception 'Email tujuan tidak valid'; end if;
-    if o ->> 'from' !~ '^([^<>@]+ <)?[^@[:space:]<>]+@[^@[:space:]<>]+\.[^@[:space:]<>]+>?$' then raise exception 'Email pengirim tidak valid (domain harus terverifikasi di Resend)'; end if;
   end if;
   return o;
 end $$;
@@ -1373,16 +1380,7 @@ end $$;
 create or replace function pos.integ_send(kind text, c jsonb, ev text, msg text, p jsonb, store text) returns bigint language plpgsql as $$
 declare hd jsonb := jsonb_build_object('Content-Type', 'application/json'); bd jsonb; u text; sg text;
 begin
-  if kind = 'telegram' then
-    u := 'https://api.telegram.org/bot' || (c ->> 'token') || '/sendMessage'; bd := jsonb_build_object('chat_id', c ->> 'chat', 'text', msg);
-  elsif kind = 'slack' then u := c ->> 'url'; bd := jsonb_build_object('text', msg);
-  elsif kind = 'discord' then u := c ->> 'url'; bd := jsonb_build_object('content', left(msg, 1900), 'allowed_mentions', jsonb_build_object('parse', '[]'::jsonb));
-  elsif kind = 'whatsapp' then
-    u := 'https://api.fonnte.com/send'; hd := hd || jsonb_build_object('Authorization', c ->> 'token'); bd := jsonb_build_object('target', c ->> 'target', 'message', msg);
-  elsif kind = 'email' then
-    u := 'https://api.resend.com/emails'; hd := hd || jsonb_build_object('Authorization', 'Bearer ' || (c ->> 'key'));
-    bd := jsonb_build_object('from', c ->> 'from', 'to', jsonb_build_array(c ->> 'to'), 'subject', split_part(msg, E'\n', 1), 'text', msg);
-  elsif kind = 'webhook' then
+  if kind = 'webhook' then
     u := c ->> 'url'; bd := jsonb_build_object('event', ev, 'store', store, 'sent_at', pos.iso(now()), 'data', coalesce(p, '{}'::jsonb), 'text', msg);
     if coalesce(c ->> 'secret', '') <> '' then
       sg := encode(extensions.hmac(convert_to(bd::text, 'utf8'), convert_to(c ->> 'secret', 'utf8'), 'sha256'), 'hex');
@@ -1396,9 +1394,9 @@ end $$;
 create or replace function pos.integ_fire(ev text, p jsonb) returns void language plpgsql as $$
 declare r record; st text; rid bigint;
 begin
-  if pos.sid() is null or not exists (select 1 from pos.t_integ where store_id = pos.sid() and enabled and ev = any(events)) then return; end if;
+  if pos.sid() is null or not exists (select 1 from pos.t_integ where store_id = pos.sid() and kind = 'webhook' and enabled and ev = any(events)) then return; end if;
   select name into st from pos.stores where id = pos.sid();
-  for r in select * from pos.t_integ where store_id = pos.sid() and enabled and ev = any(events) loop
+  for r in select * from pos.t_integ where store_id = pos.sid() and kind = 'webhook' and enabled and ev = any(events) loop
     begin
       rid := pos.integ_send(r.kind, pos.integ_dec(r.cfg), ev, pos.integ_msg(ev, p, coalesce(st, 'Ordela')), p, coalesce(st, 'Ordela'));
       update pos.t_integ set status = 'terkirim', last_at = now(), last_req = rid where store_id = r.store_id and kind = r.kind;
@@ -1413,7 +1411,7 @@ end $$;
 create or replace function pos.integ_sales(oldj jsonb, newj jsonb) returns void language plpgsql as $$
 declare o jsonb; seen text[]; n int := 0;
 begin
-  if pos.sid() is null or not exists (select 1 from pos.t_integ where store_id = pos.sid() and enabled and 'sale' = any(events)) then return; end if;
+  if pos.sid() is null or not exists (select 1 from pos.t_integ where store_id = pos.sid() and kind = 'webhook' and enabled and 'sale' = any(events)) then return; end if;
   if jsonb_typeof(newj -> 'orders') <> 'array' then return; end if;
   select coalesce(array_agg(x ->> 'no'), '{}') into seen from jsonb_array_elements(case when jsonb_typeof(oldj -> 'orders') = 'array' then oldj -> 'orders' else '[]'::jsonb end) x;
   for o in select x from jsonb_array_elements(newj -> 'orders') x limit 40 loop
@@ -1424,6 +1422,64 @@ begin
     perform pos.integ_fire('sale', jsonb_build_object('no', o ->> 'no', 'total', pos.num(o -> 'total'), 'method', o ->> 'method', 'type', o ->> 'type', 'cust', pos.itxt(o ->> 'cust'), 'lines', coalesce(o -> 'lines', '[]'::jsonb)));
   end loop;
 exception when others then return;
+end $$;
+
+
+-- label platform
+create or replace function pos.food_label(kind text) returns text language sql immutable as
+$$ select case kind when 'gofood' then 'GoFood' when 'grabfood' then 'GrabFood' when 'shopeefood' then 'ShopeeFood' end $$;
+
+-- masukkan pesanan dari platform ke antrean Pesanan Online toko aktif (pos.sid()). Format payload dibaca longgar.
+create or replace function pos.food_ingest(kind text, p jsonb) returns jsonb language plpgsql as $$
+declare ext text; nm text; arr jsonb; it jsonb; lines jsonb := '[]'; q numeric; pr numeric; nmi text; m jsonb; sub numeric := 0; tot numeric;
+  v_day date; n int; tk text; kk text; ex pos.co; r pos.co; lbl text := pos.food_label(kind); v_items jsonb;
+begin
+  if lbl is null then return jsonb_build_object('s', 400, 'error', 'platform tidak dikenal'); end if;
+  ext := pos.clean(coalesce(p ->> 'id', p ->> 'order_id', p ->> 'orderId', p ->> 'order_no', p #>> '{order,id}'), 60);
+  if ext = '' then return jsonb_build_object('s', 400, 'error', 'id pesanan wajib ada (id / order_id)'); end if;
+  arr := coalesce(p -> 'items', p -> 'order_items', p -> 'lines', p -> 'products', p #> '{order,items}');
+  if jsonb_typeof(arr) <> 'array' or jsonb_array_length(arr) = 0 or jsonb_array_length(arr) > 60 then return jsonb_build_object('s', 400, 'error', 'daftar item kosong atau terlalu banyak'); end if;
+  kk := 'f:' || pos.sid() || ':' || kind || ':' || ext;
+  select * into ex from pos.co where idem = kk;
+  if ex.id is not null then return jsonb_build_object('s', 200, 'dup', true, 'num', ex.num); end if;
+  select coalesce(json -> 'items', '[]') into v_items from pos.doc where id = 1;
+  for it in select x from jsonb_array_elements(arr) x loop
+    if jsonb_typeof(it) <> 'object' then continue; end if;
+    nmi := pos.clean(coalesce(it ->> 'name', it ->> 'item_name', it ->> 'title'), 80);
+    if nmi = '' then continue; end if;
+    q := greatest(1, least(99, floor(pos.num(coalesce(it -> 'qty', it -> 'quantity', it -> 'count', '1'::jsonb)))));
+    pr := greatest(0, pos.num(coalesce(it -> 'price', it -> 'unit_price', it -> 'amount', '0'::jsonb)));
+    select x into m from jsonb_array_elements(v_items) x where lower(x ->> 'name') = lower(nmi) limit 1;
+    lines := lines || jsonb_build_array(jsonb_build_object('id', m ->> 'id', 'name', nmi, 'price', case when pr = 0 then coalesce(pos.num(m -> 'price'), 0) else pr end, 'qty', q));
+    sub := sub + (case when pr = 0 then coalesce(pos.num(m -> 'price'), 0) else pr end) * q;
+  end loop;
+  if jsonb_array_length(lines) = 0 then return jsonb_build_object('s', 400, 'error', 'tidak ada item valid'); end if;
+  tot := coalesce(nullif(pos.num(coalesce(p -> 'total', p -> 'grand_total', p -> 'total_price')), 0), sub);
+  nm := coalesce(nullif(pos.clean(coalesce(p ->> 'customer_name', p #>> '{customer,name}', p ->> 'name'), 40), ''), 'Pelanggan ' || lbl);
+  v_day := (now() at time zone pos.tz())::date;
+  select count(*) + 1 into n from pos.co where co.day = v_day;
+  tk := encode(extensions.gen_random_bytes(16), 'hex');
+  insert into pos.co(tok, idem, day, num, name, tbl, type, note, lines, sub, tax, total, pay)
+    values (tk, kk, v_day, '#' || lpad(n::text, 3, '0'), nm, '', lbl, left(pos.clean(p ->> 'note', 200) || case when ext <> '' then ' [' || lbl || ' ' || ext || ']' else '' end, 200), lines, sub, 0, tot, '')
+    returning * into r;
+  begin perform pos.push_ev('new', r); exception when others then null; end;
+  begin perform pos.integ_fire('order', jsonb_build_object('no', r.num, 'name', r.name, 'tbl', '', 'type', lbl, 'total', r.total, 'lines', r.lines)); exception when others then null; end;
+  update pos.t_integ set status = 'aktif', last_at = now() where store_id = pos.sid() and t_integ.kind = food_ingest.kind;
+  perform pos.bump();
+  return jsonb_build_object('s', 200, 'ok', true, 'num', r.num);
+end $$;
+
+-- pintu masuk publik untuk platform/aggregator: token milik toko (disimpan hanya sebagai hash)
+create or replace function pos.food_hook(k text, p jsonb) returns jsonb language plpgsql as $$
+declare r pos.t_integ; o jsonb;
+begin
+  if coalesce(k, '') !~ '^oh_[0-9a-f]{48}$' then return pos.r(401, '{"error":"token tidak valid"}'); end if;
+  select * into r from pos.t_integ where hh = encode(extensions.digest(k, 'sha256'), 'hex') and enabled and kind <> 'webhook';
+  if r.store_id is null then return pos.r(401, '{"error":"token tidak valid atau integrasi dijeda"}'); end if;
+  if not pos.rate('fh' || r.store_id, 300, interval '10 minutes') then return pos.r(429, '{"error":"Terlalu banyak permintaan"}'); end if;
+  perform set_config('pos.sid', r.store_id::text, true);
+  o := pos.food_ingest(r.kind, p);
+  return pos.r((o ->> 's')::int, o - 's');
 end $$;
 
 create or replace function pos.integ_list() returns jsonb language plpgsql as $$
@@ -1439,7 +1495,7 @@ begin
     sc := null;
     begin execute 'select status_code from net._http_response where id = $1' into sc using r.last_req; exception when others then sc := null; end;
     out := out || jsonb_build_array(jsonb_build_object('kind', r.kind, 'enabled', r.enabled, 'events', to_jsonb(r.events), 'status', r.status,
-      'last_at', case when r.last_at is null then null else pos.iso(r.last_at) end, 'http', sc, 'fields', f));
+      'last_at', case when r.last_at is null then null else pos.iso(r.last_at) end, 'http', sc, 'fields', f, 'hook', r.hh is not null));
   end loop;
   return out;
 end $$;
