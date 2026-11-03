@@ -148,3 +148,8 @@ The cashier shift screen, opening/closing cash drawer, cash-in/cash-out forms, v
 ## POS catalog and cart feature boundary
 
 The cashier product grid, category filter, quick-add cards, modifier selection, quantity editing, and cart update handlers now live in `app-pos-catalog.js`, loaded only by the POS build. The Business render loop no longer calls POS catalog/invoice renderers, and inventory ordering/grid preferences are guarded by the build mode. Online orders opened in Business now show a clear message directing payment to the POS app instead of opening a hidden cashier form. Tests validate the exported cashier API and verify the Business artifact excludes the module.
+
+
+## POS checkout feature boundary
+
+Discount eligibility, cart totals, parked-ticket management, member/loyalty redemption, split tender, cash/change validation, and final transaction commit now live in `app-pos-checkout.js`, included only in the POS build. The Business app keeps only the shared `promoUsed` and `holdTotal` summaries because its promotion administration and table-occupancy views consume them. The table screen hides the parked-ticket action in Business, and online-order payment is routed to POS. Receipt display/printing remains shared for historical reprints. Build tests check the POS API and the shared helper boundary.
