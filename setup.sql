@@ -1318,12 +1318,12 @@ begin
 exception when others then
   return pos.r(500, jsonb_build_object('error', 'server error',
     'detail', case when exists (select 1 from pos.meta where k = 'debug') then sqlerrm end));
-end $;
+end $$;
 
 -- Riwayat AI hanya dapat diakses melalui Edge Function dengan service-role key.
 -- Token sesi tetap diverifikasi di database; identitas toko/cabang tidak diterima dari klien.
 create or replace function public.ai_chat_history(p_token text, p_action text, p_messages jsonb default '[]'::jsonb)
-returns jsonb language plpgsql security definer set search_path = '' as $
+returns jsonb language plpgsql security definer set search_path = '' as $$;
 declare
   me pos.users;
   v_sid bigint;
@@ -1371,7 +1371,7 @@ begin
   values (v_sid, me.id, p_messages, now())
   on conflict (store_id, uid) do update set messages = excluded.messages, updated_at = excluded.updated_at;
   return jsonb_build_object('ok', true);
-end $;
+end $$;
 revoke all on function public.ai_chat_history(text, text, jsonb) from public, anon, authenticated;
 grant execute on function public.ai_chat_history(text, text, jsonb) to service_role;
 
