@@ -372,22 +372,53 @@ function aiAnswer(raw){
 const AIMISS='Maaf, saya belum paham pertanyaan itu. Coba: “omzet hari ini”, “menu terlaris minggu ini”, “stok menipis”, “jam ramai”, “laba bulan ini”, “cara split bill”, atau “pasangan menu untuk upsell”.';
 /* ringkasan data (hanya angka agregat, tanpa nama/HP pelanggan) untuk AI cloud, sesuai hak akses */
 function aiCtx(){
-  const own=isOwner(),H=can('hist')||own,L=[];const st=(r)=>{const os=aiOrders(r),v=os.reduce((a,b)=>a+(+b.total||0),0);return`${os.length} transaksi, omzet ${Math.round(v)}`};
+  const own=isOwner(),H=can('hist')||own,L=[];
   const d=n=>dkey(Date.now()-n*864e5),t=dkey(Date.now());
-  L.push('Toko: '+(db.set&&db.set.store||'-')+'. Mata uang rupiah.');
-  L.push('Hari ini: '+st({f:t,t}));
-  if(H){L.push('Kemarin: '+st({f:d(1),t:d(1)}));L.push('7 hari: '+st({f:d(6),t}));L.push('30 hari: '+st({f:d(29),t}));
-    const os=aiOrders({f:d(29),t}),top=aiTop(os).slice(0,10);if(top.length)L.push('Terlaris 30 hari: '+top.map(x=>`${x.n} (${x.q}x, ${Math.round(x.v)})`).join('; '));
-     const sold={};os.forEach(o=>(o.lines||[]).forEach(l=>{const n=l.bn||l.name;if(n)sold[n]=(sold[n]||0)+(+l.qty||0)}));
-     const slow=db.items.filter(i=>!i.bundle&&!i.ns).map(i=>({n:i.name,q:sold[i.name]||0,p:+i.price||0})).sort((a,b)=>a.q-b.q).slice(0,10);
-     if(slow.length)L.push('Penjualan terendah 30 hari (termasuk menu tanpa penjualan): '+slow.map(x=>`${x.n} (${x.q} terjual; harga ${Math.round(x.p)})`).join('; '));
-    const h=Array(24).fill(0);os.forEach(o=>h[new Date(o.t).getHours()]++);L.push('Transaksi per jam (0-23): '+h.join(','));
-    const pm={};os.forEach(o=>{pm[o.method||'Lain']=(pm[o.method||'Lain']||0)+(+o.total||0)});L.push('Metode bayar 30 hari: '+Object.entries(pm).map(([k,v])=>k+' '+Math.round(v)).join('; '));
-    const ty={};os.forEach(o=>{ty[o.type||'-']=(ty[o.type||'-']||0)+1});L.push('Tipe pesanan 30 hari: '+Object.entries(ty).map(([k,v])=>k+' '+v).join('; '))}
-  if(own||can('hist')){const os=aiOrders({f:d(29),t}),cost=os.reduce((a,o)=>a+(o.lines||[]).reduce((z,l)=>z+(+l.cost||0)*(+l.qty||0),0),0),rv=os.reduce((a,b)=>a+(+b.total||0),0);L.push(`Laba kotor 30 hari: ${Math.round(rv-cost)} (modal ${Math.round(cost)})`)}
-  if(own||can('inv')){const it=db.items.filter(i=>!i.bundle&&!i.ns);L.push('Stok habis: '+(it.filter(i=>i.stock<=0).map(i=>i.name).slice(0,15).join(', ')||'-'));L.push('Stok menipis: '+(it.filter(i=>i.stock>0&&i.stock<=i.min).map(i=>i.name+' ('+i.stock+')').slice(0,15).join(', ')||'-'))}
-  L.push('Menu ('+db.items.length+'): '+db.items.slice(0,40).map(i=>i.name+' '+i.price).join('; '));
-  return L.join('\n').slice(0,5800);
+  const orders=r=>aiOrders(r),total=os=>os.reduce((a,o)=>a+(+o.total||0),0);
+  const cogs=os=>os.reduce((a,o)=>a+(o.lines||[]).reduce((z,l)=>z+(+l.cost||0)*(+l.qty||0),0),0);
+  const stat=os=>({n:os.length,v:total(os),avg:os.length?total(os)/os.length:0,cost:cogs(os)});
+  const fmt=x=>x.n+' transaksi; omzet '+Math.round(x.v)+'; rata-rata transaksi '+Math.round(x.avg);
+  const this7=orders({f:d(6),t}),prev7=orders({f:d(13),t:d(7)});
+  const this30=orders({f:d(29),t}),prev30=orders({f:d(59),t:d(30)});
+  L.push('TOKO AKTIF: '+(db.set&&db.set.store||'-')+'. Semua angka hanya untuk toko/cabang yang sedang aktif. Mata uang: '+((db.set&&db.set.cur)||'Rp')+'.');
+  L.push('Tanggal lokal hari ini: '+t);
+  L.push('Hari ini: '+fmt(stat(orders({f:t,t}))));
+  if(H){
+    L.push('7 hari terakhir ('+d(6)+' s.d. '+t+'): '+fmt(stat(this7)));
+    L.push('7 hari sebelumnya ('+d(13)+' s.d. '+d(7)+'): '+fmt(stat(prev7)));
+    L.push('30 hari terakhir: '+fmt(stat(this30)));
+    L.push('30 hari sebelumnya: '+fmt(stat(prev30)));
+    const daily=[];for(let i=6;i>=0;i--){const day=d(i),os=orders({f:day,t:day});daily.push(day+': '+os.length+' transaksi, omzet '+Math.round(total(os)));}
+    L.push('RINCIAN HARIAN 7 HARI TERAKHIR: '+daily.join(' | '));
+    const top7=aiTop(this7,'v').slice(0,12),topPrev=aiTop(prev7,'v').slice(0,8);
+    L.push('MENU 7 HARI TERAKHIR (urut omzet): '+(top7.length?top7.map(x=>x.n+' ('+x.q+' terjual; omzet '+Math.round(x.v)+')').join('; '):'belum ada'));
+    L.push('MENU 7 HARI SEBELUMNYA: '+(topPrev.length?topPrev.map(x=>x.n+' ('+x.q+' terjual; omzet '+Math.round(x.v)+')').join('; '):'belum ada'));
+    const top30=aiTop(this30,'v').slice(0,10);
+    L.push('MENU TERLARIS 30 HARI: '+(top30.length?top30.map(x=>x.n+' ('+x.q+'x; '+Math.round(x.v)+')').join('; '):'belum ada'));
+    const sold={};this30.forEach(o=>(o.lines||[]).forEach(l=>{const n=l.bn||l.name;if(n)sold[n]=(sold[n]||0)+(+l.qty||0)}));
+    const slow=db.items.filter(i=>!i.bundle&&!i.ns).map(i=>({n:i.name,q:sold[i.name]||0,p:+i.price||0})).sort((a,b)=>a.q-b.q).slice(0,10);
+    L.push('MENU PENJUALAN TERENDAH 30 HARI: '+(slow.length?slow.map(x=>x.n+' ('+x.q+' terjual; harga '+Math.round(x.p)+')').join('; '):'tidak tersedia'));
+    const h=Array(24).fill(0);this30.forEach(o=>h[new Date(o.t).getHours()]++);L.push('TRANSAKSI PER JAM 30 HARI (jam 0-23): '+h.join(','));
+    const pm={};this30.forEach(o=>{pm[o.method||'Lainnya']=(pm[o.method||'Lainnya']||0)+(+o.total||0)});L.push('METODE BAYAR 30 HARI: '+Object.entries(pm).map(([k,v])=>k+' '+Math.round(v)).join('; '));
+    const ty={};this30.forEach(o=>{ty[o.type||'-']=(ty[o.type||'-']||0)+1});L.push('TIPE PESANAN 30 HARI: '+Object.entries(ty).map(([k,v])=>k+' '+v).join('; '));
+    if(own){const ex=(db.exps||[]).filter(x=>!x.del&&x.dir!=='in'&&x.cat!=='Kas keluar'&&dkey(x.t)>=d(29)&&dkey(x.t)<=t);L.push('PENGELUARAN 30 HARI: '+Math.round(ex.reduce((a,x)=>a+(+x.amt||0),0))+' dari '+ex.length+' catatan.');}
+    L.push('HPP 7 HARI: '+Math.round(cogs(this7))+'; laba kotor 7 hari: '+Math.round(total(this7)-cogs(this7)));
+    L.push('HPP 7 HARI SEBELUMNYA: '+Math.round(cogs(prev7))+'; laba kotor periode sebelumnya: '+Math.round(total(prev7)-cogs(prev7)));
+  }
+  if(own||can('inv')){
+    const it=db.items.filter(i=>!i.bundle&&!i.ns);
+    L.push('JUMLAH ITEM STOK: '+it.length+'; stok habis: '+it.filter(i=>+i.stock<=0).length+'; stok menipis: '+it.filter(i=>+i.stock>0&&+i.stock<=+i.min).length);
+    L.push('STOK HABIS: '+(it.filter(i=>+i.stock<=0).map(i=>i.name).slice(0,15).join(', ')||'-'));
+    L.push('STOK MENIPIS: '+(it.filter(i=>+i.stock>0&&+i.stock<=+i.min).map(i=>i.name+' ('+i.stock+')').slice(0,15).join('; ')||'-'));
+  }
+  if(own){
+    const activeSh=(db.shifts||[]).filter(x=>!x.del&&!x.close);
+    L.push('SHIFT KASIR: '+activeSh.length+' shift sedang berjalan.');
+    const promos=(db.promos||[]).filter(x=>!x.del);
+    L.push('PROMO TERCATAT: '+promos.length+' promo (AI tidak boleh mengubah promo tanpa persetujuan owner).');
+  }
+  L.push('MENU & HARGA: '+db.items.filter(i=>!i.bundle&&!i.ns).slice(0,50).map(i=>i.name+' harga '+i.price+' modal '+(i.cost??'tidak diisi')+' stok '+(i.stock??'tidak diisi')).join('; '));
+  return L.join('\\n').slice(0,5900);
 }
 async function aiCloud(q){
   const C=window.POS_SB;if(!(C&&C.url)||!(CL.on&&CL.tok))return null;
