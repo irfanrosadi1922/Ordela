@@ -78,3 +78,8 @@ Owner payroll and attendance reporting now live in `app-business-payroll.js`, no
 ## Business inventory stock-count feature boundary
 
 Stock-count import and adjustment now live in `app-business-inventory.js`. The Business artifact includes this module after the shared XLSX utility and payroll feature; the POS artifact removes its script tag and does not contain the module. The feature owns CSV/XLSX parsing, template generation, discrepancy review, applying stock corrections, and the result report. Shared inventory listing and normal stock editing remain in the common runtime; the module boundary does not replace server-side permission checks.
+
+
+## Business user administration feature boundary
+
+Owner-only user administration, custom staff roles, permission editing, account activation/deletion, password resets, and the user audit log now live in `app-business-users.js`. Only the Business artifact contains and loads this module. The shared runtime retains the small role-key/role-label helpers because the account profile screens in both applications display the signed-in user's role. Tests verify the module's exported handlers, preserve the shared role-label dependency, and ensure the POS artifact contains neither the module nor its script reference.
