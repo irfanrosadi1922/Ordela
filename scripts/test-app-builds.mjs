@@ -24,6 +24,24 @@ for (const mode of ["pos", "business"]) {
   const financePath = join(dir, "app-business-finance.js");
   const aiTag = '<script src="app-business-ai.js"></script>';
   const aiPath = join(dir, "app-business-ai.js");
+  const integrationsTag = '<script src="app-business-integrations.js"></script>';
+  const integrationsPath = join(dir, "app-business-integrations.js");
+  if (mode === "business") {
+    if (!html.includes(integrationsTag) || !existsSync(integrationsPath)) throw new Error("Business integrations module is missing from Business build");
+    const integrationsSource = readFileSync(integrationsPath, "utf8");
+    new vm.Script(integrationsSource, { filename: mode + "/app-business-integrations.js" });
+    const integrationsP2 = { views: {}, t: {} };
+    const integrationsSandbox = { window: { P2: integrationsP2 }, P2: integrationsP2 };
+    vm.runInNewContext(integrationsSource, integrationsSandbox, { filename: mode + "/app-business-integrations.js" });
+    for (const name of ["igForm", "igSave", "igHook", "igRegen", "igTest", "igDel", "igReload"]) {
+      if (typeof integrationsP2[name] !== "function") throw new Error("Business integrations API missing P2." + name);
+    }
+    if (typeof integrationsP2.views.integ !== "function" || appCore.includes("const IG=")) {
+      throw new Error("Business integrations feature boundary or view registration is invalid");
+    }
+  } else if (html.includes(integrationsTag) || existsSync(integrationsPath)) {
+    throw new Error("Business integrations source leaked into POS build");
+  }
   if (mode === "business") {
     if (!html.includes(aiTag) || !existsSync(aiPath)) throw new Error("Business AI module is missing from Business build");
     const aiSource = readFileSync(aiPath, "utf8");
@@ -134,10 +152,11 @@ for (const mode of ["pos", "business"]) {
   const dashboardTagIndex = html.indexOf(dashboardTag);
   const financeTagIndex = html.indexOf(financeTag);
   const pos2TagIndex = html.indexOf('<script src="pos2.js"></script>');
+  const integrationsTagIndex = html.indexOf(integrationsTag);
   const aiTagIndex = html.indexOf(aiTag);
   if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
-      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < coreTagIndex)) ||
-      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0))) {
+      (mode === "business" && !(pos2TagIndex >= 0 && pos2TagIndex < financeTagIndex && xlsxTagIndex < payrollTagIndex && payrollTagIndex < inventoryTagIndex && inventoryTagIndex < usersTagIndex && usersTagIndex < dashboardTagIndex && dashboardTagIndex < financeTagIndex && financeTagIndex < aiTagIndex && aiTagIndex < integrationsTagIndex && integrationsTagIndex < coreTagIndex)) ||
+      (mode === "pos" && (payrollTagIndex >= 0 || inventoryTagIndex >= 0 || usersTagIndex >= 0 || dashboardTagIndex >= 0 || financeTagIndex >= 0 || aiTagIndex >= 0 || integrationsTagIndex >= 0))) {
     throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
