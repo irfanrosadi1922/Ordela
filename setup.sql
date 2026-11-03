@@ -108,6 +108,16 @@ create table if not exists pos.stores(
   code text not null unique,                 -- kode publik toko (untuk tautan/QR pemesanan online)
   name text not null, owner_id bigint, created_at timestamptz not null default now());
 alter table pos.stores enable row level security;
+
+-- Riwayat Asisten Ordela per pengguna dan toko aktif (akses hanya melalui RPC service-role yang memvalidasi sesi).
+create table if not exists pos.ai_history(
+  store_id bigint not null references pos.stores(id) on delete cascade,
+  uid bigint not null references pos.t_users(id) on delete cascade,
+  messages jsonb not null default '[]'::jsonb check (jsonb_typeof(messages) = 'array'),
+  updated_at timestamptz not null default now(),
+  primary key (store_id, uid)
+);
+alter table pos.ai_history enable row level security;
 alter table pos.stores add column if not exists grp bigint;   -- toko pusat (grup cabang); null = toko mandiri/pusat
 alter table pos.sessions add column if not exists act_sid bigint;   -- cabang yang sedang dibuka sesi owner
 alter table pos.t_users add column if not exists store_id bigint references pos.stores(id);
@@ -1308,7 +1318,62 @@ begin
 exception when others then
   return pos.r(500, jsonb_build_object('error', 'server error',
     'detail', case when exists (select 1 from pos.meta where k = 'debug') then sqlerrm end));
-end $$;
+end $;
+
+-- Riwayat AI hanya dapat diakses melalui Edge Function dengan service-role key.
+-- Token sesi tetap diverifikasi di database; identitas toko/cabang tidak diterima dari klien.
+create or replace function public.ai_chat_history(p_token text, p_action text, p_messages jsonb default '[]'::jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $
+declare
+  me pos.users;
+  v_sid bigint;
+  v_act bigint;
+  v_msgs jsonb;
+  v_item jsonb;
+begin
+  if p_action not in ('load', 'save', 'clear') then return jsonb_build_object('error', 'bad_action'); end if;
+  me := pos.auth(p_token);
+  if me.id is null then return jsonb_build_object('error', 'unauthorized'); end if;
+  v_sid := me.store_id;
+  if me.role = 'owner' and v_sid is not null then
+    select act_sid into v_act from pos.sessions where th = encode(extensions.digest(p_token, 'sha256'), 'hex');
+    if v_act is not null and exists (
+      select 1 from pos.stores x
+      where x.id = v_act and x.grp = coalesce((select g.grp from pos.stores g where g.id = v_sid), v_sid)
+    ) then v_sid := v_act; end if;
+  end if;
+  if v_sid is null then return jsonb_build_object('error', 'no_store'); end if;
+  perform set_config('pos.sid', v_sid::text, true);
+  select * into me from pos.users where id = me.id;
+  if me.id is null or not pos.can(me, 'ai') then return jsonb_build_object('error', 'forbidden'); end if;
+
+  if p_action = 'load' then
+    select messages into v_msgs from pos.ai_history where store_id = v_sid and uid = me.id;
+    return coalesce(v_msgs, '[]'::jsonb);
+  elsif p_action = 'clear' then
+    delete from pos.ai_history where store_id = v_sid and uid = me.id;
+    return jsonb_build_object('ok', true);
+  end if;
+
+  if jsonb_typeof(p_messages) <> 'array' or jsonb_array_length(p_messages) > 60 or length(p_messages::text) > 100000 then
+    return jsonb_build_object('error', 'invalid_messages');
+  end if;
+  for v_item in select value from jsonb_array_elements(p_messages) loop
+    if jsonb_typeof(v_item) <> 'object'
+      or jsonb_typeof(v_item -> 't') <> 'string'
+      or length(v_item ->> 't') > 2000
+      or (v_item ? 'ts' and length(coalesce(v_item ->> 'ts', '')) > 32)
+      or (v_item ? 'me' and jsonb_typeof(v_item -> 'me') not in ('boolean', 'number')) then
+      return jsonb_build_object('error', 'invalid_message');
+    end if;
+  end loop;
+  insert into pos.ai_history(store_id, uid, messages, updated_at)
+  values (v_sid, me.id, p_messages, now())
+  on conflict (store_id, uid) do update set messages = excluded.messages, updated_at = excluded.updated_at;
+  return jsonb_build_object('ok', true);
+end $;
+revoke all on function public.ai_chat_history(text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.ai_chat_history(text, text, jsonb) to service_role;
 
 -- ------------------------------------------------------------ Integrasi Center (per toko, kredensial terenkripsi)
 create or replace function pos.ikey() returns text language plpgsql as $$
