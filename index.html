@@ -871,7 +871,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 })();
 </script>
 <script src="native.js"></script><script src="pos2.js"></script><script src="config.js"></script><script src="sbapi.js"></script><script src="qr.js"></script><script src="qris.js"></script>
-<script src="app-mode.js"></script><script src="app-access.js"></script>
+<script src="app-mode.js"></script><script src="app-access.js"></script><script src="app-navigation.js"></script>
 </head>
 <body>
 <div class="splash" id="splash" hidden><img id="splashLogo" alt=""><div class="spn" id="splashName"></div></div>
@@ -1182,8 +1182,9 @@ setInterval(tick,15000);
 /* ---------- navigation ---------- */
 function toggleDrawer(){$('#drawer').classList.toggle('open');$('#scrim').classList.toggle('on',$('#drawer').classList.contains('open'))}
 function closeAll(){$('#drawer').classList.remove('open');$('#scrim').classList.remove('on')}
-const P2V=['ai','riw','integ','gift','rsv','opname','menu','shift','exp','buy','mem','promo','kds'];
-const ACCV=['acc','accset','accinfo','editacc','accphoto','pw','accver','accnt','accabout','accdel','accok'];
+const ORDELA_NAV_CONFIG=window.ORDELA_NAV_CONFIG;
+const P2V=ORDELA_NAV_CONFIG.secondaryViews;
+const ACCV=ORDELA_NAV_CONFIG.accountViews;
 function go(v){
   if(S.view==='set'&&v!=='set')S.setSub=null;
   if(v==='hist'||v==='rep')v='home';   // Riwayat & Laporan sudah menyatu di Beranda
