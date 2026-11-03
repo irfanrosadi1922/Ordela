@@ -100,6 +100,11 @@ if (mode === "business") {
   if (!existsSync(giftsModule)) throw new Error("Required Business gift-card module missing.");
   cpSync(giftsModule, join(output, "app-business-gifts.js"));
 }
+if (mode === "business") {
+  const promosModule = join(ROOT, "app-business-promos.js");
+  if (!existsSync(promosModule)) throw new Error("Required Business promos module missing.");
+  cpSync(promosModule, join(output, "app-business-promos.js"));
+}
 
 const indexPath = join(output, "index.html");
 const html = readFileSync(indexPath, "utf8");
@@ -156,6 +161,11 @@ const giftsTag = '<script src="app-business-gifts.js"></script>';
 if (mode === "pos" && html.includes(giftsTag)) {
   const current = readFileSync(indexPath, "utf8");
   writeFileSync(indexPath, current.replace(giftsTag, ""));
+}
+const promosTag = '<script src="app-business-promos.js"></script>';
+if (mode === "pos" && html.includes(promosTag)) {
+  const current = readFileSync(indexPath, "utf8");
+  writeFileSync(indexPath, current.replace(promosTag, ""));
 }
 if (!html.includes('<script src="app-mode.js"></script>')) {
   throw new Error("App entrypoint does not load the extracted app-mode module.");
