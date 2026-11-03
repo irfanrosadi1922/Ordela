@@ -68,3 +68,8 @@ The shared `app-access.js` module owns permission labels, descriptions, short la
 ## Shared XLSX export module
 
 The dependency-light XLSX ZIP/CRC/XML builder now lives in `app-export-xlsx.js`, loaded immediately before `app-core.js`. POS inventory count sheets, Business payroll/attendance sheets, and sales history exports call the same frozen `window.OrdelaXlsx` API. The app build regression test validates the CRC-32 reference vector, creates a sample workbook, and checks the required ZIP entries in both build outputs. This is a shared utility extraction; feature workflows that assemble the workbook data remain in the shared runtime until their dependencies can be separated safely.
+
+
+## Business payroll feature boundary
+
+Owner payroll and attendance reporting now live in `app-business-payroll.js`, not in the shared runtime. The Business build includes and loads this feature module after the shared XLSX utility; the POS build excludes both its script tag and source file. The module exposes the existing payroll state and UI handlers for the shared navigation integration, while keeping payroll calculations, salary records, payslip actions, and owner attendance exports together. Automated build tests execute the module in isolation, verify its public API, and fail if the Business module leaks into the POS artifact. Employee self-service attendance capture and shift configuration remain in the shared runtime for now; they are not claimed as separated by this change.
