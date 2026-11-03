@@ -32,8 +32,13 @@ for (const mode of ["pos", "business"]) {
   }
   const xlsxModule = readFileSync(join(dir, "app-export-xlsx.js"), "utf8");
   new vm.Script(xlsxModule, { filename: mode + "/app-export-xlsx.js" });
-  if (!html.includes('<script src="app-export-xlsx.js"></script><script src="app-core.js"></script>')) {
-    throw new Error("XLSX helper must load before the shared runtime: " + mode);
+  const xlsxTagIndex = html.indexOf('<script src="app-export-xlsx.js"></script>');
+  const payrollTagIndex = html.indexOf(payrollTag);
+  const coreTagIndex = html.indexOf('<script src="app-core.js"></script>');
+  if (xlsxTagIndex < 0 || coreTagIndex < 0 || xlsxTagIndex >= coreTagIndex ||
+      (mode === "business" && !(xlsxTagIndex < payrollTagIndex && payrollTagIndex < coreTagIndex)) ||
+      (mode === "pos" && payrollTagIndex >= 0)) {
+    throw new Error("Feature modules are not loaded in the required order: " + mode);
   }
   const xlsxSandbox = { window: {}, TextEncoder, Blob, Uint8Array };
   vm.runInNewContext(xlsxModule, xlsxSandbox, { filename: mode + "/app-export-xlsx.js" });
