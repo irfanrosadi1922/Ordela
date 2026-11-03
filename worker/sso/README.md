@@ -27,8 +27,9 @@ The `workers.dev` preview hostname cannot share a cookie with Pages preview site
 - `api-preview.ordela.my.id` routes to this preview Worker and returns the health response.
 - The Worker accepts browser origins `https://app-preview.ordela.my.id` and `https://pos-preview.ordela.my.id`.
 - The staging API cookie is scoped to `.ordela.my.id` so sibling preview hostnames can share it.
-- The Pages custom-domain records for both app preview hostnames have passed HTTP validation and are active. The latest Pages deployment containing the staging-only SSO client switch is still queued; do not call browser SSO validation complete until that deployment finishes and login/cross-app behavior is tested.
+- The Pages custom-domain records for both app preview hostnames have passed HTTP validation and are active. The staging-only SSO client switch is deployed. A real-browser smoke check passed for the API health request with credentialed CORS and for reading the shared activity cookie from the sibling preview hostname. Actual account login, authenticated cookie issuance, logout, and full app-switch session behavior still require a signed-in browser test.
 - Both app preview hostnames currently serve the same monolithic Pages project. This is only a hostname/cookie integration test; actual Business Dashboard and POS extraction remains pending.
+- A temporary browser diagnostic page at `/apps/staging/sso-check.html` verifies API CORS and sibling-host activity-cookie visibility. Remove this temporary page before production merge.
 - No production hostname, production DNS record, production Worker, or Supabase schema was changed.
 
 ## Shared idle activity across app subdomains
