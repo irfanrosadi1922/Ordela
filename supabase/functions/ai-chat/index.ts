@@ -1,12 +1,22 @@
-// Asisten AI Ordela (OpenAI). Deploy:  supabase functions deploy ai-chat --no-verify-jwt
-// Secret yang diisi SENDIRI di Supabase (Edge Functions → Secrets):  OPENAI_API_KEY   (opsional: OPENAI_MODEL, default gpt-4o-mini)
+// Asisten AI Ordela. Memakai API format "OpenAI chat completions", yang juga dipakai banyak penyedia lain.
+// Deploy:  supabase functions deploy ai-chat --no-verify-jwt
+// Secret yang diisi SENDIRI di Supabase (Edge Functions → Secrets):
+//   AI_API_KEY    kunci API penyedia (atau OPENAI_API_KEY)
+//   AI_BASE_URL   opsional, default https://api.openai.com/v1
+//   AI_MODEL      opsional, default gpt-4o-mini  (atau OPENAI_MODEL)
+// Contoh penyedia:
+//   OpenAI      AI_BASE_URL=https://api.openai.com/v1                              AI_MODEL=gpt-4o-mini
+//   Gemini      AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai  AI_MODEL=gemini-2.0-flash
+//   Groq        AI_BASE_URL=https://api.groq.com/openai/v1                          AI_MODEL=llama-3.3-70b-versatile
+//   OpenRouter  AI_BASE_URL=https://openrouter.ai/api/v1                            AI_MODEL=<nama model>
+//   DeepSeek    AI_BASE_URL=https://api.deepseek.com/v1                             AI_MODEL=deepseek-chat
 // Alur: pengguna harus login (token sesi Ordela dicek ke database + batas 30 pertanyaan/jam) → baru diteruskan ke OpenAI.
 const J = { "Content-Type": "application/json" };
 const out = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: J });
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return out({ error: "gunakan POST" }, 405);
-  const key = Deno.env.get("OPENAI_API_KEY");
-  if (!key) return out({ error: "AI belum dikonfigurasi (OPENAI_API_KEY belum diisi)" }, 501);
+  const key = Deno.env.get("AI_API_KEY") || Deno.env.get("OPENAI_API_KEY");
+  if (!key) return out({ error: "AI belum dikonfigurasi (AI_API_KEY belum diisi)" }, 501);
   let b: { t?: string; q?: string; ctx?: string };
   try { b = await req.json(); } catch { return out({ error: "JSON tidak valid" }, 400); }
   const q = String(b.q ?? "").trim().slice(0, 300);
@@ -24,16 +34,16 @@ Deno.serve(async (req: Request) => {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 20000);
   try {
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    const r = await fetch((Deno.env.get("AI_BASE_URL") || "https://api.openai.com/v1").replace(/\/+$/, "") + "/chat/completions", {
       method: "POST", signal: ctrl.signal,
       headers: { ...J, Authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        model: Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini", temperature: 0.3, max_tokens: 400,
+        model: Deno.env.get("AI_MODEL") || Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini", temperature: 0.3, max_tokens: 400,
         messages: [{ role: "system", content: sys }, { role: "user", content: `DATA TOKO (ringkasan):\n${ctx}\n\nPERTANYAAN: ${q}` }],
       }),
     });
     const j = await r.json();
-    if (!r.ok) return out({ error: r.status === 429 ? "Kuota/saldo OpenAI habis atau terlalu cepat. Cek akun OpenAI Anda." : "Penyedia AI menolak permintaan" }, 502);
+    if (!r.ok) return out({ error: r.status === 429 ? "Kuota/saldo penyedia AI habis atau terlalu cepat. Cek akun penyedia AI Anda." : "Penyedia AI menolak permintaan" }, 502);
     const a = j?.choices?.[0]?.message?.content;
     return out({ answer: String(a ?? "").slice(0, 2000) });
   } catch { return out({ error: "AI tidak merespons, coba lagi" }, 504); } finally { clearTimeout(to); }
