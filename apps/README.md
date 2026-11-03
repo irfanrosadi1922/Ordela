@@ -108,3 +108,8 @@ The Integration Center's provider connection UI, integration configuration forms
 ## Business branch and reservation feature boundaries
 
 Branch switching, consolidated branch reporting, inter-branch stock transfer, branch creation and deletion now live in `app-business-branches.js`. Reservation administration, creation, seating/cancellation actions, and the reservation view live in `app-business-reservations.js`. The small `P2.rsvFor` lookup remains in the shared operational runtime because the POS table screen uses it to show reserved tables. Both new feature modules are Business-only and are verified as isolated build artifacts; the shared POS table lookup is regression-tested separately.
+
+
+## Business stocktake page boundary
+
+The full-page barcode/manual stocktake workflow now lives in `app-business-stocktake.js`: item search, physical count entry, discrepancy filters, barcode scan, review and apply. It consumes the workbook import/report helpers from `app-business-inventory.js`, which is loaded earlier. The POS artifact excludes the stocktake page module; its checkout and ordinary inventory flows are unaffected. The inventory regression tests verify both module syntax and the required dependency order.
