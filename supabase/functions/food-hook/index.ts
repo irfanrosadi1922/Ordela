@@ -7,8 +7,10 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return new Response('{"error":"gunakan POST"}', { status: 405, headers: cors });
   const url = new URL(req.url);
   const k = url.searchParams.get("k") || req.headers.get("x-ordela-key") || "";
+  const len = Number(req.headers.get("content-length") ?? "0");
+  if (len > 200_000) return new Response('{"error":"payload terlalu besar"}', { status: 413, headers: cors });
   let body: unknown;
-  try { body = await req.json(); } catch { return new Response('{"error":"JSON tidak valid"}', { status: 400, headers: cors }); }
+  try { const txt = await req.text(); if (txt.length > 200_000) throw new Error("big"); body = JSON.parse(txt); } catch { return new Response('{"error":"JSON tidak valid"}', { status: 400, headers: cors }); }
   if (typeof body !== "object" || body === null || Array.isArray(body)) return new Response('{"error":"JSON harus objek"}', { status: 400, headers: cors });
   const base = Deno.env.get("SUPABASE_URL")!;
   const anon = Deno.env.get("SUPABASE_ANON_KEY")!;

@@ -230,9 +230,12 @@ create or replace function pos.client_ip() returns text language plpgsql stable 
 declare h jsonb; v text;
 begin
   begin h := nullif(current_setting('request.headers', true), '')::jsonb; exception when others then h := null; end;
+  -- cf-connecting-ip diisi proxy tepercaya (tidak bisa dipalsukan klien). Elemen PERTAMA x-forwarded-for bisa dipalsukan klien,
+  -- jadi cadangannya memakai x-real-ip lalu elemen TERAKHIR (ditambahkan proxy), bukan yang pertama.
   v := nullif(btrim(coalesce(h ->> 'cf-connecting-ip', '')), '');
-  if v is null then v := nullif(btrim(split_part(coalesce(h ->> 'x-forwarded-for', ''), ',', 1)), ''); end if;
-  return coalesce(v, '?');
+  if v is null then v := nullif(btrim(coalesce(h ->> 'x-real-ip', '')), ''); end if;
+  if v is null then v := nullif(btrim((string_to_array(coalesce(h ->> 'x-forwarded-for', ''), ','))[array_length(string_to_array(coalesce(h ->> 'x-forwarded-for', ''), ','), 1)]), ''); end if;
+  return left(coalesce(v, '?'), 64);
 end $$;
 
 create or replace function pos.clean_perms(j jsonb) returns jsonb language sql immutable as $$
@@ -1259,6 +1262,7 @@ begin
     if not coalesce(pos.valid_doc(x), false) or jsonb_typeof(b -> 'baseVersion') <> 'number' or (b ->> 'baseVersion')::numeric <> trunc((b ->> 'baseVersion')::numeric) then
       return pos.r(400, '{"error":"data tidak valid"}');
     end if;
+    if octet_length(x::text) > 10000000 then return pos.r(413, '{"error":"data terlalu besar (maks 10 MB)"}'); end if;
     select * into d from pos.doc where id = 1 for update;
     gerr := pos.guard(me, d.json, x);
     if gerr is not null then perform pos.audit(me.id, me.username, 'ditolak', gerr); return pos.r(403, jsonb_build_object('error', gerr)); end if;
@@ -1481,6 +1485,7 @@ end $$;
 create or replace function pos.food_hook(k text, p jsonb) returns jsonb language plpgsql as $$
 declare r pos.t_integ; o jsonb;
 begin
+  -- (tidak ada batas per-IP untuk tebakan token: semua panggilan datang dari satu IP fungsi edge sehingga bisa dipakai untuk memblokir penjual sah; token 192-bit tidak bisa ditebak)
   if coalesce(k, '') !~ '^oh_[0-9a-f]{48}$' then return pos.r(401, '{"error":"token tidak valid"}'); end if;
   select * into r from pos.t_integ where hh = encode(extensions.digest(k, 'sha256'), 'hex') and enabled and kind <> 'webhook';
   if r.store_id is null then return pos.r(401, '{"error":"token tidak valid atau integrasi dijeda"}'); end if;
@@ -1604,6 +1609,43 @@ begin
   insert into pos.t_meta(store_id, k, v) values (0, 'mail', jsonb_build_object('key', rk, 'from', fr)) on conflict (store_id, k) do update set v = excluded.v;
   return 'kirim slip email aktif';
 end $$;
+
+
+-- ------------------------------------------------------------ riwayat chat Asisten AI (disimpan server, hanya lewat fungsi edge ai-chat / service role)
+create table if not exists public.ai_chat_history(
+  user_id bigint primary key, messages jsonb not null default '[]'::jsonb, updated_at timestamptz not null default now(),
+  constraint ai_chat_history_messages_array check (jsonb_typeof(messages) = 'array'));
+alter table public.ai_chat_history enable row level security;
+revoke all on table public.ai_chat_history from public, anon, authenticated;
+create or replace function public.ai_chat_history(p_token text, p_action text, p_messages jsonb default null) returns jsonb
+language plpgsql security definer set search_path to 'pg_catalog', 'pos', 'public', 'extensions', 'pg_temp' as $$
+declare u pos.users; saved jsonb;
+begin
+  u := pos.auth(p_token);
+  if u.id is null then raise exception 'unauthorized' using errcode = '28000'; end if;
+  if p_action = 'load' then
+    select h.messages into saved from public.ai_chat_history h where h.user_id = u.id;
+    return coalesce(saved, '[]'::jsonb);
+  elsif p_action = 'save' then
+    if coalesce(jsonb_typeof(p_messages), '') <> 'array' or jsonb_array_length(p_messages) > 60 or pg_column_size(p_messages) > 200000 then
+      raise exception 'invalid messages';
+    end if;
+    insert into public.ai_chat_history(user_id, messages, updated_at) values (u.id, p_messages, now())
+      on conflict (user_id) do update set messages = excluded.messages, updated_at = now();
+    return jsonb_build_object('ok', true);
+  elsif p_action = 'clear' then
+    delete from public.ai_chat_history where user_id = u.id;
+    return jsonb_build_object('ok', true);
+  else raise exception 'invalid action';
+  end if;
+end $$;
+revoke all on function public.ai_chat_history(text, text, jsonb) from public, anon, authenticated;
+do $g$ begin if exists (select 1 from pg_roles where rolname = 'service_role') then grant execute on function public.ai_chat_history(text, text, jsonb) to service_role; end if; end $g$;
+-- hapus riwayat chat bila akun dihapus (hapus akun sendiri, hapus cabang, hapus toko)
+create or replace function pos.ai_hist_cleanup() returns trigger language plpgsql as $$
+begin delete from public.ai_chat_history where user_id = old.id; return old; end $$;
+drop trigger if exists t_users_ai_hist on pos.t_users;
+create trigger t_users_ai_hist after delete on pos.t_users for each row execute function pos.ai_hist_cleanup();
 
 -- ------------------------------------------------------------ hak akses
 revoke all on schema pos from public, anon, authenticated;
