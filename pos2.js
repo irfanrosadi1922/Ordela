@@ -301,6 +301,46 @@ V.kds=function(){
   el.innerHTML=bar('<i class="ic" data-ic="cook"></i>Layar Dapur')+(own?`<div class="panel" style="margin-bottom:10px"><label class="tgl"><input type="checkbox" ${db.set.kdsOn?'checked':''} onchange="db.set.kdsOn=this.checked;save()"><span>Kirim pesanan kasir ke dapur<small>Setiap transaksi di kasir otomatis muncul di layar ini.</small></span></label><label class="tgl"><input type="checkbox" ${db.set.stSplit?'checked':''} onchange="db.set.stSplit=this.checked;save()"><span>Cetak tiket terpisah per stasiun<small>Item Dapur dan Bar dicetak di slip berbeda (atur stasiun di data menu).</small></span></label></div>`:'')+(sts.length?`<div class="itabs"><button class="${KF.s===''?'on':''}" onclick="P2.kdsStn('')">Semua</button>${sts.map(s=>`<button class="${KF.s===s?'on':''}" onclick="P2.kdsStn('${esc(s).replace(/'/g,"")}')">${esc(s)}</button>`).join('')}</div>`:'')+`<div class="kdg">${[0,1,2].map(k=>`<div class="kdcol"><h3>${KS[k]} <b>${col(k).length}</b></h3>${col(k).map(card).join('')||'<p class="hint">Kosong</p>'}</div>`).join('')}</div>`;
 };
 
+/* ================= INTEGRASI CENTER ================= */
+const IG={telegram:{n:'Telegram',d:'Notifikasi ke chat/grup Telegram via bot.',c:'#229ed9',f:[['token','Token bot (dari @BotFather)',1],['chat','Chat ID / @channel',0]]},
+  whatsapp:{n:'WhatsApp (Fonnte)',d:'Pesan WhatsApp lewat akun Fonnte Anda.',c:'#25d366',f:[['token','Token Fonnte',1],['target','Nomor tujuan (628…, pisah koma)',0]]},
+  slack:{n:'Slack',d:'Kirim ke channel lewat Incoming Webhook.',c:'#4a154b',f:[['url','URL Webhook Slack',1]]},
+  discord:{n:'Discord',d:'Kirim ke channel lewat Webhook Discord.',c:'#5865f2',f:[['url','URL Webhook Discord',1]]},
+  email:{n:'Email (Resend)',d:'Email ringkasan transaksi lewat akun Resend Anda.',c:'#111827',f:[['key','API key Resend (re_…)',1],['from','Email pengirim (domain terverifikasi)',0],['to','Email tujuan',0]]},
+  webhook:{n:'Webhook Kustom',d:'POST JSON ke sistem Anda. Ditandatangani HMAC-SHA256 (header X-Ordela-Signature) bila Secret diisi.',c:'#0ea5e9',f:[['url','URL https',1],['secret','Secret tanda tangan (opsional)',1]]}};
+let IGL=null,IGERR='';
+V.integ=async function(){
+  const el=$('#v-integ');if(!el)return;
+  if(!(CL.on&&CL.me)){el.innerHTML=bar('<i class="ic" data-ic="plug"></i>Integrasi Center')+'<div class="panel"><p class="hint">Integrasi hanya tersedia dalam mode server (login akun). Masuk dulu untuk menyambungkan layanan.</p></div>';return}
+  if(!IGL){el.innerHTML=bar('<i class="ic" data-ic="plug"></i>Integrasi Center')+'<div class="panel"><p class="hint">Memuat…</p></div>';
+    try{const r=await api('/api/integrations');const j=await r.json();if(!r.ok)throw new Error(j.error||'');IGL=j.items;IGERR=''}catch(e){IGL=null;IGERR=e.message||'Gagal memuat';el.innerHTML=bar('<i class="ic" data-ic="plug"></i>Integrasi Center')+`<div class="panel"><p class="hint">${esc(IGERR)}</p><button class="btn sec" onclick="P2.igReload()">Coba lagi</button></div>`;return}}
+  const by={};IGL.forEach(x=>by[x.kind]=x);
+  el.innerHTML=bar('<i class="ic" data-ic="plug"></i>Integrasi Center')+`<p class="hint" style="margin:0 0 10px">Sambungkan layanan milik toko ini. Setiap transaksi baru dan pesanan online dikirim otomatis. Kunci/token disimpan terenkripsi di server dan tidak pernah ditampilkan lagi.</p>
+  <div class="igg">${Object.keys(IG).map(k=>{const m=IG[k],x=by[k];
+    const st=!x?'Belum tersambung':!x.enabled?'Dijeda':x.status==='gagal'?'Terakhir gagal':x.http&&x.http>=400?'Ditolak layanan ('+x.http+')':x.status==='terkirim'?'Terkirim'+(x.last_at?' · '+esc(dstr(x.last_at)):''):'Tersambung';
+    return `<div class="igc"><div class="igh"><span class="igd" style="background:${m.c}"></span><b>${m.n}</b><span class="tag ${x?(x.status==='gagal'||(x.http&&x.http>=400)?'neg':'pos'):''}">${st}</span></div><p class="hint">${m.d}</p>
+    <div class="two">${x?`<button class="btn sm" onclick="P2.igForm('${k}')">Ubah</button><button class="btn sm sec" onclick="P2.igTest('${k}')">Kirim tes</button>`:`<button class="btn sm" style="grid-column:1/-1" onclick="P2.igForm('${k}')">Connect</button>`}</div></div>`}).join('')}</div>
+  <p class="hint" style="margin-top:10px">Peristiwa: <b>Transaksi baru</b> (dari kasir) dan <b>Pesanan online</b> (dari halaman pelanggan). Sambungan akun berbasis login (OAuth) belum tersedia; gunakan token/URL dari layanan masing-masing.</p>`;
+};
+P2.igForm=function(k){
+  const m=IG[k],x=(IGL||[]).find(i=>i.kind===k),ev=x?x.events:['sale','order'];
+  openModal(`<h3>${m.n}</h3><p class="hint" style="margin:0 0 6px">${m.d}</p>
+  ${m.f.map(([n,l,sec])=>{const cur=x&&x.fields[n],set=sec&&cur&&cur.set;return `<label class="fl" for="ig_${n}">${l}</label><input class="fi" id="ig_${n}" autocomplete="off" autocapitalize="off" spellcheck="false" ${sec?'type="password"':''} value="${sec?'':esc((cur||'')+'')}" placeholder="${set?'Tersimpan — kosongkan untuk tetap memakai':''}">`}).join('')}
+  <label class="tgl"><input type="checkbox" id="ig_sale" ${ev.includes('sale')?'checked':''}><span>Transaksi baru</span></label>
+  <label class="tgl"><input type="checkbox" id="ig_order" ${ev.includes('order')?'checked':''}><span>Pesanan online</span></label>
+  <label class="tgl"><input type="checkbox" id="ig_on" ${!x||x.enabled?'checked':''}><span>Aktif</span></label>
+  <button class="btn" onclick="P2.igSave('${k}')">${x?'Simpan':'Sambungkan'}</button>${x?`<button class="btn sec" style="color:var(--bad)" onclick="P2.igDel('${k}')">Putuskan</button>`:''}<button class="btn sec" onclick="closeModal()">Batal</button>`);
+};
+async function igCall(path,body){const r=await api(path,{method:path==='/api/integrations'?'PUT':'POST',body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Gagal');IGL=j.items;return j}
+P2.igSave=async function(k){
+  const b={kind:k,enabled:$('#ig_on').checked,events:['sale','order'].filter(e=>$('#ig_'+e).checked)};IG[k].f.forEach(([n])=>b[n]=$('#ig_'+n).value.trim());
+  try{await igCall('/api/integrations',b);closeModal();toast('Tersimpan');V.integ();if(!(await igSend(k,true)))return}catch(e){toast(e.message)}
+};
+async function igSend(k,quiet){try{await igCall('/api/integrations/test',{kind:k});toast('Tes terkirim ke '+IG[k].n);V.integ();return true}catch(e){if(!quiet)toast(e.message);return false}}
+P2.igReload=function(){IGL=null;V.integ()};
+P2.igTest=function(k){igSend(k)};
+P2.igDel=async function(k){if(!confirm('Putuskan '+IG[k].n+'? Kredensial dihapus dari server.'))return;try{await igCall('/api/integrations/delete',{kind:k});closeModal();toast('Diputuskan');V.integ()}catch(e){toast(e.message)}};
+
 /* ================= CABANG ================= */
 P2.branch=async function(){
   closeAll();
@@ -563,7 +603,7 @@ V.menu=function(){
   const G=[['Operasional',[['pos','Kasir','receipt','#ef4444'],['table','Meja','grid','#f59e0b'],['co','Pesanan Online','cart','#0ea5e9'],['kds','Layar Dapur','cook','#f97316'],['rsv','Reservasi','cal','#0ea5e9'],['gift','Kartu Hadiah','gift','#f43f5e'],['cd','Layar Pelanggan','dash','#0891b2'],['shift','Shift Kasir','clock','#8b5cf6'],['alert','Notifikasi','bell','#ec4899']]],
    ['Penjualan & Pelanggan',[['home','Beranda & Laporan','dash','#10b981'],['mem','Member','users','#14b8a6'],['promo','Promo','bolt','#eab308'],['exp','Pengeluaran','card','#64748b']]],
    ['Produk & Stok',[['inv','Inventori','box','#3b82f6'],['opname','Stok Opname','check','#0d9488'],['buy','Pembelian','download','#6366f1']]],
-   ['Tim & Toko',[['att','Absensi','clock','#06b6d4'],['usr','Pengguna','users','#a855f7'],['pyr','Payroll','card','#22c55e'],['branch','Cabang','bank','#d946ef'],['prn','Printer','print','#475569'],['set','Pengaturan','sliders','#6b7280'],['acc','Akun Saya','key','#111827']]]];
+   ['Tim & Toko',[['att','Absensi','clock','#06b6d4'],['usr','Pengguna','users','#a855f7'],['pyr','Payroll','card','#22c55e'],['branch','Cabang','bank','#d946ef'],['integ','Integrasi','plug','#0ea5e9'],['prn','Printer','print','#475569'],['set','Pengaturan','sliders','#6b7280'],['acc','Akun Saya','key','#111827']]]];
   const nb=(typeof CO!=='undefined'&&CO.list)?CO.list.filter(o=>o.status==='new').length:0;
   const tile=([v,t,ic,c])=>{const act=v==='branch'?'P2.branch()':v==='cd'?'P2.cdOpen()':`go('${v}')`;
     return`<button class="mgi" onclick="${act}"><span class="mic" style="--g:${c};--g1:color-mix(in srgb,${c} 70%,#fff)"><i class="ic" data-ic="${ic}"></i>${v==='co'&&nb?`<b class="mb">${nb}</b>`:''}</span><span class="t">${esc(t)}</span></button>`};
