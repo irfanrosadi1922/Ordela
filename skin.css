@@ -166,3 +166,42 @@ html[data-skin] .csend{background:linear-gradient(140deg,color-mix(in srgb,var(-
 html[data-skin] #v-ai:not([hidden]){padding-bottom:12px}
 html.kb[data-skin] #v-ai:not([hidden]){padding-bottom:8px}
 #isl{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;border-radius:0!important}
+
+
+/* ---------- POS invoice sheet: cegah tab bawah menimpa checkout ---------- */
+@media (max-width:700px){
+  /* Tab bawah berada di luar .app yang memiliki transform; sembunyikan saat
+     invoice terbuka agar tidak mengambang di atas tombol pembayaran. */
+  html[data-skin] body:has(#invoice.open) #bnav{
+    display:none!important;
+    pointer-events:none!important;
+  }
+  /* Beri ruang aman untuk notch/home indicator dan pertahankan sheet di viewport. */
+  html[data-skin] #invoice.open{
+    height:min(84dvh,calc(100dvh - env(safe-area-inset-top,0px) - 8px))!important;
+    max-height:calc(100dvh - env(safe-area-inset-top,0px) - 8px)!important;
+    padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    z-index:80;
+  }
+  /* Daftar item yang bergulir sendiri; ringkasan dan aksi tetap dapat dijangkau. */
+  html[data-skin] #invoice.open .lines{
+    flex:1 1 auto;
+    min-height:80px;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  html[data-skin] #invoice.open .sum{
+    flex:0 1 auto;
+    max-height:40dvh;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  html[data-skin] #invoice.open #placeBtn,
+  html[data-skin] #invoice.open .hrow,
+  html[data-skin] #invoice.open > .mini{
+    flex:none;
+  }
+}
