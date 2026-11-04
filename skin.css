@@ -195,3 +195,17 @@ html.kb[data-skin] #v-ai:not([hidden]){padding-bottom:8px}
   }
 }
 /* Jangan ubah struktur panel saat landscape: gunakan layout responsif bawaan. */
+
+/* iOS tap targets: keep hit areas stable through orientation changes. */
+@media (max-width:700px){
+  html[data-skin] #bnav{
+    position:fixed!important;
+    touch-action:manipulation!important;
+    -webkit-user-select:none!important;
+    user-select:none!important;
+  }
+  html[data-skin] #bnav button{
+    touch-action:manipulation!important;
+    -webkit-tap-highlight-color:transparent;
+  }
+}
