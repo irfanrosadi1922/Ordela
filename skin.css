@@ -211,6 +211,18 @@ html.kb[data-skin] #v-ai:not([hidden]){padding-bottom:8px}
     bottom:8px!important;height:54px!important;padding:4px!important;
   }
   html[data-skin] .bnav button{height:46px!important}
+  html[data-skin] .bnav{
+    align-items:center!important;justify-content:space-around!important;
+    border-radius:28px!important;overflow:hidden!important;
+  }
+  html[data-skin] .bnav button{
+    flex:1!important;min-width:0!important;height:46px!important;
+    display:grid!important;place-items:center!important;
+    color:color-mix(in srgb,var(--ad) 48%,#8a96b4)!important;
+  }
+  html[data-skin] .bnav button.on{color:var(--ad)!important}
+  html[data-skin] .bnav button svg{width:23px!important;height:23px!important;transform:none!important}
+
   html[data-skin] .main{padding-bottom:76px!important}
   html[data-skin] body:has(#invoice.open) #bnav{display:none!important}
   html[data-skin] #invoice{
