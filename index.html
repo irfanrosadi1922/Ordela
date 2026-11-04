@@ -4966,7 +4966,7 @@ function acSave(){
   },{passive:false,capture:true});
   const fix=()=>{const d=document.documentElement,b=document.body;if(d.scrollLeft||b.scrollLeft||window.scrollX){d.scrollLeft=0;b.scrollLeft=0;try{scrollTo(0,0)}catch(e){}}};
   addEventListener('scroll',fix,{passive:true,capture:true});
-  if(window.visualViewport)visualViewport.addEventListener('scroll',()=>{if(visualViewport.offsetLeft){try{scrollTo(0,0)}catch(e){}}});
+  /* Jangan paksa scrollTo saat visualViewport bergeser; dapat menggeser hit-testing setelah rotasi iOS. */
   addEventListener('orientationchange',fix);
 })();
 /* gestur geser kiri/kanan (back/forward browser) dimatikan: tidak berpindah ke halaman lain seperti dashboard */

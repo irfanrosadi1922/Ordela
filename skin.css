@@ -230,8 +230,9 @@ html.kb[data-skin] #v-ai:not([hidden]){padding-bottom:8px}
     overflow-y:auto!important;
     overflow-x:hidden!important;
     padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px))!important;
-    transform:translate3d(0,0,0)!important;
-    transition:transform .28s ease!important;
+    /* Hindari transform paksa agar hit-testing sentuhan iOS tetap mengikuti posisi layout setelah rotasi. */
+    transform:none!important;
+    transition:none!important;
     pointer-events:auto!important;
     isolation:isolate;
   }
