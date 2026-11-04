@@ -1244,9 +1244,22 @@ function refreshNavAfterRotation(){
     navDot(active?active.dataset.v:null,true);
   }));
 }
+function refreshInvoiceAfterRotation(){
+  const sheet=$('#invoice');
+  if(!sheet)return;
+  sheet.classList.add('rotation-fix');
+  /* Force WebKit to recalculate the fixed sheet and its real hit-test bounds. */
+  void sheet.getBoundingClientRect();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    void sheet.getBoundingClientRect();
+    sheet.classList.remove('rotation-fix');
+  }));
+}
 window.addEventListener('orientationchange',()=>{
   setTimeout(refreshNavAfterRotation,420);
+  [80,240,480,720].forEach(ms=>setTimeout(refreshInvoiceAfterRotation,ms));
 },{passive:true});
+window.addEventListener('pageshow',refreshInvoiceAfterRotation,{passive:true});
 function toggleInv(open){$('#invoice').classList.toggle('open',open);$('#fab').classList.toggle('hide',!!open||S.view!=='pos')}
 
 /* ---------- POS ---------- */
@@ -4973,7 +4986,18 @@ function acSave(){
 /* halaman tidak boleh bergeser ke samping: tarikan horizontal hanya berlaku di area yang memang bisa di-scroll ke samping */
 (function(){
   let sx=0,sy=0,mode=null,tg=null;
-  const hs=e=>{for(;e&&e!==document.body&&e.nodeType===1;e=e.parentElement){if(e.matches&&e.matches('input[type=range],input[type=text],input[type=search],input[type=number],textarea,[data-hz]'))return true;if(e.scrollWidth>e.clientWidth+1&&/(auto|scroll)/.test(getComputedStyle(e).overflowX))return true}return false};
+  const hs=e=>{
+    /* Invoice is its own vertical scroll surface. Never let the global
+       horizontal-swipe guard cancel taps/drags on its quantity/action buttons. */
+    if(e&&e.closest&&e.closest('#invoice'))return true;
+    for(;e&&e!==document.body&&e.nodeType===1;e=e.parentElement){
+      if(e.matches&&e.matches('input[type=range],input[type=text],input[type=search],input[type=number],textarea,[data-hz]'))return true;
+      const st=getComputedStyle(e);
+      if((e.scrollWidth>e.clientWidth+1&&/(auto|scroll)/.test(st.overflowX))||
+         (e.scrollHeight>e.clientHeight+1&&/(auto|scroll)/.test(st.overflowY)))return true;
+    }
+    return false;
+  };
   document.addEventListener('touchstart',e=>{if(e.touches.length!==1){mode='multi';return}sx=e.touches[0].clientX;sy=e.touches[0].clientY;mode=null;tg=e.target},{passive:true,capture:true});
   document.addEventListener('touchmove',e=>{
     if(e.touches.length!==1||mode==='multi')return;
