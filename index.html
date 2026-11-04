@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#F6F6F6">
 <meta name="color-scheme" content="only light">
-<script>(function(){try{if(localStorage.getItem('pos_theme_v')!=='2'){localStorage.setItem('pos_theme','light');localStorage.setItem('pos_theme_v','2')}var t=localStorage.getItem('pos_theme')||'light',d=t==='dark'||(t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',d?'#0E0F12':'#F6F6F6');var c=document.querySelector('meta[name=color-scheme]');if(c)c.setAttribute('content',d?'dark':'only light')}catch(e){}})()</script>
+<script>(function(){try{var h=document.documentElement,P={biru:'#eaf1ff',hijau:'#e9f7ee',ungu:'#f1ebff',oranye:'#fff1e5',mawar:'#ffeaef',teal:'#e5f6f4',slate:'#eef1f5'},c='biru';try{c=localStorage.getItem('pos_color')||'biru'}catch(e){}if(!P[c])c='biru';h.setAttribute('data-theme','light');h.setAttribute('data-skin','1');h.setAttribute('data-color',c);var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',P[c]);var s=document.querySelector('meta[name=color-scheme]');if(s)s.setAttribute('content','only light')}catch(e){}})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta name="mobile-web-app-capable" content="yes">
@@ -871,6 +871,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 })();
 </script>
 <script src="native.js"></script><script src="pos2.js"></script><script src="config.js"></script><script src="sbapi.js"></script><script src="qr.js"></script><script src="qris.js"></script>
+<link rel="stylesheet" href="skin.css">
 </head>
 <body>
 <div class="splash" id="splash" hidden><img id="splashLogo" alt=""><div class="spn" id="splashName"></div></div>
@@ -2318,7 +2319,7 @@ const SETP=[
  ['payForm','Pesanan & Pembayaran','shield','Pembayaran Online','QRIS dinamis dan DuitNow untuk pelanggan.','qris duitnow bayar payment'],
  ['rc','Struk & Printer','receipt','Desain Struk','Tata letak, teks, logo, dan ukuran kertas struk.','struk nota receipt kertas logo footer header','set'],
  ['prn','Struk & Printer','print','Printer','Sambungkan printer Bluetooth/USB dan atur cara cetak.','printer bluetooth usb cetak thermal ble','prn'],
- ['themeForm','Tampilan','sun','Tema','Pilih tampilan terang, gelap, atau otomatis.','gelap terang dark light warna'],
+ ['themeForm','Tampilan','sun','Warna','Pilih warna aplikasi.','warna tema biru hijau ungu oranye mawar teal'],
  ['langForm','Tampilan','globe','Bahasa','Bahasa tampilan aplikasi.','language indonesia english'],
  ['attForm','Tim & Absensi','clock','Absensi & Shift','Aktifkan absensi, jam shift, lokasi toko, dan jadwal karyawan.','absen shift jadwal gps lokasi radius selfie telat','#owner'],
  ['secForm','Data & Keamanan','lock','Keamanan Sesi','Keluar otomatis saat tidak dipakai.','sesi timeout idle logout'],
@@ -3071,9 +3072,9 @@ async function renderDb(){
 /* ---------- tema: Terang / Gelap / Otomatis (disimpan per perangkat, dipakai juga oleh dashboard) ---------- */
 const themePref=()=>{try{return localStorage.getItem('pos_theme')||'light'}catch(e){return 'light'}};
 function applyTheme(){
-  const t=themePref(),d=t==='dark'||(t==='auto'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+  const d=false;   /* tema gelap dihapus; warna dipilih lewat skin.js */
   document.documentElement.setAttribute('data-theme',d?'dark':'light');
-  const m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',d?'#0E0F12':'#F6F6F6');var c=document.querySelector('meta[name=color-scheme]');if(c)c.setAttribute('content',d?'dark':'only light');
+  var c=document.querySelector('meta[name=color-scheme]');if(c)c.setAttribute('content','only light');
   const ic=d?'icon-ordela-dark.svg':'icon-ordela-red.svg';document.querySelectorAll('link[rel=icon]').forEach(l=>{if(l.getAttribute('href')!==ic)l.setAttribute('href',ic)});const touch=document.querySelector('link[rel=apple-touch-icon]');if(touch){const im=new Image();im.onload=()=>{try{const c=document.createElement('canvas');c.width=c.height=180;c.getContext('2d').drawImage(im,0,0,180,180);touch.href=c.toDataURL('image/png')}catch(e){touch.href=ic}};im.onerror=()=>{touch.href=ic};im.src=ic+'?v=33'}
 }
 function setTheme(v){try{localStorage.setItem('pos_theme',v)}catch(e){}applyTheme();renderTheme()}
@@ -5383,5 +5384,6 @@ tick();go(matchMedia('(min-width:701px)').matches?'home':'pos');initI18n();dbBoo
 </script>
 <script src="auth.js"></script>
 <script src="sso.js"></script>
+<script src="skin.js"></script>
 </body>
 </html>

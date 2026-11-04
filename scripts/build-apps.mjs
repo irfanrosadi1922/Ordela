@@ -15,9 +15,8 @@ const APPS = {
   dapur: { name: 'Ordela Dapur', short: 'Dapur' },
   pesan: { name: 'Ordela Pesan', short: 'Pesan' },
 };
-const SHARED = ['sw.js', 'sbapi.js', 'config.js', 'qr.js', 'qris.js', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-light-192.png', 'icon-light-512.png',
+const SHARED = ['sw.js', 'skin.css', 'skin.js', 'sbapi.js', 'config.js', 'qr.js', 'qris.js', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-light-192.png', 'icon-light-512.png',
   'icon-ordela-dark.svg', 'icon-ordela-red.svg', 'icon-ordela-maskable.svg'];
-const ADMIN_ONLY = ['admin.css', 'admin.js'];   // kulit tampilan khusus aplikasi admin
 const STAFF = ['index.html', 'order.html', 'auth.js', 'native.js', 'pos2.js', 'sso.js', 'html5-qrcode.min.js', 'manifest.webmanifest'];
 
 const want = process.argv.slice(2).filter((a) => APPS[a]);
@@ -27,7 +26,7 @@ rmSync(DIST, { recursive: true, force: true });
 for (const app of list) {
   const out = join(DIST, app);
   mkdirSync(out, { recursive: true });
-  const files = app === 'pesan' ? SHARED.filter((f) => f !== 'sw.js') : [...SHARED, ...STAFF.filter((f) => f !== 'order.html'), ...(app === 'admin' ? ADMIN_ONLY : [])];
+  const files = app === 'pesan' ? SHARED.filter((f) => f !== 'sw.js') : [...SHARED, ...STAFF.filter((f) => f !== 'order.html')];
   for (const f of files) {
     if (!existsSync(join(ROOT, f))) throw new Error('berkas tidak ditemukan: ' + f);
     cpSync(join(ROOT, f), join(out, f));
@@ -37,11 +36,6 @@ for (const app of list) {
     cpSync(join(ROOT, 'order.html'), join(out, 'index.html'));
     cpSync(join(ROOT, 'order.html'), join(out, 'order.html'));
   } else {
-    if (app === 'admin') {   // kulit admin: tautkan CSS/JS hanya di build ini
-      const ix = readFileSync(join(out, 'index.html'), 'utf8');
-      if (!ix.includes('<script src="sso.js"></script>')) throw new Error('index.html: penanda sso.js tidak ditemukan');
-      writeFileSync(join(out, 'index.html'), ix.replace('<script src="sso.js"></script>', '<script src="sso.js"></script><link rel="stylesheet" href="admin.css"><script src="admin.js"></script>'));
-    }
     cfg += `\nwindow.POS_APP = ${JSON.stringify(app)};\nwindow.POS_IDP = ${JSON.stringify(IDP)};\nwindow.POS_PUBLIC_URL = ${JSON.stringify(process.env.POS_PESAN_URL || `https://pesan.${DOMAIN}/`)};   // QR pelanggan menuju aplikasi pesan\n`;
     const m = JSON.parse(readFileSync(join(ROOT, 'manifest.webmanifest'), 'utf8'));
     m.name = APPS[app].name; m.short_name = APPS[app].short; m.description = APPS[app].name;
