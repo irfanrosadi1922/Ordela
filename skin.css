@@ -82,7 +82,9 @@ html[data-skin] .bnav .bnbg,html[data-skin] .bnav .bndot{display:none!important}
 @media (max-width:700px){
   html[data-skin] .bnav{display:flex;justify-content:space-around;align-items:stretch;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));height:68px;padding:6px;border-radius:34px;overflow:hidden;filter:none;
     background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,.38));
-    -webkit-backdrop-filter:blur(22px) saturate(190%);backdrop-filter:blur(22px) saturate(190%);
+    /* iOS WebKit dapat mempertahankan compositing/hit-test layer lama setelah rotasi. */
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+    transform:none!important;will-change:auto!important;
     border:1px solid rgba(255,255,255,.75);
     box-shadow:0 14px 34px -10px color-mix(in srgb,var(--ad) 38%,transparent),0 2px 6px color-mix(in srgb,var(--ad) 10%,transparent),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(255,255,255,.35)}
   html[data-skin] .bnav:before{content:"";position:absolute;left:8%;right:8%;top:0;height:50%;border-radius:0 0 50% 50%;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none}
