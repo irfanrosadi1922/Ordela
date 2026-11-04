@@ -1,0 +1,40 @@
+name: Deploy aplikasi per subdomain
+# Membangun kasir / admin / dapur / pesan dari kode yang sama (scripts/build-apps.mjs) lalu mengirim tiap hasil ke repo GitHub Pages miliknya.
+# Syarat (lihat DEPLOY-APPS.md): 4 repo tujuan, DNS CNAME, dan secret DEPLOY_TOKEN. Tanpa secret itu, job hanya membangun dan berhenti dengan aman.
+on:
+  push:
+    branches: [main]
+    paths: ['index.html', 'order.html', 'sso.js', 'pos2.js', 'auth.js', 'native.js', 'sbapi.js', 'config.js', 'qr.js', 'qris.js', 'sw.js', 'manifest.webmanifest', 'scripts/build-apps.mjs', '.github/workflows/apps.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [kasir, admin, dapur, pesan]
+    env:
+      DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build
+        run: node scripts/build-apps.mjs ${{ matrix.app }}
+      - name: Deploy ke repo tujuan
+        if: env.DEPLOY_TOKEN != ''
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.DEPLOY_TOKEN }}
+          external_repository: ${{ github.repository_owner }}/ordela-${{ matrix.app }}
+          publish_branch: gh-pages
+          publish_dir: dist/${{ matrix.app }}
+          force_orphan: true
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Lewati deploy (DEPLOY_TOKEN belum diisi)
+        if: env.DEPLOY_TOKEN == ''
+        run: echo "::notice::DEPLOY_TOKEN belum diisi — build berhasil tapi tidak dikirim."

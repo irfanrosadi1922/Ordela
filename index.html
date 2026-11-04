@@ -3863,8 +3863,16 @@ function isOwner(){return !CL.on||(!!CL.me&&CL.me.role==='owner')}
 function can(p){return !CL.on||(!!CL.me&&(CL.me.role==='owner'||(CL.me.perms||[]).includes(p)))}
 /* karyawan yang HANYA punya izin Absensi: tidak boleh memakai Kasir, Meja, Beranda, atau Notifikasi (tidak ada transaksi) */
 function attOnly(){const m=CL.on&&CL.me;if(!m||m.role==='owner')return false;const p=m.perms||[];return p.length>0&&p.every(x=>x==='att')}
-function landing(){if(CL.on&&CL.me)return 'menu';return ['pos','home','co','inv','att','set','prn'].find(v=>canView(v))||'acc'}
+/* Profil aplikasi (subdomain kasir / admin / dapur): window.POS_APP diisi config.js hasil build. Tanpa POS_APP = aplikasi penuh. */
+const APP_VIEWS={kasir:['pos','table','riw','co','shift','exp','mem','gift','rsv','cd','ai','menu','alert','att'],
+  admin:['home','inv','opname','buy','promo','mem','exp','shift','branch','integ','usr','pyr','att','prn','set','rc','ai','menu','alert','riw'],
+  dapur:['kds','co','alert','menu','att']};
+const APP_HOME={kasir:'pos',admin:'home',dapur:'kds'};
+function appOk(v){const a=window.POS_APP;if(!a||!APP_VIEWS[a])return true;return ACCV.includes(v)||APP_VIEWS[a].includes(v)}
+function landing(){if(window.POS_APP&&APP_VIEWS[POS_APP]){const h=APP_HOME[POS_APP];return canView(h)?h:(CL.on&&CL.me?'menu':'acc')}
+  if(CL.on&&CL.me)return 'menu';return ['pos','home','co','inv','att','set','prn'].find(v=>canView(v))||'acc'}
 function canView(v){
+  if(!appOk(v))return false;
   if(v==='table'&&can('co'))return true;   // server/pelayan melihat status meja dari antrean pesanan
   if(v==='home'&&can('hist'))return true;   // Rekap & Riwayat tampil di Beranda
   if(v==='riw')return can('pos')||can('hist')||can('co');
@@ -5374,5 +5382,6 @@ applyBrand();
 tick();go(matchMedia('(min-width:701px)').matches?'home':'pos');initI18n();dbBoot();cloudStart();coStart();applyAccess();bleAutoSoon(1200);
 </script>
 <script src="auth.js"></script>
+<script src="sso.js"></script>
 </body>
 </html>
