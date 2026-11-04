@@ -124,7 +124,14 @@
     el.innerHTML = hero + stats + ai + secs;
   }
 
+  /* status bar menyatu dengan latar; pita kosong di atas (offset viewport iOS yang tertinggal) dihapus kecuali saat keyboard terbuka */
+  function fixTop() {
+    var m = document.querySelector('meta[name=theme-color]'); if (m) m.setAttribute('content', '#eaf1ff');
+    var a = document.activeElement, typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'checkbox' && a.type !== 'radio';
+    if (!typing && document.documentElement.style.getPropertyValue('--vvTop') && document.documentElement.style.getPropertyValue('--vvTop') !== '0px') document.documentElement.style.setProperty('--vvTop', '0px');
+  }
   function init() {
+    fixTop(); setInterval(fixTop, 400);
     if (window.P2 && P2.views) P2.views.menu = menu;
     buildNav(); buildAvatar();
     /* susun ulang tab bila hak akses berubah (login/keluar) */
