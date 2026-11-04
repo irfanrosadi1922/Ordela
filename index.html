@@ -1229,7 +1229,37 @@ function navDot(v,instant){
   const ease=u=>{u-=1;return u*u*((c1+1)*u+c1)+1};  /* easeOutBack */
   (function step(now){const u=Math.min(1,(now-t0)/D);navDraw(from+(to-from)*ease(u));if(u<1)NAV.raf=requestAnimationFrame(step)})(t0);
 }
-window.addEventListener('resize',()=>{const o=document.querySelector('.bnav button.on');navDot(o?o.dataset.v:null,true)});
+/* Rehitung posisi tab setelah ukuran layar benar-benar stabil.
+   Resize keyboard tidak memicu animasi ulang; rotasi mengukur ulang geometri nav. */
+let navLayoutWidth=0,navLayoutTimer=0,navLayoutRaf=0;
+function refreshNavAfterLayout(){
+  const n=$('#bnav');
+  if(!n||!n.clientWidth)return;
+  const width=Math.round(n.getBoundingClientRect().width);
+  if(!width)return;
+  if(width!==navLayoutWidth){
+    navLayoutWidth=width;
+    NAV.x=null;
+    const active=n.querySelector('button.on');
+    navDot(active?active.dataset.v:null,true);
+  }
+}
+function scheduleNavLayout(){
+  if(navLayoutRaf)cancelAnimationFrame(navLayoutRaf);
+  if(navLayoutTimer)clearTimeout(navLayoutTimer);
+  navLayoutRaf=requestAnimationFrame(()=>{navLayoutRaf=0;refreshNavAfterLayout()});
+  navLayoutTimer=setTimeout(()=>{
+    navLayoutTimer=0;
+    requestAnimationFrame(()=>requestAnimationFrame(refreshNavAfterLayout));
+  },180);
+}
+window.addEventListener('resize',scheduleNavLayout,{passive:true});
+window.addEventListener('orientationchange',()=>{
+  scheduleNavLayout();
+  setTimeout(scheduleNavLayout,350);
+},{passive:true});
+window.addEventListener('pageshow',scheduleNavLayout,{passive:true});
+if(window.visualViewport)window.visualViewport.addEventListener('resize',scheduleNavLayout,{passive:true});
 function toggleInv(open){$('#invoice').classList.toggle('open',open);$('#fab').classList.toggle('hide',!!open||S.view!=='pos')}
 
 /* ---------- POS ---------- */
