@@ -209,3 +209,71 @@ html.kb[data-skin] #v-ai:not([hidden]){padding-bottom:8px}
     -webkit-tap-highlight-color:transparent;
   }
 }
+
+
+/* ---------- Invoice: scroll seluruh sheet + area item mandiri ---------- */
+@media (max-width:1000px){
+  html[data-skin] #invoice{
+    box-sizing:border-box!important;
+    overscroll-behavior-y:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    touch-action:pan-y!important;
+    overflow-x:hidden!important;
+  }
+  html[data-skin] #invoice.open{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    height:78vh!important;
+    height:78dvh!important;
+    max-height:calc(100dvh - env(safe-area-inset-top,0px) - 8px)!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px))!important;
+    transform:translate3d(0,0,0)!important;
+    transition:transform .28s ease!important;
+    pointer-events:auto!important;
+    isolation:isolate;
+  }
+  html[data-skin] #invoice.open.rotation-fix{
+    transition:none!important;
+    animation:none!important;
+  }
+  html[data-skin] #invoice.open > h2,
+  html[data-skin] #invoice.open > #otype,
+  html[data-skin] #invoice.open > .sum,
+  html[data-skin] #invoice.open > #placeBtn,
+  html[data-skin] #invoice.open > .hrow,
+  html[data-skin] #invoice.open > .mini{
+    flex:0 0 auto!important;
+    position:relative;
+    z-index:1;
+  }
+  html[data-skin] #invoice.open > .lines{
+    flex:0 0 auto!important;
+    min-height:48px!important;
+    max-height:32dvh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    touch-action:pan-y!important;
+  }
+  html[data-skin] #invoice.open .sum{
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  html[data-skin] #invoice.open button,
+  html[data-skin] #invoice.open input,
+  html[data-skin] #invoice.open select{
+    touch-action:manipulation!important;
+    -webkit-tap-highlight-color:transparent;
+  }
+  html[data-skin] #invoice.open .qty button{
+    position:relative!important;
+    z-index:3!important;
+    min-width:36px;
+    min-height:36px;
+    pointer-events:auto!important;
+  }
+}
