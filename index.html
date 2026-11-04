@@ -19,13 +19,13 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 img{-webkit-user-drag:none;user-drag:none}
 :root{--b:#111111;--b2:#2F2F2F;--bt:#111111;--bg:#F6F6F6;--card:#fff;--tx:#111111;--tx2:#2F2F2F;--ac:#FFCB74;--acx:#111111;--mu:#8a8a8a;--ln:#ececec;--bg2:#ffffff;--peach:#f4f4f4;--peach2:#ececec;--peach3:#e4e4e4;--cat1:#ececec;--cat2:#f4f4f4;--redbg:#fee2e2;--greenbg:#dcfce7;--yelbg:#fef3c7;--chip:#ebebeb;--srch:#ebebeb;--hover:#fafafa;--dis:#d4d4d4;--ok:#16a34a;--warn:#f59e0b;--bad:#dc2626;--r:24px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{background:var(--bg);position:fixed;inset:0;width:100%}
-html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-body{position:fixed;inset:0;width:100%}
+html{background:var(--bg);position:relative;width:100%;min-height:100%;}
+html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{position:relative;width:100%;min-height:100%;}
 body{font-family:'Poppins','Segoe UI',system-ui,-apple-system,Roboto,sans-serif;color:var(--tx);background:var(--bg)}
 button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 input,select,textarea{font:inherit;color:inherit}
-.app{display:flex;height:100vh;height:100dvh;height:var(--appH,100dvh);overflow:hidden;transform:none;will-change:auto}
+.app{display:flex;width:100%;height:100vh;height:100dvh;min-height:0;overflow:hidden;transform:none;will-change:auto}
 .main{flex:1;min-width:0;padding:0 max(18px,env(safe-area-inset-right,0px)) calc(90px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
 /* header */
 .top{display:flex;gap:10px;align-items:center;margin-bottom:8px;position:sticky;top:0;z-index:30;background:var(--bg);padding:max(16px,env(safe-area-inset-top,0px)) 0 10px;box-shadow:0 0 0 100vmax var(--bg);clip-path:inset(0 -100vmax)}
@@ -844,32 +844,42 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 </style>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-ordela-dark.svg"><link rel="icon" href="icon-ordela-dark.svg">
 <script>
-/* iOS viewport: gunakan satu sistem koordinat layout viewport.
-   Jangan menggeser .app dengan visualViewport.offsetTop: pada Safari iOS nilai
-   itu dapat tertinggal sesudah rotasi dan membuat area sentuh/fixed UI meleset. */
+/* Reflow global setelah rotasi. Layout memakai dynamic viewport CSS, bukan
+   offset visualViewport yang dapat tertinggal dan menggeser hit-area di iOS. */
 (function(){
-  var raf=0,timers=[];
-  function fit(){
-    var h=window.innerHeight||document.documentElement.clientHeight;
-    if(h>0)document.documentElement.style.setProperty('--appH',Math.round(h)+'px');
-    document.documentElement.style.setProperty('--vvTop','0px');
+  var timers=[],raf=0,lastW=0,lastH=0;
+  function measure(){
+    var root=document.documentElement;
+    var w=root.clientWidth||window.innerWidth;
+    var h=root.clientHeight||window.innerHeight;
+    if(!w||!h)return;
+    lastW=w;lastH=h;
+    root.style.setProperty('--ordela-vw',w+'px');
+    root.style.setProperty('--ordela-vh',h+'px');
+    /* Force one layout read after CSS media queries have switched orientation. */
+    void root.getBoundingClientRect();
+    document.querySelectorAll('[data-rotation-layout],.bnav,.drawer,.scrim,.sheet,.modal,#invoice').forEach(function(el){
+      if(el&&el.isConnected)void el.getBoundingClientRect();
+    });
+    window.dispatchEvent(new CustomEvent('ordela:viewportchange',{detail:{width:w,height:h,orientation:w>h?'landscape':'portrait'}}));
   }
   function schedule(){
     if(raf)cancelAnimationFrame(raf);
-    raf=requestAnimationFrame(function(){raf=0;fit()});
+    raf=requestAnimationFrame(function(){raf=0;measure()});
   }
-  function onOrientationChange(){
+  function rotate(){
     timers.forEach(clearTimeout);timers=[];
+    document.documentElement.classList.add('ordela-rotating');
     schedule();
-    timers.push(setTimeout(schedule,120));
-    timers.push(setTimeout(schedule,320));
-    timers.push(setTimeout(schedule,600));
+    [120,280,520,800].forEach(function(ms){timers.push(setTimeout(schedule,ms))});
+    timers.push(setTimeout(function(){document.documentElement.classList.remove('ordela-rotating');schedule()},900));
   }
   window.addEventListener('resize',schedule,{passive:true});
-  window.addEventListener('orientationchange',onOrientationChange,{passive:true});
+  window.addEventListener('orientationchange',rotate,{passive:true});
   window.addEventListener('pageshow',schedule,{passive:true});
   document.addEventListener('visibilitychange',function(){if(!document.hidden)schedule()});
-  fit();
+  if(window.screen&&screen.orientation&&screen.orientation.addEventListener)screen.orientation.addEventListener('change',rotate);
+  measure();
 })();
 </script>
 <script src="native.js"></script><script src="pos2.js"></script><script src="config.js"></script><script src="sbapi.js"></script><script src="qr.js"></script><script src="qris.js"></script>
@@ -1244,22 +1254,9 @@ function refreshNavAfterRotation(){
     navDot(active?active.dataset.v:null,true);
   }));
 }
-function refreshInvoiceAfterRotation(){
-  const sheet=$('#invoice');
-  if(!sheet)return;
-  sheet.classList.add('rotation-fix');
-  /* Force WebKit to recalculate the fixed sheet and its real hit-test bounds. */
-  void sheet.getBoundingClientRect();
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    void sheet.getBoundingClientRect();
-    sheet.classList.remove('rotation-fix');
-  }));
-}
 window.addEventListener('orientationchange',()=>{
-  setTimeout(refreshNavAfterRotation,420);
-  [80,240,480,720].forEach(ms=>setTimeout(refreshInvoiceAfterRotation,ms));
+  setTimeout(refreshNavAfterRotation,520);
 },{passive:true});
-window.addEventListener('pageshow',refreshInvoiceAfterRotation,{passive:true});
 function toggleInv(open){$('#invoice').classList.toggle('open',open);$('#fab').classList.toggle('hide',!!open||S.view!=='pos')}
 
 /* ---------- POS ---------- */
