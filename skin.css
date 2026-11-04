@@ -277,3 +277,29 @@ html.kb[data-skin] #v-ai:not([hidden]){padding-bottom:8px}
     pointer-events:auto!important;
   }
 }
+
+/* ---------- Global iOS orientation foundation ---------- */
+html[data-skin]{
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  min-height:100%!important;
+}
+html[data-skin] body{
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  min-height:100%!important;
+}
+html[data-skin] .app{
+  width:100%!important;
+  height:100vh!important;
+  height:100dvh!important;
+  min-height:0!important;
+  transform:none!important;
+  will-change:auto!important;
+}
+html[data-skin].ordela-rotating,
+html[data-skin].ordela-rotating body{
+  scroll-behavior:auto!important;
+}

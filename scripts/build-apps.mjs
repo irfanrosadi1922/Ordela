@@ -15,7 +15,7 @@ const APPS = {
   dapur: { name: 'Ordela Dapur', short: 'Dapur' },
   pesan: { name: 'Ordela Pesan', short: 'Pesan' },
 };
-const SHARED = ['sw.js', 'skin.css', 'skin.js', 'sbapi.js', 'config.js', 'qr.js', 'qris.js', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-light-192.png', 'icon-light-512.png',
+const SHARED = ['sw.js', 'skin.css', 'skin.js', 'viewport.js', 'sbapi.js', 'config.js', 'qr.js', 'qris.js', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-light-192.png', 'icon-light-512.png',
   'icon-ordela-dark.svg', 'icon-ordela-red.svg', 'icon-ordela-maskable.svg'];
 const STAFF = ['index.html', 'order.html', 'auth.js', 'native.js', 'pos2.js', 'sso.js', 'html5-qrcode.min.js', 'manifest.webmanifest'];
 
