@@ -4,7 +4,7 @@ name: Deploy aplikasi per subdomain
 on:
   push:
     branches: [main]
-    paths: ['index.html', 'order.html', 'sso.js', 'pos2.js', 'auth.js', 'native.js', 'sbapi.js', 'config.js', 'qr.js', 'qris.js', 'sw.js', 'manifest.webmanifest', 'skin.css', 'skin.js', 'scripts/build-apps.mjs', '.github/workflows/apps.yml']
+    paths: ['index.html', 'order.html', 'sso.js', 'pos2.js', 'auth.js', 'native.js', 'sbapi.js', 'config.js', 'qr.js', 'qris.js', 'sw.js', 'manifest.webmanifest', 'skin.css', 'skin.js', 'viewport.js', 'scripts/build-apps.mjs', '.github/workflows/apps.yml']
   workflow_dispatch:
 permissions:
   contents: read
