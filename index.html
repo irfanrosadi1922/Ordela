@@ -843,45 +843,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 .csend{flex:none;width:42px;height:42px;border-radius:50%;background:var(--b,#111);color:#fff;display:grid;place-items:center}.csend:disabled{opacity:.4}.csend:active{transform:scale(.92)}
 </style>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-ordela-dark.svg"><link rel="icon" href="icon-ordela-dark.svg">
-<script>
-/* Reflow global setelah rotasi. Layout memakai dynamic viewport CSS, bukan
-   offset visualViewport yang dapat tertinggal dan menggeser hit-area di iOS. */
-(function(){
-  var timers=[],raf=0,lastW=0,lastH=0;
-  function measure(){
-    var root=document.documentElement;
-    var w=root.clientWidth||window.innerWidth;
-    var h=root.clientHeight||window.innerHeight;
-    if(!w||!h)return;
-    lastW=w;lastH=h;
-    root.style.setProperty('--ordela-vw',w+'px');
-    root.style.setProperty('--ordela-vh',h+'px');
-    /* Force one layout read after CSS media queries have switched orientation. */
-    void root.getBoundingClientRect();
-    document.querySelectorAll('[data-rotation-layout],.bnav,.drawer,.scrim,.sheet,.modal,#invoice').forEach(function(el){
-      if(el&&el.isConnected)void el.getBoundingClientRect();
-    });
-    window.dispatchEvent(new CustomEvent('ordela:viewportchange',{detail:{width:w,height:h,orientation:w>h?'landscape':'portrait'}}));
-  }
-  function schedule(){
-    if(raf)cancelAnimationFrame(raf);
-    raf=requestAnimationFrame(function(){raf=0;measure()});
-  }
-  function rotate(){
-    timers.forEach(clearTimeout);timers=[];
-    document.documentElement.classList.add('ordela-rotating');
-    schedule();
-    [120,280,520,800].forEach(function(ms){timers.push(setTimeout(schedule,ms))});
-    timers.push(setTimeout(function(){document.documentElement.classList.remove('ordela-rotating');schedule()},900));
-  }
-  window.addEventListener('resize',schedule,{passive:true});
-  window.addEventListener('orientationchange',rotate,{passive:true});
-  window.addEventListener('pageshow',schedule,{passive:true});
-  document.addEventListener('visibilitychange',function(){if(!document.hidden)schedule()});
-  if(window.screen&&screen.orientation&&screen.orientation.addEventListener)screen.orientation.addEventListener('change',rotate);
-  measure();
-})();
-</script>
+<script src="viewport.js"></script>
 <script src="native.js"></script><script src="pos2.js"></script><script src="config.js"></script><script src="sbapi.js"></script><script src="qr.js"></script><script src="qris.js"></script>
 <link rel="stylesheet" href="skin.css">
 </head>
