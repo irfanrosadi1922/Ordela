@@ -306,15 +306,3 @@ html[data-skin].ordela-rotating,
 html[data-skin].ordela-rotating body{
   scroll-behavior:auto!important;
 }
-
-/* ---------- Bottom navigation: lebih solid dan teks lebih terbaca ---------- */
-@media (max-width:700px){
-  html[data-skin] .bnav{
-    background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.88))!important;
-    border-color:rgba(255,255,255,.96)!important;
-  }
-  html[data-skin] .bnav button{
-    color:color-mix(in srgb,var(--ad) 55%,#354052)!important;
-  }
-  html[data-skin] .bnav button.on{color:var(--ad)!important}
-}
