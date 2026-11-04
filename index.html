@@ -844,36 +844,30 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
 </style>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-ordela-dark.svg"><link rel="icon" href="icon-ordela-dark.svg">
 <script>
-/* iOS: sinkronkan tinggi aplikasi dengan area layar yang benar-benar terlihat.
-   Jangan scroll ke atas atau me-render ulang .app saat keyboard dibuka/ditutup,
-   karena resize dari keyboard sebelumnya membuat seluruh halaman bergeser. */
+/* iOS viewport: gunakan satu sistem koordinat layout viewport.
+   Jangan menggeser .app dengan visualViewport.offsetTop: pada Safari iOS nilai
+   itu dapat tertinggal sesudah rotasi dan membuat area sentuh/fixed UI meleset. */
 (function(){
-  var raf=0,rotateTimer=0,rotating=false;
+  var raf=0,timers=[];
   function fit(){
-    var vv=window.visualViewport;
-    /* During rotation use the layout viewport, not a stale visualViewport
-       measurement from the previous orientation or keyboard animation. */
-    var h=rotating?window.innerHeight:(vv&&vv.height?vv.height:window.innerHeight);
-    var top=rotating?0:(vv&&typeof vv.offsetTop==='number'?vv.offsetTop:0);
+    var h=window.innerHeight||document.documentElement.clientHeight;
     if(h>0)document.documentElement.style.setProperty('--appH',Math.round(h)+'px');
-    document.documentElement.style.setProperty('--vvTop',Math.max(0,Math.round(top))+'px');
+    document.documentElement.style.setProperty('--vvTop','0px');
   }
   function schedule(){
     if(raf)cancelAnimationFrame(raf);
     raf=requestAnimationFrame(function(){raf=0;fit()});
   }
   function onOrientationChange(){
-    rotating=true;
+    timers.forEach(clearTimeout);timers=[];
     schedule();
-    setTimeout(schedule,180);
-    setTimeout(schedule,360);
-    if(rotateTimer)clearTimeout(rotateTimer);
-    rotateTimer=setTimeout(function(){rotating=false;rotateTimer=0;schedule()},650);
+    timers.push(setTimeout(schedule,120));
+    timers.push(setTimeout(schedule,320));
+    timers.push(setTimeout(schedule,600));
   }
   window.addEventListener('resize',schedule,{passive:true});
   window.addEventListener('orientationchange',onOrientationChange,{passive:true});
   window.addEventListener('pageshow',schedule,{passive:true});
-  if(window.visualViewport)window.visualViewport.addEventListener('resize',schedule,{passive:true});
   document.addEventListener('visibilitychange',function(){if(!document.hidden)schedule()});
   fit();
 })();
