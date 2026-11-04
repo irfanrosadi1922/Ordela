@@ -848,11 +848,13 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
    Jangan scroll ke atas atau me-render ulang .app saat keyboard dibuka/ditutup,
    karena resize dari keyboard sebelumnya membuat seluruh halaman bergeser. */
 (function(){
-  var raf=0;
+  var raf=0,rotateTimer=0,rotating=false;
   function fit(){
     var vv=window.visualViewport;
-    var h=vv&&vv.height?vv.height:window.innerHeight;
-    var top=vv&&typeof vv.offsetTop==='number'?vv.offsetTop:0;
+    /* During rotation use the layout viewport, not a stale visualViewport
+       measurement from the previous orientation or keyboard animation. */
+    var h=rotating?window.innerHeight:(vv&&vv.height?vv.height:window.innerHeight);
+    var top=rotating?0:(vv&&typeof vv.offsetTop==='number'?vv.offsetTop:0);
     if(h>0)document.documentElement.style.setProperty('--appH',Math.round(h)+'px');
     document.documentElement.style.setProperty('--vvTop',Math.max(0,Math.round(top))+'px');
   }
@@ -860,12 +862,18 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
     if(raf)cancelAnimationFrame(raf);
     raf=requestAnimationFrame(function(){raf=0;fit()});
   }
-  window.addEventListener('resize',schedule,{passive:true});
-  window.addEventListener('orientationchange',function(){setTimeout(schedule,250)},{passive:true});
-  window.addEventListener('pageshow',schedule,{passive:true});
-  if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',schedule,{passive:true});
+  function onOrientationChange(){
+    rotating=true;
+    schedule();
+    setTimeout(schedule,180);
+    setTimeout(schedule,360);
+    if(rotateTimer)clearTimeout(rotateTimer);
+    rotateTimer=setTimeout(function(){rotating=false;rotateTimer=0;schedule()},650);
   }
+  window.addEventListener('resize',schedule,{passive:true});
+  window.addEventListener('orientationchange',onOrientationChange,{passive:true});
+  window.addEventListener('pageshow',schedule,{passive:true});
+  if(window.visualViewport)window.visualViewport.addEventListener('resize',schedule,{passive:true});
   document.addEventListener('visibilitychange',function(){if(!document.hidden)schedule()});
   fit();
 })();
@@ -1229,37 +1237,22 @@ function navDot(v,instant){
   const ease=u=>{u-=1;return u*u*((c1+1)*u+c1)+1};  /* easeOutBack */
   (function step(now){const u=Math.min(1,(now-t0)/D);navDraw(from+(to-from)*ease(u));if(u<1)NAV.raf=requestAnimationFrame(step)})(t0);
 }
-/* Rehitung posisi tab setelah ukuran layar benar-benar stabil.
-   Resize keyboard tidak memicu animasi ulang; rotasi mengukur ulang geometri nav. */
-let navLayoutWidth=0,navLayoutTimer=0,navLayoutRaf=0;
-function refreshNavAfterLayout(){
+/* Setelah rotasi, ukur ulang indikator sekali setelah layout stabil.
+   Hindari listener visualViewport/keyboard yang ikut mengubah posisi tombol. */
+function refreshNavAfterRotation(){
   const n=$('#bnav');
   if(!n||!n.clientWidth)return;
-  const width=Math.round(n.getBoundingClientRect().width);
-  if(!width)return;
-  if(width!==navLayoutWidth){
-    navLayoutWidth=width;
-    NAV.x=null;
-    const active=n.querySelector('button.on');
+  cancelAnimationFrame(NAV.raf);
+  NAV.raf=0;
+  NAV.x=null;
+  const active=n.querySelector('button.on');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
     navDot(active?active.dataset.v:null,true);
-  }
+  }));
 }
-function scheduleNavLayout(){
-  if(navLayoutRaf)cancelAnimationFrame(navLayoutRaf);
-  if(navLayoutTimer)clearTimeout(navLayoutTimer);
-  navLayoutRaf=requestAnimationFrame(()=>{navLayoutRaf=0;refreshNavAfterLayout()});
-  navLayoutTimer=setTimeout(()=>{
-    navLayoutTimer=0;
-    requestAnimationFrame(()=>requestAnimationFrame(refreshNavAfterLayout));
-  },180);
-}
-window.addEventListener('resize',scheduleNavLayout,{passive:true});
 window.addEventListener('orientationchange',()=>{
-  scheduleNavLayout();
-  setTimeout(scheduleNavLayout,350);
+  setTimeout(refreshNavAfterRotation,420);
 },{passive:true});
-window.addEventListener('pageshow',scheduleNavLayout,{passive:true});
-if(window.visualViewport)window.visualViewport.addEventListener('resize',scheduleNavLayout,{passive:true});
 function toggleInv(open){$('#invoice').classList.toggle('open',open);$('#fab').classList.toggle('hide',!!open||S.view!=='pos')}
 
 /* ---------- POS ---------- */
