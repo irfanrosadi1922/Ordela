@@ -108,16 +108,19 @@ html[data-skin] .rail .rb.on{background:var(--adt);color:var(--ad)}
 .clo.on{border-color:var(--c);background:#fff}.clo.on i .ico{opacity:1;transform:none}
 .clo:active{transform:scale(.97)}
 
-/* ---------- notifikasi Dynamic Island ---------- */
-#isl{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:400;transform:translateX(-50%);pointer-events:none;width:0}
-#isl .isb{position:absolute;left:50%;top:0;transform:translateX(-50%) scale(.5);transform-origin:50% 0;width:118px;height:34px;border-radius:20px;background:#000;color:#fff;opacity:0;overflow:hidden;
-  box-shadow:0 14px 34px -10px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06) inset;
-  transition:width .5s cubic-bezier(.32,1.35,.5,1),height .5s cubic-bezier(.32,1.35,.5,1),border-radius .5s cubic-bezier(.32,1.35,.5,1),transform .45s cubic-bezier(.32,1.35,.5,1),opacity .2s;pointer-events:none}
-#isl.pill .isb{opacity:1;transform:translateX(-50%) scale(1)}
-#isl.full .isb{opacity:1;transform:translateX(-50%) scale(1);width:min(92vw,372px);height:var(--ih,56px);border-radius:30px;pointer-events:auto;cursor:pointer}
-#isl .isb{display:flex;align-items:center}
-#isl .isc{width:100%;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;opacity:0;transform:scale(.92);filter:blur(6px);transition:opacity .22s,transform .3s,filter .3s;min-width:0}
-#isl.full .isc{opacity:1;transform:none;filter:none;transition-delay:.12s}
+/* ---------- notifikasi Dynamic Island ----------
+   Kotak selalu berukuran penuh dan berada di tengah (tanpa transform/margin yang ikut dianimasikan);
+   bentuk kapsul kecil -> penuh dianimasikan dengan clip-path, jadi tidak pernah bergeser ke samping. */
+#isl{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;width:min(92vw,372px);margin-left:calc(min(92vw,372px) / -2);height:var(--ih,56px);z-index:400;pointer-events:none;transform-origin:50% 0;
+  filter:drop-shadow(0 14px 22px rgba(0,0,0,.35));visibility:hidden}
+#isl.pill,#isl.full{visibility:visible}
+#isl .isb{position:absolute;inset:0;display:flex;align-items:center;background:#000;color:#fff;overflow:hidden;
+  clip-path:inset(0 calc((100% - 118px) / 2) calc(100% - 34px) calc((100% - 118px) / 2) round 18px);opacity:0;
+  transition:clip-path .55s cubic-bezier(.3,1.25,.45,1),opacity .18s ease}
+#isl.pill .isb{opacity:1}
+#isl.full .isb{clip-path:inset(0 0 0 0 round 30px);opacity:1;pointer-events:auto;cursor:pointer}
+#isl .isc{width:100%;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;opacity:0;transform:scale(.94);filter:blur(5px);transition:opacity .2s,transform .3s,filter .3s;min-width:0}
+#isl.full .isc{opacity:1;transform:none;filter:none;transition-delay:.14s}
 #isl .isi{width:36px;height:36px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--k,#2f6bff);color:#fff}
 #isl .isi svg *{stroke:#fff!important;fill:none!important}
 #isl .isi svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
@@ -126,7 +129,40 @@ html[data-skin] .rail .rb.on{background:var(--adt);color:var(--ad)}
 #isl .ist span{display:block;font-size:12px;line-height:1.3;color:rgba(255,255,255,.7);margin-top:1px;overflow-wrap:anywhere}
 #isl .isa{flex:none;border:0;border-radius:999px;background:rgba(255,255,255,.16);color:#fff;font:inherit;font-weight:700;font-size:12px;padding:7px 12px}
 #isl[data-k=ok]{--k:#22c55e}#isl[data-k=warn]{--k:#f59e0b}#isl[data-k=bad]{--k:#ef4444}#isl[data-k=new]{--k:var(--ad)}#isl[data-k=info]{--k:#3b82f6}
-#isl.bump .isb{animation:islb .35s}
-@keyframes islb{50%{transform:translateX(-50%) scale(1.035)}}
-@media (prefers-reduced-motion:reduce){#isl .isb,#isl .isc{transition:opacity .15s!important;animation:none!important}}
+#isl.bump{animation:islb .35s}
+@keyframes islb{50%{transform:scale(1.03)}}
+@media (prefers-reduced-motion:reduce){#isl .isb,#isl .isc{transition:opacity .15s!important}#isl.bump{animation:none}}
 html[data-skin] .toast{display:none!important}
+
+/* ---------- keyboard terbuka: sembunyikan tab bawah & hemat ruang ---------- */
+html.kb[data-skin] .bnav{display:none!important}
+html.kb[data-skin] .main{padding-bottom:12px}
+html.kb[data-skin] .main:has(#v-ai:not([hidden])){padding-bottom:0}
+html.kb[data-skin] .main:has(#v-ai:not([hidden])) .top{display:none}
+html.kb[data-skin] .csg{display:none}
+
+/* ---------- Asisten (chat) ---------- */
+html[data-skin] .main:has(#v-ai:not([hidden])){padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+html.kb[data-skin] .main:has(#v-ai:not([hidden])){padding-bottom:0}
+html[data-skin] .chat{background:#fff;border-radius:28px;box-shadow:0 10px 30px -14px color-mix(in srgb,var(--ad) 45%,transparent)}
+html[data-skin] .chh{border:0;padding:14px 16px;background:linear-gradient(140deg,color-mix(in srgb,var(--ad) 78%,#fff),var(--ad) 55%,var(--ad2) 130%);color:#fff;position:relative;overflow:hidden}
+html[data-skin] .chh:after{content:"";position:absolute;right:-40px;top:-50px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.3),rgba(255,255,255,0) 70%);pointer-events:none}
+html[data-skin] .chh .cav.lg{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+html[data-skin] .cav{background:var(--ad);border:0}
+html[data-skin] .cav .ai-logo{filter:brightness(0) invert(1)}
+html[data-skin] .cht b{color:#fff;font-size:15px}
+html[data-skin] .cht small{color:rgba(255,255,255,.85)}
+html[data-skin] .chh button{background:rgba(255,255,255,.22);color:#fff;border:0;border-radius:999px;padding:7px 14px;font-weight:700;position:relative;z-index:1}
+html[data-skin] .clog{background:linear-gradient(180deg,var(--peach),#fff 70%);padding:16px 14px;gap:12px}
+html[data-skin] .cb{background:#fff;border-radius:20px 20px 20px 6px;box-shadow:0 4px 14px -8px color-mix(in srgb,var(--ad) 45%,transparent);border:1px solid var(--ln)}
+html[data-skin] .cr.me .cb{background:linear-gradient(140deg,color-mix(in srgb,var(--ad) 82%,#fff),var(--ad));color:#fff;border:0;border-radius:20px 20px 6px 20px;box-shadow:0 8px 18px -10px var(--ad)}
+html[data-skin] .cb.typ i{background:var(--ad);opacity:.5}
+html[data-skin] .csg{border:0;background:#fff;padding:10px 12px 4px}
+html[data-skin] .csg button{background:var(--adt);color:var(--ad2);border:0;font-weight:700;border-radius:999px;padding:8px 14px}
+html[data-skin] .cin{background:#fff;padding:8px 10px 10px}
+html[data-skin] .cin input{background:var(--peach);border:1.5px solid transparent;border-radius:999px;padding:12px 18px}
+html[data-skin] .cin input:focus{border-color:var(--ad);background:#fff}
+html[data-skin] .csend{background:linear-gradient(140deg,color-mix(in srgb,var(--ad) 82%,#fff),var(--ad));box-shadow:0 8px 18px -8px var(--ad)}
+html[data-skin] #v-ai:not([hidden]){padding-bottom:12px}
+html.kb[data-skin] #v-ai:not([hidden]){padding-bottom:8px}
+#isl{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;border-radius:0!important}

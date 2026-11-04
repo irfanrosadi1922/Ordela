@@ -31,6 +31,7 @@ for (const app of list) {
     if (!existsSync(join(ROOT, f))) throw new Error('berkas tidak ditemukan: ' + f);
     cpSync(join(ROOT, f), join(out, f));
   }
+  if (existsSync(join(ROOT, 'brand'))) cpSync(join(ROOT, 'brand'), join(out, 'brand'), { recursive: true });   // logo dipakai Asisten & lainnya
   let cfg = readFileSync(join(ROOT, 'config.js'), 'utf8').replace(/\s+$/, '');
   if (app === 'pesan') {
     cpSync(join(ROOT, 'order.html'), join(out, 'index.html'));

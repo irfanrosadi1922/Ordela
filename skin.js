@@ -51,8 +51,9 @@
     var ab = isl.querySelector('.isa'); ab.hidden = !(act && act.label); ab.textContent = act ? act.label || '' : '';
     var was = isl.classList.contains('full');
     clearTimeout(tHide); clearTimeout(tShow); clearTimeout(tOff);
+    var il = isl.querySelector('.isc');
+    isl.style.setProperty('--ih', Math.max(50, Math.min(il.scrollHeight, 110)) + 'px');
     var go = function () {
-      var il = isl.querySelector('.isc'); isl.style.setProperty('--ih', Math.max(50, il.scrollHeight) + 'px');
       isl.classList.add('full');
       if (was) { isl.classList.remove('bump'); void isl.offsetWidth; isl.classList.add('bump'); }
     };
@@ -70,6 +71,18 @@
     if (kind === 'new' && typeof window.canView === 'function' && window.canView('co') && typeof window.go === 'function') action = { label: 'Lihat', tap: true, fn: function () { window.go('co'); } };
     island({ title: title, body: body, kind: kind, action: action, ms: kind === 'new' ? 7000 : 0 });
   }
+  /* keyboard terbuka: tab bawah disembunyikan agar area kerja (mis. chat) tidak terhimpit */
+  (function () {
+    var t = 0;
+    function typing() { var a = document.activeElement; return !!a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !/^(checkbox|radio|button|submit|file|range|color)$/.test(a.type || ''); }
+    function upd() {
+      var vv = window.visualViewport, shrunk = vv && (window.innerHeight - vv.height > 140);
+      H.classList.toggle('kb', !!(typing() || shrunk));
+    }
+    function sched() { clearTimeout(t); t = setTimeout(upd, 60); }
+    document.addEventListener('focusin', sched); document.addEventListener('focusout', sched);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', sched);
+  })();
   window.OrdelaSkin = { island: island, setColor: setColor, palette: PAL, color: getColor };
   /* semua toast() lama otomatis tampil sebagai Dynamic Island */
   function hook() {
