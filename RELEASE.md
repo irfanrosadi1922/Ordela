@@ -2,7 +2,7 @@
 
 ## Isi rilis (sejak a973b0f)
 - **Keamanan:** IP klien tidak bisa dipalsukan (x-forwarded-for), batas 10 MB dokumen data, kredensial integrasi terenkripsi (write-only), batas pemakaian AI 30/jam per akun, riwayat chat AI ikut terhapus saat akun dihapus.
-- **SSO + 4 aplikasi:** kasir / admin / dapur / pesan di subdomain `*.ordela.my.id`; login satu kali via `app.ordela.my.id`; sesi terikat ke aplikasi dan rute dibatasi di server.
+- **4 aplikasi:** kasir / admin / dapur / pesan di subdomain `*.ordela.my.id`; tiap aplikasi punya login sendiri, sesi terikat ke aplikasinya, rute dibatasi di server, dan jabatan tanpa izin ditolak saat login. Mode SSO (satu login via `app.ordela.my.id`) tersedia tapi nonaktif secara default.
 - **Integrasi Center:** GoFood / GrabFood / ShopeeFood (penerima pesanan per toko) + Webhook keluar bertanda tangan HMAC.
 - **Riwayat Pesanan** menggantikan tombol keranjang; Meja dipindah ke sana. **Asisten AI** (aturan lokal + cloud AI).
 - **Deploy otomatis** ke 4 repo lewat `.github/workflows/apps.yml` (secret `DEPLOY_TOKEN`).

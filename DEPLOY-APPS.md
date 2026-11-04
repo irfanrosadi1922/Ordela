@@ -1,6 +1,6 @@
 # Deploy aplikasi per subdomain (SSO)
 
-Satu kode, empat aplikasi. Login dilakukan di **app.ordela.my.id** (penyedia identitas); aplikasi lain menerima sesi lewat kode SSO sekali pakai.
+Satu kode, empat aplikasi. **Mode default: tiap aplikasi punya layar login sendiri** dan sesinya hanya berlaku untuk aplikasi itu; hak tiap jabatan tetap berlaku (jabatan tanpa izin ditolak saat login). Mode SSO lewat `app.ordela.my.id` masih ada dan aktif bila `window.POS_SSO = true` di `config.js` aplikasi.
 
 | Aplikasi | Subdomain | Repo tujuan |
 |---|---|---|

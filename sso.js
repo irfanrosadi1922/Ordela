@@ -25,6 +25,20 @@
   }
 
   /* ---------- aplikasi terbatas ---------- */
+  /* Mode default: tiap aplikasi punya layar login sendiri (login langsung, sesi hanya untuk aplikasi itu; hak tiap jabatan tetap berlaku).
+     Mode SSO lewat pusat login hanya aktif bila config.js memasang window.POS_SSO = true. */
+  if (APP && window.POS_SSO !== true) {
+    var _f = window.fetch;
+    window.fetch = function (input, o) {
+      try {
+        if (input === '/api/login' && o && typeof o.body === 'string') { var j = JSON.parse(o.body); j.aud = APP; o = Object.assign({}, o, { body: JSON.stringify(j) }); }
+      } catch (e) {}
+      return _f.call(this, input, o);
+    };
+    document.title = AUDS[APP] + ' · ' + document.title.replace(/^.*?·\s*/, '');
+    return;
+  }
+
   if (APP) {
     var toIdp = function (fresh) {
       var u = IDP + '/?sso=' + APP + '&return=' + encodeURIComponent(clean()) + (fresh ? '&fresh=1' : '');

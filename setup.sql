@@ -568,7 +568,7 @@ end $$;
 
 -- ------------------------------------------------------------ login
 create or replace function pos.login(b jsonb) returns jsonb language plpgsql as $$
-declare v_ip text := pos.client_ip(); lu timestamptz; un text; u pos.users; pw text; good boolean := false; v_out int;
+declare v_ip text := pos.client_ip(); lu timestamptz; un text; u pos.users; pw text; good boolean := false; v_out int; v_aud text;
 begin
   select until into lu from pos.fails where ip = v_ip;
   if lu is not null and lu > now() then return pos.r(429, '{"error":"terlalu banyak percobaan"}'); end if;
@@ -590,15 +590,20 @@ begin
   end if;
   delete from pos.fails where ip = v_ip;
   if not u.active then return pos.r(403, '{"error":"Akun dinonaktifkan. Hubungi owner."}'); end if;
+  v_aud := case when b ->> 'aud' in ('kasir', 'admin', 'dapur') then b ->> 'aud' else 'all' end;   -- login langsung dari aplikasi terbatas: sesi hanya untuk aplikasi itu
+  if v_aud <> 'all' and not pos.aud_user_ok(u, v_aud) then
+    perform pos.audit(u.id, u.username, 'login-ditolak', v_aud);
+    return pos.r(403, '{"error":"Jabatan akun ini tidak punya akses ke aplikasi ini"}');
+  end if;
   update pos.t_users set last_login = now() where id = u.id;
   v_out := 0;
   if coalesce(u.single, u.role <> 'owner') then
-    update pos.sessions set kicked_at = now() where uid = u.id and kicked_at is null;
+    update pos.sessions set kicked_at = now() where uid = u.id and kicked_at is null and (v_aud = 'all' or aud in ('all', v_aud));
     get diagnostics v_out = row_count;
   end if;
-  perform pos.audit(u.id, u.username, 'login', v_ip || case when v_out > 0 then ' (perangkat lama dikeluarkan)' else '' end);
+  perform pos.audit(u.id, u.username, 'login', v_ip || case when v_aud <> 'all' then ' [' || v_aud || ']' else '' end || case when v_out > 0 then ' (perangkat lama dikeluarkan)' else '' end);
   select * into u from pos.t_users where id = u.id;
-  return pos.r(200, jsonb_build_object('token', pos.new_session(u.id), 'days', 14, 'me', pos.me_self(u)));
+  return pos.r(200, jsonb_build_object('token', pos.new_session(u.id, v_aud), 'days', 14, 'aud', v_aud, 'me', pos.me_self(u)));
 end $$;
 
 -- ------------------------------------------------------------ SSO antar aplikasi (kasir / admin / dapur)
