@@ -3,6 +3,13 @@
   'use strict';
   if (window.POS_APP !== 'admin') return;
   document.documentElement.setAttribute('data-app', 'admin');
+  /* warna bilah status = warna latar, agar tidak ada pita di bawah jam/sinyal */
+  function themeColor() {
+    var m = document.querySelector('meta[name=theme-color]'); if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
+    if (document.documentElement.getAttribute('data-theme') !== 'dark' && m.getAttribute('content') !== '#eaf1ff') m.setAttribute('content', '#eaf1ff');
+    return m;
+  }
+  try { var tm = themeColor(); new MutationObserver(themeColor).observe(tm, { attributes: true, attributeFilter: ['content'] }); } catch (e) {}
   var $ = function (s) { return document.querySelector(s); };
   var esc = (typeof window.esc === 'function' ? window.esc : null) || function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   /* Ikon duotone sendiri (24px): garis 1.8 + isi tipis (.d). Satu ikon untuk satu fungsi, tidak ada yang dipakai ganda. */

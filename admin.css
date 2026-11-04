@@ -1,14 +1,14 @@
 /* Ordela Admin — kulit tampilan khusus aplikasi admin (hanya dimuat di admin.ordela.my.id oleh scripts/build-apps.mjs).
    Gaya: latar biru lembut, kartu putih bersudut bulat, kartu hero biru, daftar bergrup berikon, tab bawah datar. */
-html[data-app=admin]{--ad:#2f6bff;--ad2:#1f4fd8;--adt:#e6eeff;--bg:#eaf1ff;--card:#fff;--ac:#2f6bff;--acx:#fff;--b:#2f6bff;--b2:#1f4fd8;--bt:#2f6bff;--ln:#e3eaf8;--mu:#7b88a6;--peach:#f1f5ff;--peach2:#e7eeff;--peach3:#dde7ff;--cat1:#e7eeff;--cat2:#f1f5ff}
-html[data-app=admin] body{background:linear-gradient(180deg,#d6e6ff 0,#eaf1ff 260px,#f4f7ff 100%) fixed}
-html[data-app=admin] .main{background:transparent}
-html[data-app=admin] .top{background:#eaf1ff;box-shadow:0 0 0 100vmax #eaf1ff}
-html[data-app=admin] .panel,html[data-app=admin] .mgc{box-shadow:0 6px 22px -10px rgba(47,107,255,.25)}
+html[data-app=admin]:not([data-theme=dark]){--ad:#2f6bff;--ad2:#1f4fd8;--adt:#e6eeff;--bg:#eaf1ff;--card:#fff;--ac:#2f6bff;--acx:#fff;--b:#2f6bff;--b2:#1f4fd8;--bt:#2f6bff;--ln:#e3eaf8;--mu:#7b88a6;--peach:#f1f5ff;--peach2:#e7eeff;--peach3:#dde7ff;--cat1:#e7eeff;--cat2:#f1f5ff}
+html[data-app=admin]:not([data-theme=dark]),html[data-app=admin]:not([data-theme=dark]) body,html[data-app=admin]:not([data-theme=dark]) .app{background:#eaf1ff}
+html[data-app=admin]:not([data-theme=dark]) .main{background:transparent}
+html[data-app=admin]:not([data-theme=dark]) .top{background:#eaf1ff;box-shadow:0 0 0 100vmax #eaf1ff;margin-bottom:6px}
+html[data-app=admin]:not([data-theme=dark]) .panel,html[data-app=admin]:not([data-theme=dark]) .mgc{box-shadow:0 6px 22px -10px rgba(47,107,255,.25)}
 
 /* tombol akun di bilah atas */
 .adav{width:40px;height:40px;border-radius:50%;border:0;background:#fff;color:var(--ad);font-family:inherit;font-weight:800;font-size:15px;line-height:1;display:grid;place-items:center;box-shadow:0 4px 14px -6px rgba(47,107,255,.5);margin-left:auto;flex:none}
-html[data-app=admin] .top .icon-btn{background:#fff;border-radius:50%;box-shadow:0 4px 14px -6px rgba(47,107,255,.35)}
+html[data-app=admin]:not([data-theme=dark]) .top .icon-btn{background:#fff;border-radius:50%;box-shadow:0 4px 14px -6px rgba(47,107,255,.35)}
 
 /* ---------- Beranda (menu) ---------- */
 .adh{position:relative;overflow:hidden;border-radius:28px;padding:18px 18px 18px;color:#fff;background:linear-gradient(140deg,#4b86ff 0%,#2f5cff 55%,#1e3fd0 120%);box-shadow:0 16px 34px -14px rgba(47,92,255,.7)}
@@ -59,23 +59,27 @@ html[data-app=admin] .top .icon-btn{background:#fff;border-radius:50%;box-shadow
 .adr .nb{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:2px solid #fff;border-radius:999px;font-size:10.5px;min-width:20px;height:20px;display:grid;place-items:center;font-weight:800}
 
 /* ---------- tab bawah ---------- */
-html[data-app=admin] .bnav .bnbg,html[data-app=admin] .bnav .bndot{display:none!important}
+html[data-app=admin]:not([data-theme=dark]) .bnav .bnbg,html[data-app=admin]:not([data-theme=dark]) .bnav .bndot{display:none!important}
 @media (max-width:700px){
-  html[data-app=admin] .bnav{display:flex;justify-content:space-around;align-items:stretch;background:#fff;border-radius:26px 26px 0 0;height:calc(70px + env(safe-area-inset-bottom,0px));padding:6px 6px env(safe-area-inset-bottom,0px);filter:none;box-shadow:0 -10px 30px -12px rgba(47,107,255,.35)}
-  html[data-app=admin] .bnav button{flex:1;height:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#9aa6c2;font-family:inherit;font-weight:700;font-size:10.5px;line-height:1.1;letter-spacing:.01em;min-width:0}
-  html[data-app=admin] .bnav button .bi{width:52px;height:30px;border-radius:15px;display:grid;place-items:center;transition:background .2s}
-  html[data-app=admin] .bnav button svg{width:22px;height:22px;transform:none!important;animation:none!important}
-  html[data-app=admin] .bnav button.on{color:var(--ad)}
-  html[data-app=admin] .bnav button.on .bi{background:var(--adt)}
-  html[data-app=admin] .bnav button:active .bi{transform:scale(.92)}
-  html[data-app=admin] .main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  html[data-app=admin]:not([data-theme=dark]) .bnav{display:flex;justify-content:space-around;align-items:stretch;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));height:68px;padding:5px;border-radius:30px;
+    background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,.38));
+    -webkit-backdrop-filter:blur(22px) saturate(190%);backdrop-filter:blur(22px) saturate(190%);
+    border:1px solid rgba(255,255,255,.75);filter:none;
+    box-shadow:0 14px 34px -12px rgba(47,107,255,.40),0 2px 6px rgba(47,107,255,.08),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(255,255,255,.35)}
+  html[data-app=admin]:not([data-theme=dark]) .bnav button{flex:1;height:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#7f8db0;font-family:inherit;font-weight:700;font-size:10.5px;line-height:1.1;letter-spacing:.01em;min-width:0;border-radius:24px}
+  html[data-app=admin]:not([data-theme=dark]) .bnav button .bi{width:50px;height:30px;border-radius:15px;display:grid;place-items:center;transition:background .25s,box-shadow .25s}
+  html[data-app=admin]:not([data-theme=dark]) .bnav button svg{transform:none!important;animation:none!important}
+  html[data-app=admin]:not([data-theme=dark]) .bnav button.on{color:var(--ad)}
+  html[data-app=admin]:not([data-theme=dark]) .bnav button.on .bi{background:rgba(47,107,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 4px 12px -6px rgba(47,107,255,.55)}
+  html[data-app=admin]:not([data-theme=dark]) .bnav button:active .bi{transform:scale(.92)}
+  html[data-app=admin]:not([data-theme=dark]) .main{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 }
-html[data-app=admin] .rail{background:#fff}
-html[data-app=admin] .rail .rb.on{background:var(--adt);color:var(--ad)}
+html[data-app=admin]:not([data-theme=dark]) .rail{background:#fff}
+html[data-app=admin]:not([data-theme=dark]) .rail .rb.on{background:var(--adt);color:var(--ad)}
 
 /* ikon duotone */
 .ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
-.ico .d,html[data-app=admin] svg .d{fill:currentColor;fill-opacity:.18}
+.ico .d,html[data-app=admin]:not([data-theme=dark]) svg .d{fill:currentColor;fill-opacity:.18}
 .adr .ti .ico{color:var(--c);width:24px;height:24px}
-html[data-app=admin] .bnav button .ico{width:23px;height:23px}
+html[data-app=admin]:not([data-theme=dark]) .bnav button .ico{width:23px;height:23px}
 .adbtn .ico{width:19px;height:19px;color:var(--ad)}
