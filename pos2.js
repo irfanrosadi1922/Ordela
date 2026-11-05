@@ -521,7 +521,7 @@ V.riw=function(){
   const chip=(k,l)=>`<button class="tag ${RW.r===k?'pos':''}" type="button" onclick="P2.riwSet('${k}')">${l}</button>`;
   el.innerHTML=bar('<i class="ic" data-ic="receipt"></i>Riwayat Pesanan')+`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${chip('today','Hari ini')}${H?chip('7','7 hari')+chip('30','30 hari')+chip('all','Semua'):''}</div>
   <input class="fi" id="riwQ" type="search" placeholder="Cari no. struk, nama, meja…" value="${esc(RW.q)}" oninput="P2.riwQ(this.value)" autocomplete="off">
-  <div class="panel hp" style="margin-top:8px"><div class="ph"><h3>Transaksi</h3><small class="pl">${rows.length} transaksi · ${money(rows.reduce((a,b)=>a+(+b.total||0),0))}</small></div><div class="lst">${h||'<div style="color:var(--mu);padding:6px 4px">'+(db.orders.length?'Tidak ada transaksi.':'Belum ada transaksi.')+'</div>'}</div>
+  <div class="panel hp" style="margin-top:8px"><div class="ph"><h3>Transaksi</h3><small class="pl">${rows.length} transaksi · ${money(rows.reduce((a,b)=>a+(+b.total||0),0))}</small></div><div class="lst">${h||'<div class="rwempty"><i class="ic" data-ic="receipt"></i><b>'+(db.orders.length?'Tidak ada transaksi':'Belum ada transaksi')+'</b><small>'+(db.orders.length?'Coba ubah rentang waktu atau kata pencarian.':'Transaksi yang sudah dibayar akan muncul di sini.')+'</small></div>'}</div>
   ${rows.length>RW.n?'<button class="btn sec morebtn" onclick="P2.riwMore()">Tampilkan lebih banyak</button>':''}</div>`;
 };
 P2.riwSet=function(r){RW.r=r;RW.n=30;V.riw()};
