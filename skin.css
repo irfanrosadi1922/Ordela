@@ -433,3 +433,7 @@ html[data-skin] .thp .tpg{background:var(--ad)}
   html[data-skin] .bnav .lm button{flex:1;color:var(--ad)!important;background:none!important;box-shadow:none!important;transition:none}
   html[data-skin] .bnav .lm button svg{transform:none!important}
 }
+
+/* menu: panah ">" dan keterangan grup di kanan dihapus (tidak penting) */
+.adr .go,.adr>svg.go,.adr>.go{display:none!important}
+.adgt span{display:none!important}
