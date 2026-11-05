@@ -437,3 +437,11 @@ html[data-skin] .thp .tpg{background:var(--ad)}
 /* menu: panah ">" dan keterangan grup di kanan dihapus (tidak penting) */
 .adr .go,.adr>svg.go,.adr>.go{display:none!important}
 .adgt span{display:none!important}
+
+/* pencarian selaras tema + avatar foto */
+html[data-skin] .pill.search{background:#fff!important;border:1px solid var(--ln);box-shadow:0 6px 18px -12px color-mix(in srgb,var(--ad) 45%,transparent)!important}
+html[data-skin] .pill.search input{color:var(--tx)}
+html[data-skin] .pill.search input::placeholder{color:color-mix(in srgb,var(--ad) 50%,#9aa5bd);opacity:1}
+html[data-skin] .pill.search .ic,html[data-skin] .pill.search svg{color:var(--ad);stroke:var(--ad)}
+.adav.ph{padding:0;overflow:hidden;background:var(--adt)}
+.adav.ph img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}

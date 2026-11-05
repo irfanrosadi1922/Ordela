@@ -237,8 +237,10 @@
     })();
     function setAvatar() {
       var b = $('#adav'); if (!b) return;
-      var nm = (typeof CL !== 'undefined' && CL.on && CL.me && CL.me.name) || 'A';
-      b.textContent = String(nm).trim().charAt(0).toUpperCase() || 'A';
+      var me = typeof CL !== 'undefined' && CL.on && CL.me, nm = (me && me.name) || 'A', ph = me && me.photo, key = (ph ? 'p' + ph.length + ph.slice(-24) : 'n' + nm);
+      if (b.dataset.k === key) return; b.dataset.k = key;
+      if (ph) { b.textContent = ''; var im = document.createElement('img'); im.alt = ''; im.src = ph; b.appendChild(im); b.classList.add('ph'); }
+      else { b.classList.remove('ph'); b.textContent = String(nm).trim().charAt(0).toUpperCase() || 'A'; }
     }
     function buildAvatar() {
       var top = $('.top'); if (!top || $('#adav')) return;
@@ -335,6 +337,7 @@
     setInterval(function () {
       var k = (typeof CL !== 'undefined' && CL.me ? JSON.stringify(CL.me.perms || '') + CL.me.role : '') + (typeof CL !== 'undefined' && CL.on);
       if (k !== last) { last = k; buildNav(); setAvatar(); if (typeof S !== 'undefined' && S.view === 'menu' && typeof render === 'function') render(); }
+      setAvatar();
     }, 600);
     /* pesanan baru dari coEvents: toast(...) sudah otomatis menjadi Dynamic Island (judul — isi) */
   }
