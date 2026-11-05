@@ -309,3 +309,8 @@ html[data-skin].ordela-rotating body{
 
 /* Invoice ponsel menempel ke dasar layar (tanpa margin bawaan desktop) */
 @media (max-width:1000px){html[data-skin] #invoice{margin:0!important}}
+
+/* Landscape ponsel/tablet: tombol keranjang tidak menutupi rail menu di kiri */
+@media (min-width:701px) and (max-width:1000px){
+  html[data-skin] .fab{left:calc(114px + env(safe-area-inset-left,0px));right:max(14px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:11px 20px}
+}
