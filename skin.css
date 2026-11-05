@@ -371,3 +371,29 @@ html.ordela-rotating[data-skin] *{-webkit-backdrop-filter:none!important;backdro
   html[data-skin] .bnav button.on svg{transform:scale(1.08)!important;transition:transform .45s cubic-bezier(.3,1.6,.5,1)}
 }
 @media (max-width:1000px){html[data-skin] #invoice>.mini{display:block;margin:12px auto 0!important}}
+
+/* ---------- Invoice ponsel: lembar tetap (tidak ikut memanjang), hanya daftar item yang discroll ---------- */
+@media (max-width:1000px){
+  html[data-skin] #invoice,html[data-skin] #invoice.open{
+    display:flex!important;flex-direction:column!important;
+    overflow:hidden!important;touch-action:auto!important;
+    padding:16px 16px calc(14px + env(safe-area-inset-bottom,0px))!important;
+  }
+  html[data-skin] #invoice.open>h2{position:static;margin:0 0 8px;padding:0;background:none}
+  html[data-skin] #invoice.open>*{flex:none!important}
+  html[data-skin] #invoice.open>.lines,html[data-skin] #invoice>.lines{
+    flex:1 1 0!important;min-height:110px!important;max-height:none!important;
+    overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;padding:2px 2px 6px 0;
+  }
+  html[data-skin] #invoice select#otype{margin-bottom:6px;padding:7px 14px}
+  html[data-skin] #invoice .sum{margin-top:6px;padding-top:6px}
+  html[data-skin] #invoice .sum h4{margin:0 0 4px;font-size:12px}
+  html[data-skin] #invoice .sum .sr{margin:2px 0;font-size:12.5px;min-height:0}
+  html[data-skin] #invoice .sum .sr input,html[data-skin] #invoice .sum .sr select{padding:4px 8px;height:32px;font-size:14px!important}
+  html[data-skin] #invoice .tot{margin-top:4px;font-size:17px}
+  html[data-skin] #invoice #placeBtn{margin-top:8px;padding:12px}
+  html[data-skin] #invoice .hrow{margin-top:6px;gap:8px}
+  html[data-skin] #invoice .hrow .btn{padding:9px}
+  html[data-skin] #invoice>.mini{margin:6px auto 0!important}
+}
