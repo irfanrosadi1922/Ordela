@@ -206,31 +206,39 @@
       function xOf(e) { return e.clientX - n.getBoundingClientRect().left; }
       n.addEventListener('pointerdown', function (e) {
         if (e.button > 0) return;
+        if (drag) { clearTimeout(drag.t); drag = null; }
+        sup = false;
         var l = lensEl(n); if (!n.querySelector(':scope > button')) return;
-        drag = { id: e.pointerId, x0: e.clientX, moved: false, hit: null, t: setTimeout(function () { if (drag) { drag.hold = true; } }, 180) };
+        drag = { id: e.pointerId, x0: e.clientX, moved: false, hit: null, t: setTimeout(function () { abort(); }, 6000) };
         lensFill(n, l); l.classList.add('press'); n.classList.add('held');
         l.style.opacity = 1; l.style.transition = 'transform .16s cubic-bezier(.2,.9,.3,1),width .16s,opacity .15s,scale .3s cubic-bezier(.3,1.5,.5,1)';
         drag.hit = lensMove(n, l, xOf(e));
       });
-      n.addEventListener('pointermove', function (e) {
+      window.addEventListener('pointermove', function (e) {
         if (!drag || e.pointerId !== drag.id) return;
         if (Math.abs(e.clientX - drag.x0) > 6) drag.moved = true;
         var l = lensEl(n), h = lensMove(n, l, xOf(e));
         if (h !== drag.hit) { drag.hit = h; try { navigator.vibrate && navigator.vibrate(6); } catch (_) {} }
         if (drag.moved) { l.style.transition = 'width .16s,scale .3s cubic-bezier(.3,1.5,.5,1),opacity .15s'; if (e.cancelable) e.preventDefault(); }
-      }, { passive: false });
+      }, { passive: false, capture: true });
+      function abort() { if (!drag) return; var l = lensEl(n); clearTimeout(drag.t); drag = null; l.classList.remove('press'); n.classList.remove('held'); l.style.transition = ''; lens(true); }
       function end(e, cancel) {
         if (!drag || (e && e.pointerId !== drag.id)) return;
         var d = drag, l = lensEl(n); clearTimeout(d.t); drag = null;
         l.classList.remove('press'); n.classList.remove('held'); l.style.transition = '';
-        var go = !cancel && d.moved && d.hit;
+        var rc = n.getBoundingClientRect(), out = e && (e.clientY < rc.top - 50 || e.clientY > rc.bottom + 50);   /* dilepas jauh di luar nav = batal */
+        var go = !cancel && !out && d.moved && d.hit;
         sup = false;
         if (go && !d.hit.classList.contains('on')) d.hit.click();
         lens(false);
-        if (d.moved) { sup = true; setTimeout(function () { sup = false; }, 350); }
+        if (d.moved) { sup = true; setTimeout(function () { sup = false; }, 160); }
       }
-      n.addEventListener('pointerup', function (e) { end(e, false); });
-      n.addEventListener('pointercancel', function (e) { end(e, true); });
+      /* dengarkan di window supaya jari/mouse yang lepas di luar nav, atau nav yang dibangun ulang saat digeser, tidak membuat status geser tersangkut */
+      window.addEventListener('pointerup', function (e) { end(e, false); }, true);
+      window.addEventListener('pointercancel', function (e) { end(e, true); }, true);
+      window.addEventListener('blur', abort);
+      document.addEventListener('visibilitychange', function () { if (document.hidden) abort(); });
+      window.addEventListener('ordela:viewportchange', abort);
       n.addEventListener('lostpointercapture', function (e) { if (drag && e.pointerId === drag.id) end(e, false); });
       n.addEventListener('click', function (e) { if (sup) { e.stopPropagation(); e.preventDefault(); sup = false; } }, true);
       n.addEventListener('contextmenu', function (e) { e.preventDefault(); });
