@@ -306,3 +306,6 @@ html[data-skin].ordela-rotating,
 html[data-skin].ordela-rotating body{
   scroll-behavior:auto!important;
 }
+
+/* Invoice ponsel menempel ke dasar layar (tanpa margin bawaan desktop) */
+@media (max-width:1000px){html[data-skin] #invoice{margin:0!important}}
