@@ -76,11 +76,14 @@
     var t = 0;
     function typing() { var a = document.activeElement; return !!a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !/^(checkbox|radio|button|submit|file|range|color)$/.test(a.type || ''); }
     function upd() {
-      var vv = window.visualViewport, shrunk = vv && (window.innerHeight - vv.height > 140);
-      H.classList.toggle('kb', !!(typing() || shrunk));
+      /* kb hanya aktif saat kolom input benar-benar fokus; ukuran viewport saja (mis. saat rotasi) tidak boleh menyembunyikan tombol */
+      H.classList.toggle('kb', typing());
     }
     function sched() { clearTimeout(t); t = setTimeout(upd, 60); }
+    function rot() { H.classList.remove('kb'); sched(); setTimeout(upd, 350); setTimeout(upd, 900); }
     document.addEventListener('focusin', sched); document.addEventListener('focusout', sched);
+    window.addEventListener('resize', sched); window.addEventListener('orientationchange', rot); window.addEventListener('pageshow', rot);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) rot(); });
     if (window.visualViewport) window.visualViewport.addEventListener('resize', sched);
   })();
   window.OrdelaSkin = { island: island, setColor: setColor, palette: PAL, color: getColor };
