@@ -319,3 +319,55 @@ html[data-skin].ordela-rotating body{
 html.ordela-rotating[data-skin] .bnav,
 html.ordela-rotating[data-skin] .fab{display:none!important}
 html.ordela-rotating[data-skin] *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* ---------- Invoice: satu area scroll utuh & pas dengan layar ---------- */
+@media (max-width:1000px){
+  html[data-skin] #invoice,html[data-skin] #invoice.open{
+    height:calc(100vh - 44px)!important;height:calc(100dvh - env(safe-area-inset-top,0px) - 44px)!important;
+    max-height:none!important;
+    display:block!important;
+    overflow-y:auto!important;overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;touch-action:pan-y!important;
+    padding:0 18px calc(24px + env(safe-area-inset-bottom,0px))!important;
+    border-radius:26px 26px 0 0!important;
+  }
+  html[data-skin] #invoice.open>h2{position:sticky;top:0;z-index:5;margin:0 -18px 10px;padding:18px 18px 10px;background:var(--card)}
+  html[data-skin] #invoice.open>.lines,html[data-skin] #invoice>.lines{
+    display:flex!important;flex-direction:column;gap:8px;
+    max-height:none!important;min-height:64px!important;overflow:visible!important;flex:none!important;touch-action:pan-y!important;
+  }
+  html[data-skin] #invoice.open>*{flex:none!important}
+  html[data-skin] #invoice .sum{margin-top:12px}
+  html[data-skin] #invoice #placeBtn{margin-top:12px}
+  html[data-skin] #invoice .hrow{margin-top:8px}
+}
+
+/* ---------- Tab bawah: kaca cair dengan lensa yang bergeser ---------- */
+@media (max-width:700px){
+  html[data-skin] .bnav{
+    background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,.28))!important;
+    -webkit-backdrop-filter:blur(22px) saturate(1.8)!important;backdrop-filter:blur(22px) saturate(1.8)!important;
+    border:1px solid rgba(255,255,255,.7)!important;
+    box-shadow:0 18px 40px -12px rgba(20,30,70,.35),0 2px 8px rgba(20,30,70,.08),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.4)!important;
+    border-radius:999px!important;overflow:visible!important;
+  }
+  html[data-skin] .bnav:before{display:none}
+  html[data-skin] .bnav .lens{
+    position:absolute;left:0;top:6px;height:calc(100% - 12px);width:0;border-radius:999px;pointer-events:none;z-index:0;
+    transform:translate3d(0,0,0);
+    transition:transform .55s cubic-bezier(.3,1.45,.5,1),width .55s cubic-bezier(.3,1.45,.5,1),opacity .2s;
+    background:
+      radial-gradient(120% 90% at 50% -20%,rgba(255,255,255,.95),rgba(255,255,255,0) 60%),
+      linear-gradient(180deg,rgba(255,255,255,.55),color-mix(in srgb,var(--adt) 70%,rgba(255,255,255,.35)));
+    -webkit-backdrop-filter:blur(3px) saturate(2) brightness(1.08);backdrop-filter:blur(3px) saturate(2) brightness(1.08);
+    box-shadow:inset 0 1.5px 1px rgba(255,255,255,.98),inset 0 -2px 3px color-mix(in srgb,var(--ad) 22%,transparent),inset 2px 0 3px -1px rgba(255,120,200,.28),inset -2px 0 3px -1px rgba(80,200,255,.30),0 6px 16px -6px color-mix(in srgb,var(--ad) 50%,transparent),0 0 0 1px rgba(255,255,255,.65);
+  }
+  html[data-skin] .bnav .lens.go{animation:lensgo .55s cubic-bezier(.3,1.2,.5,1)}
+  html[data-skin] .bnav .lens.press{transform:translate3d(var(--lx,0px),0,0) scale(1.1)}
+  @keyframes lensgo{0%{scale:1 1}35%{scale:1.22 .9}70%{scale:.97 1.05}100%{scale:1 1}}
+  html[data-skin] .bnav button .bi,html[data-skin] .bnav button.on .bi{background:none!important;box-shadow:none!important}
+  html[data-skin] .bnav button{transition:color .25s}
+  html[data-skin] .bnav button.on{color:var(--ad)}
+  html[data-skin] .bnav button.on svg{transform:scale(1.08)!important;transition:transform .45s cubic-bezier(.3,1.6,.5,1)}
+}
+@media (max-width:1000px){html[data-skin] #invoice>.mini{display:block;margin:12px auto 0!important}}

@@ -147,7 +147,32 @@
       n.classList.add('none');
       var v = (typeof S !== 'undefined' && S.view) || 'menu';
       n.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === v); });
+      lens(true);
     }
+    /* lensa kaca yang bergeser ke tab aktif */
+    var lensX = null;
+    function lens(instant) {
+      var n = $('#bnav'); if (!n) return;
+      var l = n.querySelector('.lens');
+      if (!l) { l = document.createElement('i'); l.className = 'lens'; n.insertBefore(l, n.firstChild); instant = true; }
+      var b = n.querySelector('button.on');
+      if (!b || !b.offsetWidth) { l.style.opacity = 0; return; }
+      var w = b.offsetWidth, x = b.offsetLeft;
+      l.style.opacity = 1;
+      if (instant) { l.style.transition = 'none'; }
+      l.style.width = w + 'px'; l.style.transform = 'translate3d(' + x + 'px,0,0)'; l.style.setProperty('--lx', x + 'px');
+      if (instant) { void l.offsetWidth; l.style.transition = ''; }
+      else if (lensX !== null && lensX !== x) { l.classList.remove('go'); void l.offsetWidth; l.classList.add('go'); }
+      lensX = x;
+    }
+    (function () {
+      var n = $('#bnav'); if (!n) return;
+      new MutationObserver(function (m) { for (var i = 0; i < m.length; i++) if (m[i].target.tagName === 'BUTTON') { lens(false); return; } }).observe(n, { attributes: true, subtree: true, attributeFilter: ['class'] });
+      window.addEventListener('ordela:viewportchange', function () { lens(true); });
+      window.addEventListener('resize', function () { lens(true); });
+      n.addEventListener('pointerdown', function () { var l = n.querySelector('.lens'); if (l) l.classList.add('press'); });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (e) { n.addEventListener(e, function () { var l = n.querySelector('.lens'); if (l) l.classList.remove('press'); }); });
+    })();
     function setAvatar() {
       var b = $('#adav'); if (!b) return;
       var nm = (typeof CL !== 'undefined' && CL.on && CL.me && CL.me.name) || 'A';
