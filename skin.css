@@ -314,3 +314,8 @@ html[data-skin].ordela-rotating body{
 @media (min-width:701px) and (max-width:1000px){
   html[data-skin] .fab{left:calc(114px + env(safe-area-inset-left,0px));right:max(14px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:11px 20px}
 }
+
+/* Saat rotasi: nav & tombol melayang disembunyikan sebentar lalu dibuat ulang (menghindari posisi/area sentuh basi di iOS) */
+html.ordela-rotating[data-skin] .bnav,
+html.ordela-rotating[data-skin] .fab{display:none!important}
+html.ordela-rotating[data-skin] *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}

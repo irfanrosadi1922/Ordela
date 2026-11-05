@@ -16,7 +16,7 @@ jobs:
         run: |
           mkdir www
           echo '{"appId":"com.ordela.app","appName":"Ordela","webDir":"www","backgroundColor":"#ffffff"}' > capacitor.config.json
-          cp index.html order.html sw.js sbapi.js auth.js native.js pos2.js sso.js skin.css skin.js html5-qrcode.min.js config.js qr.js qris.js manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png icon-light-192.png icon-light-512.png icon-ordela-dark.svg icon-ordela-red.svg icon-ordela-maskable.svg www/
+          cp index.html order.html sw.js sbapi.js auth.js native.js pos2.js sso.js skin.css skin.js viewport.js html5-qrcode.min.js config.js qr.js qris.js manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png icon-light-192.png icon-light-512.png icon-ordela-dark.svg icon-ordela-red.svg icon-ordela-maskable.svg www/
           cp -r brand www/brand
           # alamat website publik untuk QR: variabel APP_URL > file CNAME > alamat GitHub Pages
           PUB="${{ vars.APP_URL }}"
