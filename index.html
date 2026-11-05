@@ -2803,7 +2803,7 @@ function renderCur(){
 /* ---------- tampilan grid menu ---------- */
 function applyGridView(){
   const g=db.set.gv,el=$('#grid'),cd=g.colsD,cm=g.colsM;
-  el.className='grid'+(cd>0?' fd':'')+' fm'+(g.stock?'':' nostock');
+  el.className='grid'+(g.mode==='list'?' list':'')+(cd>0?' fd':'')+' fm'+(g.stock?'':' nostock');
   /* jarak, padding, dan lengkung sudut kartu mengecil saat kolom bertambah */
   const pick=(n,t)=>{for(const [min,v] of t)if(n>=min)return v;return t[t.length-1][1]};
   const GAP=[[8,6],[6,8],[4,10],[0,14]],PAD=[[8,4],[6,5],[4,6],[0,8]],RAD=[[8,12],[6,16],[4,20],[0,28]];
@@ -2812,6 +2812,7 @@ function applyGridView(){
   $('#cats').style.display=g.cats?'':'none';
   const b=(on,t,fn)=>`<button class="chip ${on?'on':''}" onclick="${fn}">${t}</button>`;
   $('#gtool').innerHTML='<span class="lb">Tampilan</span>'
+    +b(g.mode==='grid','<i class="ic" data-ic="grid"></i>Grid',"setGV('mode','grid')")+b(g.mode==='list','<i class="ic" data-ic="list"></i>Daftar',"setGV('mode','list')")
     +'<button class="chip" onclick="gridForm()"><i class="ic" data-ic="sliders"></i>Atur</button>'+('BarcodeDetector' in window?'<button class="chip" onclick="scanCam()">Scan</button>':'');
 }
 function setGV(k,v,re){db.set.gv[k]=v;save();applyGridView();if(k==='tap')renderGrid();if(re)gridForm()}
@@ -2820,6 +2821,7 @@ function gridForm(){
   const row=(k,opts)=>`<div class="chips">${opts.map(([v,t])=>`<button class="chip ${g[k]===v?'on':''}" onclick="setGV('${k}',${typeof v==='number'?v:`'${v}'`},1)">${t}</button>`).join('')}</div>`;
   const ck=(k,l)=>`<label class="tgl"><input type="checkbox" ${g[k]?'checked':''} onchange="setGV('${k}',this.checked)"><span>${l}</span></label>`;
   openModal(`<h3>Atur Tampilan Menu</h3>
+  <label class="fl">Mode</label>${row('mode',[['grid','<i class="ic" data-ic="grid"></i>Grid'],['list','<i class="ic" data-ic="list"></i>Daftar']])}
   <label class="fl">Saat gambar menu diketuk</label>${row('tap',[['add','<i class="ic" data-ic="bolt"></i>Tambah 1 langsung'],['qty','<i class="ic" data-ic="hash"></i>Pilih jumlah'],['detail','<i class="ic" data-ic="search"></i>Lihat detail'],['none','<i class="ic" data-ic="ban"></i>Tanpa aksi']])}
   <label class="fl">Jumlah kolom: layar besar (PC / tablet)</label>${row('colsD',[[0,'Auto'],[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6'],[8,'8']])}
   <label class="fl">Jumlah kolom: HP</label>${row('colsM',[[1,'1'],[2,'2'],[3,'3'],[4,'4']])}
@@ -3636,7 +3638,7 @@ async function coAutoPrint(){
 
 /* ---------- Ambil Pesanan (server/pelayan): pesanan dibuat dari akun masing-masing, masuk ke antrean Pesanan Online yang sama,
    lalu dicetak otomatis oleh perangkat printer (layar Pesanan Online yang terbuka + printer terhubung) ---------- */
-const NO={q:{},s:'',busy:false,key:'',v:'grid'};
+const NO={q:{},s:'',busy:false,key:'',v:(()=>{try{return localStorage.getItem('pos_nov')==='grid'?'grid':'list'}catch(e){return'list'}})()};
 function noView(v){NO.v=v;try{localStorage.setItem('pos_nov',v)}catch(e){}noList()}
 function noOpen(tbl){
   if(!can('co')){toast('Tidak punya izin Pesanan Online');return}
@@ -3646,6 +3648,7 @@ function noOpen(tbl){
   <div><label class="fl">Meja</label><input class="fi" id="noT" maxlength="12" autocomplete="off" value="${esc(tbl||'')}"></div></div>
   <div class="two"><div><label class="fl">Tipe</label><select class="fi" id="noTy"><option>Dine In</option><option>Takeaway</option></select></div>
   <div><label class="fl">Cari menu</label><input class="fi" id="noS" placeholder="Cari…" oninput="NO.s=this.value;noList()"></div></div>
+  <div class="gtool"><span class="lb">Tampilan</span><button type="button" class="chip" id="noVl" onclick="noView('list')">Daftar</button><button type="button" class="chip" id="noVg" onclick="noView('grid')">Grid</button></div>
   <div id="noL" class="nol grid"></div>
   <label class="fl">Catatan</label><input class="fi" id="noC" maxlength="200" placeholder="Mis. tanpa pedas">
   <div class="nof"><b id="noTot"></b><button class="btn" id="noGo" onclick="noSend()">Kirim ke Printer</button></div>
