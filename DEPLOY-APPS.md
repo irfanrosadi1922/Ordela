@@ -22,3 +22,18 @@ Satu kode, empat aplikasi. **Mode default: tiap aplikasi punya layar login sendi
 - Workflow `.github/workflows/apps.yml` berjalan tiap push ke `main` dan mengirim hasil ke repo tujuan. Tanpa `DEPLOY_TOKEN`, hanya build.
 - Lokal: `node scripts/build-apps.mjs [kasir|admin|dapur|pesan]`.
 - Pembatasan sisi server: tiap sesi terikat aplikasi (`aud`); rute di luar cakupan aplikasi ditolak 403.
+
+## APK Android (dua aplikasi)
+
+Workflow **Buat APK** (`.github/workflows/apk.yaml`) membangun dua APK sekaligus dari satu basis kode:
+
+| Aplikasi | Package | Nama | Berkas |
+|---|---|---|---|
+| Kasir | `com.ordela.kasir` | Ordela Kasir | `Ordela-Kasir.apk` |
+| Admin | `com.ordela.admin` | Ordela Admin | `Ordela-Admin.apk` |
+
+- Jalankan: GitHub → Actions → **Buat APK** → Run workflow (atau push tag `v*`). Unduh dari bagian *Artifacts* (`Ordela-kasir-apk`, `Ordela-admin-apk`).
+- Mode default: **langsung** — APK membuka `https://kasir.ordela.my.id/` dan `https://admin.ordela.my.id/` sehingga selalu versi terbaru tanpa memasang APK ulang. Isi variabel repo `APP_LIVE=0` untuk mode luring (isi dibundel di APK). Variabel `APP_DOMAIN` mengganti domain dasar.
+- Kedua APK memakai keystore yang sama (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`). Tanpa secret itu, tiap APK memakai kunci sementara sendiri dan menyertakan `KUNCI-SIMPAN-INI.jks`.
+- Notifikasi native (Firebase): `GOOGLE_SERVICES_JSON` harus memuat **dua** klien dengan package `com.ordela.kasir` dan `com.ordela.admin`.
+- Aplikasi lama `com.ordela.app` tidak ikut diperbarui; hapus manual dari HP bila masih terpasang.

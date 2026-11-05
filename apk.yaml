@@ -5,7 +5,15 @@ on:
     tags: ['v*']
 jobs:
   apk:
+    name: APK ${{ matrix.app }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [kasir, admin]      # dua aplikasi: Ordela Kasir & Ordela Admin
+    env:
+      APP: ${{ matrix.app }}
+      POS_DOMAIN: ${{ vars.APP_DOMAIN || 'ordela.my.id' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -14,20 +22,23 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - name: Siapkan isi aplikasi
         run: |
+          case "$APP" in
+            kasir) APPID=com.ordela.kasir; NAME="Ordela Kasir";;
+            admin) APPID=com.ordela.admin; NAME="Ordela Admin";;
+          esac
+          echo "APPID=$APPID" >> $GITHUB_ENV
+          # isi aplikasi = hasil build subdomain (profil, tab, dan pengaturan khusus aplikasi itu)
+          node scripts/build-apps.mjs "$APP"
           mkdir www
-          echo '{"appId":"com.ordela.app","appName":"Ordela","webDir":"www","backgroundColor":"#ffffff"}' > capacitor.config.json
-          cp index.html order.html sw.js sbapi.js auth.js native.js pos2.js sso.js skin.css skin.js viewport.js html5-qrcode.min.js config.js qr.js qris.js manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png icon-light-192.png icon-light-512.png icon-ordela-dark.svg icon-ordela-red.svg icon-ordela-maskable.svg www/
-          cp -r brand www/brand
-          # alamat website publik untuk QR: variabel APP_URL > file CNAME > alamat GitHub Pages
-          PUB="${{ vars.APP_URL }}"
-          if [ -z "$PUB" ] && [ -f CNAME ]; then PUB="https://$(tr -d ' \r\n' < CNAME)/"; fi
-          if [ -z "$PUB" ]; then PUB="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"; fi
-          echo "window.POS_PUBLIC_URL='$PUB';" >> www/native.js
-          echo "Alamat publik QR: $PUB"
-          # Bila variabel APP_URL diisi, aplikasi membuka situs live (selalu terbaru)
-          if [ -n "${{ vars.APP_URL }}" ]; then
-            node -e "const c=require('./capacitor.config.json');c.server={url:'${{ vars.APP_URL }}',cleartext:false};require('fs').writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
-          fi
+          cp -r "dist/$APP/." www/
+          rm -f www/CNAME www/.nojekyll
+          # mode langsung (default): membuka situs live https://<app>.<domain>/ agar selalu terbaru. Isi variabel APP_LIVE=0 untuk mode luring (isi dibundel di APK).
+          LIVE="${{ vars.APP_LIVE }}"
+          NAME="$NAME" APPID="$APPID" LIVE="$LIVE" URL="https://$APP.$POS_DOMAIN/" node -e "
+            const c={appId:process.env.APPID,appName:process.env.NAME,webDir:'www',backgroundColor:'#ffffff'};
+            if(process.env.LIVE!=='0')c.server={url:process.env.URL,cleartext:false};
+            require('fs').writeFileSync('capacitor.config.json',JSON.stringify(c,null,2));"
+          cat capacitor.config.json
       - run: npm install --no-audit --no-fund
       - run: npx cap add android
       - name: Izin kamera, lokasi, ikon
@@ -41,7 +52,7 @@ jobs:
           grep -c CAMERA $M
       - name: Plugin Bluetooth klasik (printer thermal)
         run: |
-          D=android/app/src/main/java/com/ordela/app
+          D=android/app/src/main/java/$(echo "$APPID" | tr . /)
           mkdir -p $D
           cat > $D/ClassicBtPlugin.java <<'JAVAEOF'
           package com.ordela.app;
@@ -253,6 +264,7 @@ jobs:
               }
           }
           JAVAEOF
+          sed -i "s/com\.ordela\.app/$APPID/g" $D/*.java
           ls -la $D
       - name: Firebase (notifikasi) bila kunci tersedia
         env:
@@ -284,10 +296,10 @@ jobs:
           mkdir out
           IN=$(ls android/app/build/outputs/apk/release/*.apk | head -1)
           $BT/zipalign -p 4 "$IN" aligned.apk
-          $BT/apksigner sign --ks ks.jks --ks-key-alias pos --ks-pass pass:$PASS --key-pass pass:$PASS --out out/Ordela.apk aligned.apk
-          $BT/apksigner verify out/Ordela.apk
+          $BT/apksigner sign --ks ks.jks --ks-key-alias pos --ks-pass pass:$PASS --key-pass pass:$PASS --out "out/Ordela-${APP^}.apk" aligned.apk
+          $BT/apksigner verify "out/Ordela-${APP^}.apk"
           [ -n "$KS_B64" ] || cp ks.jks out/KUNCI-SIMPAN-INI.jks
       - uses: actions/upload-artifact@v4
         with:
-          name: Ordela-apk
+          name: Ordela-${{ matrix.app }}-apk
           path: out/*

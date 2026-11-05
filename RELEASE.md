@@ -25,7 +25,7 @@
 - [ ] 4 subdomain terbuka dengan HTTPS dan alur SSO lancar
 - [ ] Secret `DEPLOY_TOKEN` terisi, workflow deploy hijau
 - [ ] Naikkan versi service worker tiap rilis (`sw.js`)
-- [ ] Bangun ulang APK/IPA lalu uji di perangkat
+- [ ] Bangun ulang APK (Kasir & Admin) dan IPA lalu uji di perangkat
 - [ ] Cadangkan database Supabase sebelum rilis besar
 
 ## Rollback
