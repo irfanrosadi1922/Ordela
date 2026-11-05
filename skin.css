@@ -397,3 +397,6 @@ html.ordela-rotating[data-skin] *{-webkit-backdrop-filter:none!important;backdro
   html[data-skin] #invoice .hrow .btn{padding:9px}
   html[data-skin] #invoice>.mini{margin:6px auto 0!important}
 }
+
+/* tombol lonceng di bar atas dihapus (pesanan online tetap ada di tab/menu dan lewat notifikasi Dynamic Island) */
+#coBell{display:none!important}
