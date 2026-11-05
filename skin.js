@@ -251,13 +251,13 @@
     /* menu bergrup (dipakai semua aplikasi; baris hanya muncul bila jabatan berhak dan aplikasinya mengizinkan) */
     var G = [
       ['Operasional', 'Kerja harian', [
-        ['pos', 'Kasir', 'Transaksi & pembayaran', 'term', '#2f6bff'],
+        ['pos', 'Kasir', 'Transaksi & pembayaran', 'term', 'var(--ad)'],
         ['table', 'Meja', 'Denah & status meja', 'table', '#0ea5e9'],
         ['kds', 'Layar Dapur', 'Antrian pesanan dapur', 'cook', '#f97316'],
         ['co', 'Pesanan Online', 'Pesanan pelanggan & GoFood/Grab', 'bag', '#06b6d4'],
         ['shift', 'Shift Kasir', 'Buka-tutup kas per shift', 'timer', '#14b8a6']]],
       ['Penjualan', 'Omzet dan riwayat', [
-        ['home', 'Beranda & Laporan', 'Omzet, grafik, ekspor Excel', 'chart', '#2f6bff'],
+        ['home', 'Beranda & Laporan', 'Omzet, grafik, ekspor Excel', 'chart', 'var(--ad)'],
         ['riw', 'Riwayat Pesanan', 'Semua transaksi & struk', 'receipt', '#8b5cf6'],
         ['exp', 'Pengeluaran', 'Catat biaya operasional', 'wallet', '#64748b']]],
       ['Pelanggan & Promosi', 'Bangun loyalitas', [
@@ -277,7 +277,7 @@
         ['branch', 'Cabang', 'Pindah stok antar cabang', 'store', '#d946ef'],
         ['integ', 'Integrasi', 'GoFood, GrabFood, ShopeeFood, webhook', 'nodes', '#0ea5e9'],
         ['prn', 'Printer', 'Struk & printer', 'printer', '#475569'],
-        ['set', 'Pengaturan', 'Toko, pajak, pembayaran, warna', 'set', '#2f6bff']]]
+        ['set', 'Pengaturan', 'Toko, pajak, pembayaran, warna', 'set', 'var(--ad)']]]
     ];
     var CHEV = '<svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
     function dayStart(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); }

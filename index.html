@@ -5388,7 +5388,7 @@ function renderHome(){
   ${H?`<div class="panel hfil"><div class="chips">${HR_PRE.map(([k,t])=>`<button class="chip ${S.hr===k?'on':''}" onclick="setHR('${k}')">${t}</button>`).join('')}</div>
     <div class="hdates"><label><span>Dari</span><input class="fi" type="date" id="hFrom" value="${esc(S.hf)}" onchange="setHD()"></label><label><span>Sampai</span><input class="fi" type="date" id="hTo" value="${esc(S.ht)}" onchange="setHD()"></label></div></div>`:''}
   <div class="kp">
-    <div class="kc"><div class="kt"><span>Pendapatan</span>${D(rev,pl?sumT(pl):0)}</div><div class="kv">${KI('#111111','<path d="M7 17L17 7M9 7h8v8"/>')}<span>${money(rev)}</span></div></div>
+    <div class="kc"><div class="kt"><span>Pendapatan</span>${D(rev,pl?sumT(pl):0)}</div><div class="kv">${KI('var(--ad)','<path d="M7 17L17 7M9 7h8v8"/>')}<span>${money(rev)}</span></div></div>
     <div class="kc"><div class="kt"><span>Pesanan</span>${D(l.length,pl?pl.length:0)}</div><div class="kv">${KI('#34c27a','<circle cx="9" cy="20" r="1.2"/><circle cx="18" cy="20" r="1.2"/><path d="M2 3h3l2.5 12h11l2-8H6"/>')}<span>${l.length}</span></div></div>
     <div class="kc"><div class="kt"><span>Dine In</span>${D(dn,dnP)}</div><div class="kv">${KI('#ef4444','<path d="M6 6l12 12M18 6L6 18"/>')}<span>${dn}</span></div></div>
     <div class="kc"><div class="kt"><span>Take Away</span>${D(tk,tkP)}</div><div class="kv">${KI('#f7b538','<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8a3 3 0 0 1 6 0"/>')}<span>${tk}</span></div></div>
