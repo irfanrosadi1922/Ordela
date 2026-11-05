@@ -431,7 +431,7 @@ function patchLogin(){
   const l=document.querySelector('label[for=loginUser]');if(l)l.textContent='Username atau email';
   const i=$('#loginUser');if(i)i.placeholder='username atau email@contoh.com';
   const lf=document.querySelector('#login .lfoot');
-  if(lf){lf.classList.add('two');lf.innerHTML='<span><a onclick="authForgot()">Lupa sandi?</a></span><span>Belum punya akun? <a onclick="authRegister()">Daftar</a></span>'}
+  if(lf){lf.classList.add('two');lf.innerHTML='<span><a onclick="authForgot()">Lupa sandi?</a></span>'}
 }
 const _aa=window.applyAccess;
 window.applyAccess=function(){_aa.apply(this,arguments);vRender();authGate()};
