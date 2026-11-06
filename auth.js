@@ -467,12 +467,13 @@ window.applyAccess=function(){_aa.apply(this,arguments);vRender();authGate()};
 const _ra=window.renderAccPage;
 window.renderAccPage=function(){_ra.apply(this,arguments);renderAccVerif()};
 const _sn=window.syncNow;
-window.syncNow=function(){if(CL.me&&CL.me.role==='new')return;return _sn.apply(this,arguments)};
+const needSetup=m=>!!m&&(m.role==='new'||(m.role==='owner'&&m.store===null)); // owner buatan admin: sudah owner, toko belum dibuat
+window.syncNow=function(){if(needSetup(CL.me))return;return _sn.apply(this,arguments)};
 const _cl=window.cloudLogout;
 window.cloudLogout=function(){try{sessionStorage.removeItem('pos_vbar_x')}catch(e){}hide();return _cl.apply(this,arguments)};
 
 function authGate(){ // akun baru tanpa toko -> penyiapan toko
-  if(CL.on&&CL.tok&&CL.me&&CL.me.role==='new'&&typeof window.authWizard==='function'&&!document.getElementById('wzOn'))window.authWizard();
+  if(CL.on&&CL.tok&&needSetup(CL.me)&&typeof window.authWizard==='function'&&!document.getElementById('wzOn'))window.authWizard();
 }
 
 patchLogin();
