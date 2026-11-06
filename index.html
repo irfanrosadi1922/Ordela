@@ -313,11 +313,11 @@ td .th img{width:100%;height:100%;object-fit:cover}
 
 @media (max-width:700px){
   .top .pill:not(.search){display:none}
-  .bnav{display:grid;grid-template-columns:repeat(5,1fr);align-items:center;position:fixed;left:0;right:0;bottom:0;z-index:38;height:calc(66px + env(safe-area-inset-bottom,0px));padding:0 max(8px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(8px,env(safe-area-inset-left,0px));filter:drop-shadow(0 -6px 14px rgba(0,0,0,.08));-webkit-tap-highlight-color:transparent}
-  .bnav .bnbg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;z-index:-1;pointer-events:none}.bnav .bnbg{-webkit-backdrop-filter:blur(16px) saturate(155%);backdrop-filter:blur(16px) saturate(155%)}.bnav #bnrect{fill-opacity:.78}
-  .bnav .bndot{position:absolute;top:-9px;left:-29px;width:58px;height:58px;border-radius:50%;background:var(--b);box-shadow:0 8px 20px rgba(17,17,17,.45);z-index:0;pointer-events:none;will-change:transform;transition:opacity .2s}
+  .bnav{display:grid;grid-template-columns:repeat(5,1fr);align-items:center;position:fixed;left:0;right:0;bottom:0;z-index:38;height:calc(66px + env(safe-area-inset-bottom,0px));padding:0 max(8px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(8px,env(safe-area-inset-left,0px));-webkit-backdrop-filter:blur(22px) saturate(165%);backdrop-filter:blur(22px) saturate(165%);filter:drop-shadow(0 -6px 14px rgba(0,0,0,.08));-webkit-tap-highlight-color:transparent}
+  .bnav .bnbg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;z-index:0;pointer-events:none}.bnav #bnrect{fill-opacity:.48}
+  .bnav .bndot{position:absolute;top:-9px;left:-29px;width:58px;height:58px;border-radius:50%;background:var(--b);box-shadow:0 8px 20px rgba(17,17,17,.45);z-index:1;pointer-events:none;will-change:transform;transition:opacity .2s}
   .bnav.none .bndot{opacity:0}
-  .bnav button{position:relative;z-index:1;height:66px;display:grid;place-items:center;color:#b9b9b9;transition:color .2s;-webkit-tap-highlight-color:transparent}
+  .bnav button{position:relative;z-index:2;height:66px;display:grid;place-items:center;color:#b9b9b9;transition:color .2s;-webkit-tap-highlight-color:transparent}
   .bnav button svg{width:26px;height:26px;transition:transform .38s cubic-bezier(.34,1.56,.64,1)}
   .bnav button.on{color:#fff}
   .bnav button.on svg{transform:translateY(-13px) scale(1.08);animation:bnpop .45s}
