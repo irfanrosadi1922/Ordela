@@ -182,8 +182,8 @@ window.authForgot=function(){
 };
 
 /* ---------- buat sandi baru (dari tautan di email) ---------- */
-function newPwScreen(token){
-  const f=show(`${brand()}<h2>Buat sandi baru</h2>
+function newPwScreen(token,invite){
+  const f=show(`${brand()}<h2>${invite?'Buat kata sandi akun Anda':'Buat sandi baru'}</h2>${invite?'<p class="lsub">Anda diundang ke Ordela. Buat kata sandi, lalu lengkapi data diri dan toko Anda.</p>':''}
   <label class="fl" for="nPw">Kata sandi baru</label>${eye('nPw')}
   <label class="fl" for="nPw2">Ulangi kata sandi</label>${eye('nPw2')}
   <p class="hint" style="margin:4px 0 0;font-size:12px;color:var(--mu)">Minimal 8 karakter, berisi huruf dan angka.</p>
@@ -198,7 +198,8 @@ function newPwScreen(token){
     try{
       const r=await gt('/user',{method:'PUT',bearer:token,body:{password:p}});
       if(!r.ok)return msg(gtErr(r));
-      hide();showLogin('Sandi berhasil diperbarui. Masuk dengan sandi baru.');
+      if(invite){try{const u=await gt('/user',{method:'GET',bearer:token});if(u.ok&&u.j&&u.j.email)localStorage.setItem('pos_user',u.j.email)}catch(e){}}
+      hide();showLogin(invite?'Kata sandi dibuat. Masuk untuk melengkapi data diri dan toko.':'Sandi berhasil diperbarui. Masuk dengan sandi baru.');
     }catch(e){msg('Tidak bisa terhubung. Coba lagi.')}
     finally{setBusy(b,false)}
   });
@@ -221,6 +222,7 @@ async function handleQuery(){
   let r;try{r=await gt('/verify',{body:{type:ty,token_hash:th}})}catch(e){toast('Tidak bisa terhubung');return true}
   if(!r.ok||!r.j||!r.j.access_token){toast('Tautan sudah kedaluwarsa atau sudah dipakai. Minta tautan baru.');if(ty==='recovery')setTimeout(authForgot,300);return true}
   if(ty==='recovery'){newPwScreen(r.j.access_token);return true}
+  if(ty==='invite'){newPwScreen(r.j.access_token,true);return true}
   toast('Email berhasil diverifikasi');setTimeout(async()=>{try{await refreshMe();renderAccVerif();if(S.view==='acc')renderAccPage()}catch(e){}},400);
   return true;
 }
@@ -229,6 +231,7 @@ function handleHash(){
   if(p.error||p.error_code){toast(/expired|invalid/i.test((p.error_code||'')+(p.error_description||''))?'Tautan sudah kedaluwarsa. Minta tautan baru.':'Tautan tidak valid.');
     if(p.type==='recovery'||/recover/i.test(p.error_description||''))setTimeout(authForgot,300);return}
   if(p.type==='recovery'&&p.access_token){newPwScreen(p.access_token);return}
+  if(p.type==='invite'&&p.access_token){newPwScreen(p.access_token,true);return}
   if(p.type==='signup'||p.type==='email_change'||p.type==='invite'||p.type==='magiclink'){toast('Email berhasil diverifikasi');setTimeout(async()=>{try{await refreshMe();renderAccVerif();if(S.view==='acc')renderAccPage()}catch(e){}},400)}
 }
 
@@ -354,16 +357,42 @@ function wzDefaults(){
   WZ.tz=TZS.some(x=>x[0]===z)?z:'Asia/Jakarta';
   WZ.cc=phDefCc();WZ.cur=/Kuala_Lumpur/.test(WZ.tz)?'RM':/Singapore/.test(WZ.tz)?'S$':/Brunei/.test(WZ.tz)?'B$':/Bangkok/.test(WZ.tz)?'฿':/Manila/.test(WZ.tz)?'₱':'Rp';
 }
-function wzDots(){return'<div class="wz">'+[1,2,3].map(i=>`<i class="${i<=WZ.step?'on':''}"></i>`).join('')+'</div>'}
+const wzOff=()=>WZ.needId?1:0,wzTot=()=>3+wzOff(),wzCur=()=>WZ.step===0?1:WZ.step+wzOff();
+function wzDots(){return'<div class="wz">'+Array.from({length:wzTot()},(_,i)=>`<i class="${i+1<=wzCur()?'on':''}"></i>`).join('')+'</div>'}
 window.authWizard=function(){
   wzDefaults();
   const m=CL.me||{};
   if(!WZ.name&&m.name)WZ.name='';
+  if(WZ.needId===undefined){WZ.needId=!m.phone;WZ.idDone=false;WZ.step=WZ.needId?0:1}
   const hdr=`<i id="wzOn" hidden></i>${wzDots()}`;
   const out=`<span class="alt"><a onclick="cloudLogout()">Keluar</a></span>`;
   let f;
-  if(WZ.step===1){
-    f=show(`${hdr}<h2>Siapkan toko Anda</h2><p class="lsub">Langkah 1 dari 3 · Informasi toko</p>
+  if(WZ.step===0){
+    f=show(`${hdr}<h2>Data diri Anda</h2><p class="lsub">Langkah 1 dari ${wzTot()} · Identitas pemilik akun</p>
+    <label class="fl" for="iName">Nama lengkap</label><input class="fi" id="iName" maxlength="60" autocomplete="name" value="${E(WZ.pName!=null?WZ.pName:(m.name||''))}" placeholder="Nama sesuai identitas">
+    <label class="fl">Nomor telepon <span style="font-weight:400">(opsional)</span></label>
+    <div class="phr"><select class="fi" id="iCc">${phCcOpts(WZ.cc)}</select><input class="fi" id="iPhone" type="tel" inputmode="tel" maxlength="14" value="${E(WZ.pPhone||'')}" placeholder="812 3456 7890"></div>
+    <label class="fl" for="iBirth">Tanggal lahir <span style="font-weight:400">(opsional)</span></label><input class="fi" id="iBirth" type="date" autocomplete="bday" value="${E(WZ.pBirth||'')}">
+    <label class="fl" for="iAddr">Alamat <span style="font-weight:400">(opsional)</span></label><textarea class="fi" id="iAddr" maxlength="300" placeholder="Jalan, kota">${E(WZ.pAddr||'')}</textarea>
+    <p class="fe" id="aErr" role="alert"></p><button class="btn" id="iBtn" type="submit">Lanjut</button>${out}`);
+    $('#iPhone').addEventListener('input',e=>{e.target.value=phFmt(e.target.value)});
+    f.addEventListener('submit',async()=>{
+      const name=val('iName').trim().replace(/\s+/g,' '),ph=val('iPhone').replace(/\D/g,''),birth=val('iBirth'),addr=val('iAddr').trim(),cc=val('iCc');
+      WZ.pName=name;WZ.pPhone=val('iPhone');WZ.pBirth=birth;WZ.pAddr=addr;WZ.cc=cc;
+      if(name.length<2||name.length>60)return msg('Nama lengkap wajib diisi (2-60 karakter).');
+      if(ph&&ph.length<6)return msg('Nomor telepon tidak valid.');
+      if(birth){const d=new Date(birth);if(isNaN(d)||d>new Date()||d.getFullYear()<1900)return msg('Tanggal lahir tidak valid.')}
+      const b=$('#iBtn');setBusy(b,true,'Menyimpan…');msg('');
+      try{
+        const r=await api('/api/me',{method:'PUT',body:JSON.stringify({name,phone:ph?'+'+cc+' '+phFmt(ph.replace(/^0+/,'')):'',photo:m.photo||'',birth,address:addr})});
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok)return msg(j.error||'Gagal menyimpan data diri. Coba lagi.');
+        setMe(j);WZ.idDone=true;WZ.step=1;authWizard();
+      }catch(e){if(e&&e.message!=='auth')msg('Tidak bisa terhubung. Coba lagi.')}
+      finally{setBusy(b,false)}
+    });
+  }else if(WZ.step===1){
+    f=show(`${hdr}<h2>Siapkan toko Anda</h2><p class="lsub">Langkah ${wzCur()} dari ${wzTot()} · Informasi toko</p>
     <label class="fl" for="wName">Nama toko</label><input class="fi" id="wName" maxlength="60" value="${E(WZ.name)}" placeholder="mis. Kedai Melati" autocomplete="organization">
     <label class="fl" for="wAddr">Alamat toko</label><textarea class="fi" id="wAddr" maxlength="300" placeholder="Jalan, kota">${E(WZ.addr)}</textarea>
     <label class="fl">Nomor telepon toko <span style="font-weight:400">(opsional)</span></label>
@@ -376,7 +405,7 @@ window.authWizard=function(){
       if(WZ.phone&&WZ.phone.replace(/\D/g,'').length<6)return msg('Nomor telepon tidak valid.');
       WZ.step=2;authWizard()});
   }else if(WZ.step===2){
-    f=show(`${hdr}<h2>Pengaturan dasar</h2><p class="lsub">Langkah 2 dari 3 · Mata uang, zona waktu, pajak</p>
+    f=show(`${hdr}<h2>Pengaturan dasar</h2><p class="lsub">Langkah ${wzCur()} dari ${wzTot()} · Mata uang, zona waktu, pajak</p>
     <label class="fl" for="wCur">Mata uang</label><select class="fi" id="wCur">${CURS.map(c=>`<option value="${E(c[0])}" ${c[0]===WZ.cur?'selected':''}>${E(c[1])}</option>`).join('')}</select>
     <label class="fl" for="wTz">Zona waktu</label><select class="fi" id="wTz">${TZS.map(c=>`<option value="${c[0]}" ${c[0]===WZ.tz?'selected':''}>${E(c[1])}</option>`).join('')}</select>
     <label class="fl" for="wTax">Pajak (%)</label><input class="fi" id="wTax" type="number" inputmode="decimal" min="0" max="50" step="0.5" value="${E(WZ.tax)}">
@@ -388,7 +417,7 @@ window.authWizard=function(){
       const x=parseFloat(WZ.tax);if(isNaN(x)||x<0||x>50)return msg('Pajak harus 0 sampai 50.');
       WZ.step=3;authWizard()});
   }else{
-    f=show(`${hdr}<h2>Logo toko</h2><p class="lsub">Langkah 3 dari 3 · Opsional, bisa diubah nanti</p>
+    f=show(`${hdr}<h2>Logo toko</h2><p class="lsub">Langkah ${wzCur()} dari ${wzTot()} · Opsional, bisa diubah nanti</p>
     <div class="lgup"><span class="lpv" id="wPv">${WZ.logo?`<img src="${E(WZ.logo)}" alt="">`:'<small style="color:var(--mu)">Logo</small>'}</span>
       <div><button class="btn sec sm" type="button" onclick="document.getElementById('wFile').click()">Pilih gambar</button> <button class="lnk" type="button" id="wRm" ${WZ.logo?'':'hidden'}>Hapus</button></div></div>
     <input type="file" id="wFile" accept="image/*" hidden>
@@ -420,7 +449,7 @@ async function wzFinish(){
     d.set={...d.set,store:WZ.name,addr:WZ.addr,phone:WZ.phone?'+'+WZ.cc+' '+WZ.phone:'',tax:parseFloat(WZ.tax)||0,cur:WZ.cur,dec,logo:WZ.logo,tz:WZ.tz};
     delete d._ts;
     db=fixDb(d);S.cart={};S.sel.clear();CL.ver=0;CL.dirty=true;persistMeta();save();applyBrand();
-    hide();Object.assign(WZ,{step:1,name:'',addr:'',phone:'',logo:''});
+    hide();Object.assign(WZ,{step:1,name:'',addr:'',phone:'',logo:'',needId:undefined,idDone:false,pName:null,pPhone:'',pBirth:'',pAddr:''});
     applyAccess();go('pos');syncNow();toast('Toko siap. Mulai tambahkan menu Anda.');
   }catch(e){if(e&&e.message!=='auth')msg('Tidak bisa terhubung. Coba lagi.')}
   finally{setBusy(b,false)}
