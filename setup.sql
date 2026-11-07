@@ -271,7 +271,7 @@ create or replace function pos.me_self(u pos.users) returns jsonb language sql s
     'hasAuth', u.auth_id is not null, 'store', (select jsonb_build_object('code', s.code, 'name', s.name) from pos.stores s where s.id = u.store_id),
     'emailVerified', coalesce((select a.email_confirmed_at is not null from auth.users a where a.id = u.auth_id), false),
     'pendingEmail', coalesce((select nullif(lower(a.email_change), '') from auth.users a where a.id = u.auth_id), ''),
-    'theme', coalesce((select ot.color from pos.owner_theme ot join pos.stores st on st.owner_id = ot.owner_id where st.id = u.store_id), 'biru')) $;
+    'theme', coalesce((select ot.color from pos.owner_theme ot join pos.stores st on st.owner_id = ot.owner_id where st.id = u.store_id), 'biru')) $$;
 
 -- ---- sandi: akun Supabase Auth memakai hash di auth.users, akun lama (dan staf) memakai pos.users.pw
 create or replace function pos.pw_ok(u pos.users, pw text) returns boolean language plpgsql as $$
