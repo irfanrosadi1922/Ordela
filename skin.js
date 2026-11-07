@@ -10,7 +10,24 @@
     var p = PAL.filter(function (x) { return x[0] === c; })[0] || PAL[0];
     var m = document.querySelector('meta[name=theme-color]'); if (m) m.setAttribute('content', p[3]);
   }
-  function setColor(c) { try { localStorage.setItem('pos_color', c); } catch (e) {} applyColor(c); if (typeof window.renderTheme === 'function') window.renderTheme(); }
+  function setColor(c) {
+    if (!PAL.some(function (p) { return p[0] === c; })) return;
+    try { localStorage.setItem('pos_color', c); } catch (e) {}
+    applyColor(c);
+    if (typeof window.renderTheme === 'function') window.renderTheme();
+    var tok = ''; try { tok = localStorage.getItem('pos_tok') || ''; } catch (e) {}
+    if (tok) {
+      fetch('/api/theme', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }, body: JSON.stringify({ color: c }), cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw new Error('save'); })
+        .catch(function () { if (typeof window.toast === 'function') window.toast('Warna belum tersimpan ke akun. Coba lagi.', 'warn'); });
+    }
+  }
+  function applyOwnerColor(c) {
+    if (!PAL.some(function (p) { return p[0] === c; })) c = 'biru';
+    try { localStorage.setItem('pos_color', c); } catch (e) {}
+    applyColor(c);
+    if (typeof window.renderTheme === 'function') window.renderTheme();
+  }
   applyColor(getColor());
   /* tema lain (mis. dari kode lama) tidak boleh mengembalikan mode gelap atau warna status bar lama */
   try { new MutationObserver(function () { if (H.getAttribute('data-theme') !== 'light') H.setAttribute('data-theme', 'light'); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) {}
@@ -86,7 +103,7 @@
     document.addEventListener('visibilitychange', function () { if (!document.hidden) rot(); });
     if (window.visualViewport) window.visualViewport.addEventListener('resize', sched);
   })();
-  window.OrdelaSkin = { island: island, setColor: setColor, palette: PAL, color: getColor };
+  window.OrdelaSkin = { island: island, setColor: setColor, applyOwnerColor: applyOwnerColor, palette: PAL, color: getColor };
   /* semua toast() lama otomatis tampil sebagai Dynamic Island */
   function hook() {
     if (typeof window.toast === 'function' && !window.toast._isl) { var t = function (m) { toastIsland(m); }; t._isl = 1; window.toast = t; }
