@@ -202,12 +202,12 @@ html.kb[data-skin] #v-ai:not([hidden]){padding-bottom:8px}
 @media (max-width:700px){
   html[data-skin] #bnav{
     position:fixed!important;
-    touch-action:manipulation!important;
+    touch-action:none!important;
     -webkit-user-select:none!important;
     user-select:none!important;
   }
   html[data-skin] #bnav button{
-    touch-action:manipulation!important;
+    touch-action:none!important;
     -webkit-tap-highlight-color:transparent;
   }
 }
@@ -355,18 +355,18 @@ html.ordela-rotating[data-skin] *{-webkit-backdrop-filter:none!important;backdro
   html[data-skin] .bnav .lens{
     position:absolute;left:0;top:6px;height:calc(100% - 12px);width:0;border-radius:999px;pointer-events:none;z-index:0;
     transform:translate3d(0,0,0);
-    transition:transform .55s cubic-bezier(.3,1.45,.5,1),width .55s cubic-bezier(.3,1.45,.5,1),opacity .2s;
+    transition:transform .9s cubic-bezier(.22,1.15,.36,1),width .9s cubic-bezier(.22,1.15,.36,1),opacity .2s;
     background:
       radial-gradient(120% 90% at 50% -20%,rgba(255,255,255,.95),rgba(255,255,255,0) 60%),
       linear-gradient(180deg,rgba(255,255,255,.55),color-mix(in srgb,var(--adt) 70%,rgba(255,255,255,.35)));
     -webkit-backdrop-filter:blur(3px) saturate(2) brightness(1.08);backdrop-filter:blur(3px) saturate(2) brightness(1.08);
     box-shadow:inset 0 1.5px 1px rgba(255,255,255,.98),inset 0 -2px 3px color-mix(in srgb,var(--ad) 22%,transparent),inset 2px 0 3px -1px rgba(255,120,200,.28),inset -2px 0 3px -1px rgba(80,200,255,.30),0 6px 16px -6px color-mix(in srgb,var(--ad) 50%,transparent),0 0 0 1px rgba(255,255,255,.65);
   }
-  html[data-skin] .bnav .lens.go{animation:lensgo .55s cubic-bezier(.3,1.2,.5,1)}
+  html[data-skin] .bnav .lens.go{animation:lensgo .9s cubic-bezier(.3,1.1,.5,1)}
   html[data-skin] .bnav .lens.press{transform:translate3d(var(--lx,0px),0,0) scale(1.1)}
-  @keyframes lensgo{0%{scale:1 1}35%{scale:1.22 .9}70%{scale:.97 1.05}100%{scale:1 1}}
+  @keyframes lensgo{0%{scale:1 1}40%{scale:1.16 .93}75%{scale:.98 1.03}100%{scale:1 1}}
   html[data-skin] .bnav button .bi,html[data-skin] .bnav button.on .bi{background:none!important;box-shadow:none!important}
-  html[data-skin] .bnav button{transition:color .25s}
+  html[data-skin] .bnav button{transition:color .45s}
   html[data-skin] .bnav button.on{color:var(--ad)}
   html[data-skin] .bnav button.on svg{transform:scale(1.08)!important;transition:transform .45s cubic-bezier(.3,1.6,.5,1)}
 }
@@ -419,7 +419,7 @@ html[data-skin] .thp .tpg{background:var(--ad)}
   html[data-skin] .bnav.held{transform:scale(1.025)}
   html[data-skin] .bnav button{position:relative;z-index:1}
   html[data-skin] .bnav .lens{z-index:0;overflow:hidden;top:6px;height:calc(100% - 12px);scale:1;
-    transition:transform .55s cubic-bezier(.3,1.45,.5,1),width .55s cubic-bezier(.3,1.45,.5,1),opacity .2s,scale .35s cubic-bezier(.3,1.5,.5,1),top .3s,height .3s}
+    transition:transform .9s cubic-bezier(.22,1.15,.36,1),width .9s cubic-bezier(.22,1.15,.36,1),opacity .2s,scale .35s cubic-bezier(.3,1.5,.5,1),top .3s,height .3s}
   html[data-skin] .bnav .lens.press{z-index:3;top:-7px;height:calc(100% + 14px);scale:1.04;
     -webkit-backdrop-filter:none;backdrop-filter:none;
     background:radial-gradient(130% 90% at 50% -10%,rgba(255,255,255,.98),rgba(255,255,255,.55) 60%),color-mix(in srgb,var(--adt) 55%,#fff);
@@ -477,3 +477,6 @@ html[data-skin] #v-riw .li:active{background:var(--peach)}
 .tier.tbusiness{background:#1f2937;color:#fff}
 @media(prefers-color-scheme:dark){.tier.tbusiness{background:#e5e7eb;color:#111827}}
 .tier.tenterprise,.tier.tlegacyaccess{background:#1f2937;color:#fff}
+
+/* nav bawah mengurus geser/ketuknya sendiri: tanpa ini browser sentuh (iOS) mengambil alih geseran dan membatalkan sentuhan (pointercancel) */
+html[data-skin] .bnav,html[data-skin] #bnav,html[data-skin] .bnav button,html[data-skin] #bnav button{touch-action:none!important}

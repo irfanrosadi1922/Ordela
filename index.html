@@ -5090,7 +5090,7 @@ function acSave(){
   const hs=e=>{
     /* Invoice is its own vertical scroll surface. Never let the global
        horizontal-swipe guard cancel taps/drags on its quantity/action buttons. */
-    if(e&&e.closest&&e.closest('#invoice'))return true;
+    if(e&&e.closest&&e.closest('#invoice,#bnav,.bnav'))return true;   // nav bawah mengurus sentuhannya sendiri
     for(;e&&e!==document.body&&e.nodeType===1;e=e.parentElement){
       if(e.matches&&e.matches('input[type=range],input[type=text],input[type=search],input[type=number],textarea,[data-hz]'))return true;
       const st=getComputedStyle(e);

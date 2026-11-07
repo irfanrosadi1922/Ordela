@@ -215,7 +215,8 @@
       lc.style.transform = 'translate(' + (-x) + 'px,' + (-(-7)) + 'px)';
       lm.style.transformOrigin = (x + w / 2) + 'px ' + (nh / 2) + 'px';
       var hit = null;
-      btns.forEach(function (b) { if (cx >= b.offsetLeft && cx < b.offsetLeft + b.offsetWidth) hit = b; });
+      var best = 1e9;
+      btns.forEach(function (b) { var d = Math.abs(cx - (b.offsetLeft + b.offsetWidth / 2)); if (d < best) { best = d; hit = b; } });
       return hit;
     }
     (function () {
@@ -233,17 +234,19 @@
         if (drag) { clearTimeout(drag.t); drag = null; }
         sup = false;
         var l = lensEl(n); if (!n.querySelector(':scope > button')) return;
-        drag = { id: e.pointerId, x0: e.clientX, moved: false, hit: null, t: setTimeout(function () { abort(); }, 6000) };
+        drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: Date.now(), moved: false, hit: null, t: setTimeout(function () { abort(); }, 6000) };
         lensFill(n, l); l.classList.add('press'); n.classList.add('held');
-        l.style.opacity = 1; l.style.transition = 'transform .16s cubic-bezier(.2,.9,.3,1),width .16s,opacity .15s,scale .3s cubic-bezier(.3,1.5,.5,1)';
+        l.style.opacity = 1; l.style.transition = 'transform .28s cubic-bezier(.2,.9,.3,1),width .28s,opacity .2s,scale .4s cubic-bezier(.3,1.5,.5,1)';
         drag.hit = lensMove(n, l, xOf(e));
       });
       window.addEventListener('pointermove', function (e) {
         if (!drag || e.pointerId !== drag.id) return;
-        if (Math.abs(e.clientX - drag.x0) > 6) drag.moved = true;
+        var mdx = Math.abs(e.clientX - drag.x0), mdy = Math.abs(e.clientY - drag.y0);
+        if (mdx > 6) drag.moved = true;
+        if (Math.max(mdx, mdy) > 10) drag.far = true;   /* gerak jauh (termasuk vertikal) = bukan ketukan */
         var l = lensEl(n), h = lensMove(n, l, xOf(e));
         if (h !== drag.hit) { drag.hit = h; try { navigator.vibrate && navigator.vibrate(6); } catch (_) {} }
-        if (drag.moved) { l.style.transition = 'width .16s,scale .3s cubic-bezier(.3,1.5,.5,1),opacity .15s'; if (e.cancelable) e.preventDefault(); }
+        if (drag.moved) { l.style.transition = 'width .22s,scale .4s cubic-bezier(.3,1.5,.5,1),opacity .2s'; if (e.cancelable) e.preventDefault(); }
       }, { passive: false, capture: true });
       function abort() { if (!drag) return; var l = lensEl(n); clearTimeout(drag.t); drag = null; l.classList.remove('press'); n.classList.remove('held'); l.style.transition = ''; lens(true); }
       function end(e, cancel) {
@@ -251,11 +254,13 @@
         var d = drag, l = lensEl(n); clearTimeout(d.t); drag = null;
         l.classList.remove('press'); n.classList.remove('held'); l.style.transition = '';
         var rc = n.getBoundingClientRect(), out = e && (e.clientY < rc.top - 50 || e.clientY > rc.bottom + 50);   /* dilepas jauh di luar nav = batal */
-        var go = !cancel && !out && d.moved && d.hit;
+        /* ketukan (jari tidak bergeser jauh) dan geseran sama-sama berpindah tab di sini; klik bawaan browser bisa hilang di iOS bila jari sedikit bergeser atau sentuhan dibatalkan */
+        var tap = !d.moved && !d.far && (Date.now() - d.t0) < 700;
+        var go = !out && d.hit && (cancel ? tap : (d.moved || tap));
         sup = false;
         if (go && !d.hit.classList.contains('on')) d.hit.click();
         lens(false);
-        if (d.moved) { sup = true; setTimeout(function () { sup = false; }, 160); }
+        if (go) { sup = true; setTimeout(function () { sup = false; }, 350); }
       }
       /* dengarkan di window supaya jari/mouse yang lepas di luar nav, atau nav yang dibangun ulang saat digeser, tidak membuat status geser tersangkut */
       window.addEventListener('pointerup', function (e) { end(e, false); }, true);
