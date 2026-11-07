@@ -151,7 +151,7 @@
     function lockOf(v) { return typeof viewLock === 'function' && viewLock(v) ? (lockNeed(VIEW_LOCK[v]) || 'yang lebih tinggi') : null; }
     function isOwn() { return typeof isOwner === 'function' ? isOwner() : true; }
     function show(v) { return ok(v) && (isOwn() || !lockOf(v)); }
-    function tierBadge(k) { var t = typeof tierOf === 'function' ? tierOf(k) : null; return t ? '<em class="tier t' + t.toLowerCase() + '">' + t + '</em>' : ''; }
+    function tierBadge(k) { var t = typeof tierOf === 'function' ? tierOf(k) : null; return t ? '<em class="tier t' + String(t).toLowerCase().replace(/[^a-z]/g, '') + '">' + t + '</em>' : ''; }
     var LOCKSVG = '<svg class="lksv" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg>';
 
     /* tab bawah per aplikasi */

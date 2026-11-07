@@ -263,56 +263,39 @@ create or replace function pos.can(u pos.users, k text) returns boolean language
 $$ select u.role = 'owner' or pos.perms_of(u) ? k $$;
 
 -- ---------------------------------------------------------------- paket langganan
--- pos.plans          : daftar paket + urutannya (rank lebih besar = lebih tinggi)
--- pos.plan_features  : paket minimal tiap fitur (ubah dengan UPDATE bila pembagian fitur berubah)
--- pos.owner_plan     : paket yang dimiliki tiap pemilik; seluruh toko & cabangnya ikut paket ini. Tanpa baris = Starter. expires_at lewat = Starter.
--- pos.owner_feat     : pengecualian per pemilik: allow=true membuka fitur di luar paketnya, false mengunci fitur yang ada di paketnya.
--- Tabel hanya bisa diubah dari SQL Editor (service role), tidak terbuka lewat API.
-create table if not exists pos.plans(code text primary key, name text not null, rank int not null, sort int not null default 0);
-alter table pos.plans drop constraint if exists plans_rank_key;
-alter table pos.plans add column if not exists sort int not null default 0;
-create table if not exists pos.plan_features(feat text primary key, min_rank int not null default 1);
-create table if not exists pos.owner_plan(
-  owner_id bigint primary key references pos.t_users(id) on delete cascade,
-  plan text not null references pos.plans(code), expires_at timestamptz, note text, updated_at timestamptz not null default now());
-create table if not exists pos.owner_feat(
-  owner_id bigint not null references pos.t_users(id) on delete cascade, feat text not null, allow boolean not null,
-  primary key (owner_id, feat));
-alter table pos.plans enable row level security; alter table pos.plan_features enable row level security;
-alter table pos.owner_plan enable row level security; alter table pos.owner_feat enable row level security;
--- rank menentukan akses (fitur dengan min_rank <= rank terbuka). Legacy Access sama tingginya dengan Enterprise (semua fitur).
-insert into pos.plans(code, name, rank, sort) values ('starter', 'Starter', 0, 0), ('pro', 'Pro', 1, 1), ('business', 'Business', 2, 2),
-  ('enterprise', 'Enterprise', 3, 3), ('legacy', 'Legacy Access', 3, 4)
-  on conflict (code) do update set name = excluded.name, rank = excluded.rank, sort = excluded.sort;
-update pos.owner_plan set plan = 'starter' where plan = 'free';
-delete from pos.plans where code = 'free';
-insert into pos.plan_features(feat, min_rank) values
-  ('ai', 1), ('promo', 1), ('mem', 1), ('opn', 1), ('kds', 1),
-  ('buy', 2), ('att', 2), ('integ', 2), ('branch', 2) on conflict (feat) do nothing;
--- Pemilik yang sudah ada diberi Legacy Access (semua fitur) supaya tidak tiba-tiba terkunci. Ubah lewat UPDATE pos.owner_plan.
-update pos.owner_plan set plan = 'legacy' where plan = 'business' and note = 'pemilik lama';
-insert into pos.owner_plan(owner_id, plan, note)
-  select u.id, 'legacy', 'pemilik lama' from pos.t_users u where u.role = 'owner' on conflict (owner_id) do nothing;
-
-create or replace function pos.plan_of(p_store bigint) returns jsonb language sql stable set search_path = '' as $$
-  with o as (select st.owner_id from pos.stores st where st.id = p_store),
-  cur as (
-    select pl.code, pl.name, pl.rank, op.expires_at from o
-      join pos.owner_plan op on op.owner_id = o.owner_id join pos.plans pl on pl.code = op.plan
-      where op.expires_at is null or op.expires_at > now()),
-  eff as (select coalesce((select c.rank from cur c), 0) as rank),
-  lk as (
-    select f.feat, (select pn.name from pos.plans pn where pn.rank >= f.min_rank order by pn.rank, pn.sort limit 1) as need
-    from pos.plan_features f
-    where case (select x.allow from pos.owner_feat x, o where x.owner_id = o.owner_id and x.feat = f.feat)
-            when true then false when false then true else f.min_rank > (select rank from eff) end)
-  select jsonb_build_object(
-    'name', coalesce((select c.name from cur c), 'Starter'),
-    'code', coalesce((select c.code from cur c), 'starter'),
-    'rank', (select rank from eff),
-    'expires', (select pos.iso(c.expires_at) from cur c),
-    'locks', coalesce((select jsonb_object_agg(lk.feat, coalesce(lk.need, 'Business')) from lk), '{}'::jsonb))
-$$;
+-- Sumber data: skema billing (billing.plans.features per paket, billing.subscriptions per toko). Tidak ada tabel paket baru di sini.
+-- Paket berlaku bila status active / grandfathered, trialing yang belum lewat, atau past_due selama masa tenggang; selain itu dianggap paket 'free' (Starter).
+-- Tiap fitur aplikasi dipetakan ke kunci fitur di billing.plans.features; fitur yang tidak ada di paket toko → terkunci, "paket minimal" = paket aktif
+-- terendah (urut sort_order) yang memilikinya. Bila skema billing tidak ada, tidak ada yang dikunci.
+drop table if exists pos.owner_feat, pos.owner_plan, pos.plan_features, pos.plans cascade;   -- sisa percobaan sebelumnya
+create or replace function pos.plan_of(p_store bigint) returns jsonb language plpgsql stable set search_path = '' as $$
+declare sub record; v_code text := 'free'; v_pl record; v_locks jsonb := '{}'::jsonb; v_tiers jsonb := '{}'::jsonb; v_need text; m record;
+  fmap constant jsonb := '{"ai":"ai_manager","promo":"promotions","mem":"loyalty","opn":"inventory_advanced","kds":"kds","buy":"supplier_management","att":"staff_attendance","integ":"api_integrations","branch":"multi_outlet"}';
+begin
+  if to_regclass('billing.subscriptions') is null or to_regclass('billing.plans') is null then
+    return jsonb_build_object('name', 'Starter', 'code', 'free', 'status', 'none', 'locks', '{}'::jsonb, 'tiers', '{}'::jsonb);
+  end if;
+  select s.plan_code, s.status, s.trial_ends_at, s.grace_ends_at, s.current_period_end into sub
+    from billing.subscriptions s where s.store_id = p_store order by s.updated_at desc limit 1;
+  if found and (sub.status in ('active', 'grandfathered')
+      or (sub.status = 'trialing' and (sub.trial_ends_at is null or sub.trial_ends_at > now()))
+      or (sub.status = 'past_due' and sub.grace_ends_at is not null and sub.grace_ends_at > now())) then
+    v_code := sub.plan_code;
+  end if;
+  select p.code, p.name, p.features into v_pl from billing.plans p where p.code = v_code;
+  if not found then select p.code, p.name, p.features into v_pl from billing.plans p where p.code = 'free'; end if;
+  for m in select k as feat, v as bkey from jsonb_each_text(fmap) as t(k, v) loop
+    select p.name into v_need from billing.plans p where p.is_active and coalesce((p.features ->> m.bkey)::boolean, false) order by p.sort_order limit 1;
+    v_tiers := v_tiers || jsonb_build_object(m.feat, coalesce(v_need, 'Business'));
+    if coalesce((v_pl.features ->> m.bkey)::boolean, false) is not true then
+      v_locks := v_locks || jsonb_build_object(m.feat, coalesce(v_need, 'Business'));
+    end if;
+  end loop;
+  return jsonb_build_object('name', coalesce(v_pl.name, 'Starter'), 'code', coalesce(v_pl.code, 'free'),
+    'status', coalesce(sub.status, 'none'),
+    'expires', case when sub.status = 'trialing' then pos.iso(sub.trial_ends_at) else pos.iso(sub.current_period_end) end,
+    'locks', v_locks, 'tiers', v_tiers);
+end $$;
 create or replace function pos.feat_ok(p_store bigint, p_feat text) returns boolean language sql stable set search_path = '' as $$
   select not (pos.plan_of(p_store) -> 'locks' ? p_feat) $$;
 
@@ -326,7 +309,7 @@ create or replace function pos.me_self(u pos.users) returns jsonb language sql s
     'emailVerified', coalesce((select a.email_confirmed_at is not null from auth.users a where a.id = u.auth_id), false),
     'pendingEmail', coalesce((select nullif(lower(a.email_change), '') from auth.users a where a.id = u.auth_id), ''),
     'theme', coalesce((select ot.color from pos.owner_theme ot join pos.stores st on st.owner_id = ot.owner_id where st.id = u.store_id), 'biru'),
-    'plan', pos.plan_of(u.store_id) - 'locks', 'locks', pos.plan_of(u.store_id) -> 'locks') $$;
+    'plan', pos.plan_of(u.store_id) - 'locks' - 'tiers', 'locks', pos.plan_of(u.store_id) -> 'locks', 'tiers', pos.plan_of(u.store_id) -> 'tiers') $$;
 
 -- ---- sandi: akun Supabase Auth memakai hash di auth.users, akun lama (dan staf) memakai pos.users.pw
 create or replace function pos.pw_ok(u pos.users, pw text) returns boolean language plpgsql as $$

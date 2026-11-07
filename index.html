@@ -3968,15 +3968,13 @@ function isOwner(){return !CL.on||(!!CL.me&&CL.me.role==='owner')}
 const LOCK_NAME={att:'Absensi',buy:'Pembelian & Pemasok',inv:'Inventori',opn:'Stok Opname',co:'Pesanan Online',mem:'Member',kds:'Layar Dapur',ai:'AI Manager',promo:'Promo',integ:'Integrasi',branch:'Multi-outlet'};
 const VIEW_LOCK={att:'att',buy:'buy',inv:'inv',opname:'opn',co:'co',mem:'mem',kds:'kds',ai:'ai',promo:'promo',integ:'integ',branch:'branch'};
 /* Tingkat paket tiap fitur (dipakai bila server belum mengirim me.locks). Paket toko: me.plan.name, bila kosong dianggap Starter. */
-const FEAT_TIER={ai:'Pro',promo:'Pro',mem:'Pro',opn:'Pro',kds:'Pro',buy:'Business',att:'Business',integ:'Business',branch:'Business'};
-const PLAN_RANK=n=>{n=String(n||'').toLowerCase();return /enterprise|legacy/.test(n)?3:/business|bisnis/.test(n)?2:/pro/.test(n)?1:0};
-const TIER_RANK={Pro:1,Business:2};
-function tierOf(k){return FEAT_TIER[k]||null}
+const FEAT_TIER={ai:'Business',promo:'Business',mem:'Business',opn:'Pro',kds:'Business',buy:'Pro',att:'Pro',integ:'Business',branch:'Business'};
+function tierOf(k){return(CL.me&&CL.me.tiers&&CL.me.tiers[k])||FEAT_TIER[k]||null}
 function lockNeed(k){
   if(!CL.on||!CL.me)return null;
   if(CL.me.locks&&CL.me.locks[k])return CL.me.locks[k];
   if(CL.me.plan&&CL.me.locks)return null;   // server mengirim paket toko → server yang menentukan, tidak ada tebakan klien
-  const t=FEAT_TIER[k];return t&&PLAN_RANK(CL.me.plan&&CL.me.plan.name)<TIER_RANK[t]?t:null}
+  return null}   // server belum mengirim paket (setup.sql belum dijalankan) → jangan mengunci apa pun
 function viewLock(v){const k=VIEW_LOCK[v];return k&&lockNeed(k)?k:null}
 function upgradeDlg(v){
   const k=VIEW_LOCK[v],need=lockNeed(k)||'yang lebih tinggi',nm=LOCK_NAME[k]||'Fitur ini',cur=(CL.me&&CL.me.plan&&CL.me.plan.name)||'saat ini';

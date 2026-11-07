@@ -53,22 +53,10 @@ Isi di GitHub → Settings → Secrets and variables → Actions: `KEYSTORE_BASE
 
 Alur rilis: Actions → **Buat APK** → Run workflow → job `release` menerbitkan APK ke Releases (`apk-latest`) → semua perangkat yang memakai APK terbaru dengan fitur ini mendapat notifikasi. APK **pertama** (yang belum punya pemeriksa pembaruan) harus dipasang manual sekali.
 
-## Paket langganan (Starter / Pro / Business / Enterprise / Legacy Access)
+## Paket langganan
 
-Dijalankan lewat `setup.sql` (jalankan ulang seluruh berkas di Supabase → SQL Editor; data tidak dihapus). Pemilik yang sudah ada otomatis diberi paket **Legacy Access** (semua fitur, setara Enterprise) agar tidak mendadak terkunci; pemilik baru = **Starter** sampai diatur. Seluruh toko dan cabang milik satu pemilik ikut paket pemiliknya.
+Aplikasi membaca paket **per toko** dari skema `billing` (`billing.subscriptions` + fitur di `billing.plans.features`); tidak ada tabel paket terpisah. Dijalankan lewat `setup.sql` (jalankan ulang seluruh berkas di Supabase → SQL Editor; data tidak dihapus).
 
-Atur paket di SQL Editor Kode paket: `starter`, `pro`, `business`, `enterprise`, `legacy`. (ganti `owner_id` dengan id pemilik di `pos.t_users`):
-
-```sql
--- lihat pemilik
-select u.id, u.username, u.name, coalesce(p.plan,'starter') plan, p.expires_at from pos.t_users u left join pos.owner_plan p on p.owner_id=u.id where u.role='owner';
--- beri/ubah paket (expires_at boleh null = tanpa batas; lewat tanggal = otomatis Starter)
-insert into pos.owner_plan(owner_id, plan, expires_at) values (5, 'pro', now() + interval '1 month')
-  on conflict (owner_id) do update set plan=excluded.plan, expires_at=excluded.expires_at, updated_at=now();
--- pengecualian per pemilik: buka (true) atau kunci (false) satu fitur
-insert into pos.owner_feat values (5, 'ai', true) on conflict (owner_id, feat) do update set allow=excluded.allow;
--- ubah paket minimal sebuah fitur untuk semua toko (0 Starter, 1 Pro, 2 Business, 3 Enterprise/Legacy)
-update pos.plan_features set min_rank = 2 where feat = 'ai';
-```
-
-Fitur: `ai`, `promo`, `mem`, `opn`, `kds`, `buy`, `att`, `integ`, `branch`. Server mengirim `me.plan` dan `me.locks` saat login; aplikasi menampilkan gembok + label paket, dan `/api/ai/use` menolak (403) toko yang paketnya belum mencakup AI. Deploy ulang fungsi `ai-chat` (`supabase functions deploy ai-chat --no-verify-jwt`) agar pesan penolakannya tampil.
+- Paket berlaku bila status `active` / `grandfathered`, `trialing` yang belum lewat `trial_ends_at`, atau `past_due` selama `grace_ends_at`. Selain itu (cancelled, expired, suspended, tanpa langganan) dianggap `free` (Starter).
+- Pemetaan fitur aplikasi → kunci di `billing.plans.features`: AI Manager `ai_manager`, Promo `promotions`, Member `loyalty`, Stok Opname `inventory_advanced`, Layar Dapur `kds`, Pembelian & Pemasok `supplier_management`, Absensi `staff_attendance`, Integrasi `api_integrations`, Multi-outlet `multi_outlet`. Ubah isi `features` di `billing.plans` untuk mengubah pembagian; aplikasi ikut.
+- Server mengirim `me.plan` dan `me.locks` saat login (label "Pro"/"Business" di fitur = paket minimal yang memilikinya). `/api/ai/use` menolak (403) toko yang paketnya tidak memiliki `ai_manager`. Deploy ulang fungsi `ai-chat` (`supabase functions deploy ai-chat --no-verify-jwt`) agar pesan penolakannya tampil.
