@@ -37,3 +37,18 @@ Workflow **Buat APK** (`.github/workflows/apk.yaml`) membangun dua APK sekaligus
 - Kedua APK memakai keystore yang sama (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`). Tanpa secret itu, tiap APK memakai kunci sementara sendiri dan menyertakan `KUNCI-SIMPAN-INI.jks`.
 - Notifikasi native (Firebase): `GOOGLE_SERVICES_JSON` harus memuat **dua** klien dengan package `com.ordela.kasir` dan `com.ordela.admin`.
 - Aplikasi lama `com.ordela.app` tidak ikut diperbarui; hapus manual dari HP bila masih terpasang.
+
+### Pembaruan otomatis APK
+
+APK Kasir/Admin memeriksa rilis `apk-latest` di GitHub saat dibuka, saat kembali ke aplikasi, dan tiap 6 jam. Bila ada build lebih baru: muncul notifikasi Dynamic Island + notifikasi sistem + baris **Menu → Pembaruan aplikasi**. Tekan **Perbarui** → berkas APK terunduh → tekan **Pasang**. (Android tidak mengizinkan pemasangan senyap di luar Play Store; pemasangan tetap perlu satu ketukan konfirmasi, dan izin "Pasang aplikasi dari sumber ini" untuk browser diminta sekali.)
+
+**Syarat wajib: kunci tanda tangan tetap.** Pembaruan hanya bisa terpasang bila APK baru ditandatangani kunci yang sama dengan APK terpasang. Tanpa secret `KEYSTORE_BASE64`, tiap build memakai kunci sementara baru sehingga job *Terbitkan rilis* sengaja dilewati. Cara membuat (di komputer Anda, JANGAN dibagikan):
+
+```bash
+keytool -genkeypair -keystore ordela.jks -alias pos -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 ordela.jks        # hasilnya → secret KEYSTORE_BASE64
+```
+
+Isi di GitHub → Settings → Secrets and variables → Actions: `KEYSTORE_BASE64` (hasil base64) dan `KEYSTORE_PASSWORD` (kata sandi yang sama untuk store dan key). Alias harus `pos`. Simpan berkas `ordela.jks` di tempat aman; bila hilang, pengguna harus mencopot-pasang APK.
+
+Alur rilis: Actions → **Buat APK** → Run workflow → job `release` menerbitkan APK ke Releases (`apk-latest`) → semua perangkat yang memakai APK terbaru dengan fitur ini mendapat notifikasi. APK **pertama** (yang belum punya pemeriksa pembaruan) harus dipasang manual sekali.
