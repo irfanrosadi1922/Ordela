@@ -263,6 +263,7 @@ create or replace function pos.can(u pos.users, k text) returns boolean language
 $$ select u.role = 'owner' or pos.perms_of(u) ? k $$;
 
 -- ---------------------------------------------------------------- paket langganan
+-- Cabang (pos.stores.grp) memakai langganan toko pusatnya.
 -- Sumber data: skema billing (billing.plans.features per paket, billing.subscriptions per toko). Tidak ada tabel paket baru di sini.
 -- Paket berlaku bila status active / grandfathered, trialing yang belum lewat, atau past_due selama masa tenggang; selain itu dianggap paket 'free' (Starter).
 -- Tiap fitur aplikasi dipetakan ke kunci fitur di billing.plans.features; fitur yang tidak ada di paket toko → terkunci, "paket minimal" = paket aktif
@@ -272,6 +273,7 @@ create or replace function pos.plan_of(p_store bigint) returns jsonb language pl
 declare sub record; v_code text := 'free'; v_pl record; v_locks jsonb := '{}'::jsonb; v_tiers jsonb := '{}'::jsonb; v_need text; m record;
   fmap constant jsonb := '{"ai":"ai_manager","promo":"promotions","mem":"loyalty","opn":"inventory_advanced","kds":"kds","buy":"supplier_management","att":"staff_attendance","integ":"api_integrations","branch":"multi_outlet"}';
 begin
+  p_store := coalesce((select st.grp from pos.stores st where st.id = p_store), p_store);   -- cabang mengikuti paket toko pusat
   if to_regclass('billing.subscriptions') is null or to_regclass('billing.plans') is null then
     return jsonb_build_object('name', 'Starter', 'code', 'free', 'status', 'none', 'locks', '{}'::jsonb, 'tiers', '{}'::jsonb);
   end if;
