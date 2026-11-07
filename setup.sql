@@ -1091,7 +1091,10 @@ begin
   if u = '/api/branches' and m = 'GET' then
     if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
     v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
-    return pos.r(200, jsonb_build_object('active', me.store_id, 'hq', v_hq, 'canAdd', exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id),
+    return pos.r(200, jsonb_build_object('active', me.store_id, 'hq', v_hq,
+      'canAdd', exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id) and pos.feat_ok(v_hq, 'branch'),
+      'canDel', exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id), 'locked', not pos.feat_ok(v_hq, 'branch'),
+      'need', pos.plan_of(v_hq) -> 'locks' ->> 'branch',
       'list', coalesce((select jsonb_agg(jsonb_build_object('id', x.id, 'name', x.name, 'code', x.code) order by (x.id = v_hq) desc, x.id)
         from pos.stores x where x.id = v_hq or x.grp = v_hq), '[]')));
   end if;
@@ -1099,6 +1102,7 @@ begin
     if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
     v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
     if not exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id) then return pos.r(403, '{"error":"Hanya owner pusat yang boleh menambah cabang"}'); end if;
+    if not pos.feat_ok(v_hq, 'branch') then return pos.r(403, jsonb_build_object('error', 'Multi-outlet belum termasuk di paket toko pusat. Upgrade ke paket ' || coalesce(pos.plan_of(v_hq) -> 'locks' ->> 'branch', 'yang lebih tinggi') || ' untuk menambah cabang.')); end if;
     if (select count(*) from pos.stores x where x.grp = v_hq) >= 20 then return pos.r(400, '{"error":"Maksimal 20 cabang"}'); end if;
     v_name := pos.clean(b ->> 'name', 60);
     if length(v_name) < 2 then return pos.r(400, '{"error":"Nama cabang wajib diisi (min. 2 karakter)"}'); end if;
@@ -1122,6 +1126,16 @@ begin
     if not pos.pw_ok(me, coalesce(b ->> 'password', '')) then return pos.r(403, '{"error":"Sandi salah"}'); end if;
     v_id := nullif(b ->> 'id', '')::bigint;
     if v_id is null or v_id = v_hq or not exists (select 1 from pos.stores x where x.id = v_id and x.grp = v_hq) then return pos.r(404, '{"error":"Cabang tidak ditemukan (toko pusat tidak bisa dihapus di sini)"}'); end if;
+    -- skema billing menunjuk ke pos.stores dengan ON DELETE RESTRICT: tolak dengan pesan jelas bila ada tagihan/langganan berbayar, selain itu hapus langganan otomatis cabang
+    if to_regclass('billing.subscriptions') is not null then
+      if exists (select 1 from billing.invoices i where i.store_id = v_id) then
+        return pos.r(409, '{"error":"Cabang ini punya riwayat tagihan sehingga tidak bisa dihapus. Hubungi Ordela."}');
+      end if;
+      if exists (select 1 from billing.subscriptions bs where bs.store_id = v_id and bs.plan_code <> 'free' and bs.status in ('active', 'trialing', 'past_due', 'grandfathered')) then
+        return pos.r(409, '{"error":"Cabang ini memiliki langganan berbayar. Batalkan langganannya lebih dulu."}');
+      end if;
+      delete from billing.subscriptions where store_id = v_id;
+    end if;
     delete from pos.sessions where uid in (select id from pos.t_users where store_id = v_id);
     update pos.sessions set act_sid = null where act_sid = v_id;
     delete from pos.t_push_tokens where store_id = v_id;
@@ -1138,6 +1152,7 @@ begin
     return pos.r(200, jsonb_build_object('ok', true, 'active', (select coalesce(ss.act_sid, v_hq) from pos.sessions ss where ss.th = encode(extensions.digest(t, 'sha256'), 'hex'))));
   end if;
   if u = '/api/branches/report' and m = 'POST' then
+    if not pos.feat_ok(coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id), 'branch') then return pos.r(403, '{"error":"Multi-outlet belum termasuk di paket toko pusat."}'); end if;
     if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
     v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
     if not exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id) then return pos.r(403, '{"error":"Hanya owner pusat"}'); end if;
@@ -1152,6 +1167,7 @@ begin
       where st.id = v_hq or st.grp = v_hq), '[]'::jsonb)));
   end if;
   if u = '/api/branches/transfer' and m = 'POST' then
+    if not pos.feat_ok(coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id), 'branch') then return pos.r(403, '{"error":"Multi-outlet belum termasuk di paket toko pusat."}'); end if;
     if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
     v_hq := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
     if not exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id) then return pos.r(403, '{"error":"Hanya owner pusat"}'); end if;
