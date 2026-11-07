@@ -3967,9 +3967,9 @@ function isOwner(){return !CL.on||(!!CL.me&&CL.me.role==='owner')}
 /* Pembatasan fitur per paket langganan: server mengirim me.locks = {kunci: nama paket minimal}. Tanpa data itu tidak ada yang terkunci. */
 const LOCK_NAME={att:'Absensi',buy:'Pembelian & Pemasok',inv:'Inventori',opn:'Stok Opname',co:'Pesanan Online',mem:'Member',kds:'Layar Dapur',ai:'AI Manager',promo:'Promo',integ:'Integrasi',branch:'Multi-outlet'};
 const VIEW_LOCK={att:'att',buy:'buy',inv:'inv',opname:'opn',co:'co',mem:'mem',kds:'kds',ai:'ai',promo:'promo',integ:'integ',branch:'branch'};
-/* Tingkat paket tiap fitur (dipakai bila server belum mengirim me.locks). Paket toko: me.plan.name, bila kosong dianggap Free. */
+/* Tingkat paket tiap fitur (dipakai bila server belum mengirim me.locks). Paket toko: me.plan.name, bila kosong dianggap Starter. */
 const FEAT_TIER={ai:'Pro',promo:'Pro',mem:'Pro',opn:'Pro',kds:'Pro',buy:'Business',att:'Business',integ:'Business',branch:'Business'};
-const PLAN_RANK=n=>{n=String(n||'').toLowerCase();return /free|gratis|basic|starter/.test(n)?0:/business|bisnis/.test(n)?2:/enterprise|premium|ultimate/.test(n)?3:/pro/.test(n)?1:n?1:0};
+const PLAN_RANK=n=>{n=String(n||'').toLowerCase();return /enterprise|legacy/.test(n)?3:/business|bisnis/.test(n)?2:/pro/.test(n)?1:0};
 const TIER_RANK={Pro:1,Business:2};
 function tierOf(k){return FEAT_TIER[k]||null}
 function lockNeed(k){

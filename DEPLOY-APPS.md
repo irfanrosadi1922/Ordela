@@ -53,21 +53,21 @@ Isi di GitHub → Settings → Secrets and variables → Actions: `KEYSTORE_BASE
 
 Alur rilis: Actions → **Buat APK** → Run workflow → job `release` menerbitkan APK ke Releases (`apk-latest`) → semua perangkat yang memakai APK terbaru dengan fitur ini mendapat notifikasi. APK **pertama** (yang belum punya pemeriksa pembaruan) harus dipasang manual sekali.
 
-## Paket langganan (Free / Pro / Business)
+## Paket langganan (Starter / Pro / Business / Enterprise / Legacy Access)
 
-Dijalankan lewat `setup.sql` (jalankan ulang seluruh berkas di Supabase → SQL Editor; data tidak dihapus). Pemilik yang sudah ada otomatis diberi paket **Business** agar tidak mendadak terkunci; pemilik baru = **Free** sampai diatur. Seluruh toko dan cabang milik satu pemilik ikut paket pemiliknya.
+Dijalankan lewat `setup.sql` (jalankan ulang seluruh berkas di Supabase → SQL Editor; data tidak dihapus). Pemilik yang sudah ada otomatis diberi paket **Legacy Access** (semua fitur, setara Enterprise) agar tidak mendadak terkunci; pemilik baru = **Starter** sampai diatur. Seluruh toko dan cabang milik satu pemilik ikut paket pemiliknya.
 
-Atur paket di SQL Editor (ganti `owner_id` dengan id pemilik di `pos.t_users`):
+Atur paket di SQL Editor Kode paket: `starter`, `pro`, `business`, `enterprise`, `legacy`. (ganti `owner_id` dengan id pemilik di `pos.t_users`):
 
 ```sql
 -- lihat pemilik
-select u.id, u.username, u.name, coalesce(p.plan,'free') plan, p.expires_at from pos.t_users u left join pos.owner_plan p on p.owner_id=u.id where u.role='owner';
--- beri/ubah paket (expires_at boleh null = tanpa batas; lewat tanggal = otomatis Free)
+select u.id, u.username, u.name, coalesce(p.plan,'starter') plan, p.expires_at from pos.t_users u left join pos.owner_plan p on p.owner_id=u.id where u.role='owner';
+-- beri/ubah paket (expires_at boleh null = tanpa batas; lewat tanggal = otomatis Starter)
 insert into pos.owner_plan(owner_id, plan, expires_at) values (5, 'pro', now() + interval '1 month')
   on conflict (owner_id) do update set plan=excluded.plan, expires_at=excluded.expires_at, updated_at=now();
 -- pengecualian per pemilik: buka (true) atau kunci (false) satu fitur
 insert into pos.owner_feat values (5, 'ai', true) on conflict (owner_id, feat) do update set allow=excluded.allow;
--- ubah paket minimal sebuah fitur untuk semua toko (0 Free, 1 Pro, 2 Business)
+-- ubah paket minimal sebuah fitur untuk semua toko (0 Starter, 1 Pro, 2 Business, 3 Enterprise/Legacy)
 update pos.plan_features set min_rank = 2 where feat = 'ai';
 ```
 

@@ -265,10 +265,12 @@ $$ select u.role = 'owner' or pos.perms_of(u) ? k $$;
 -- ---------------------------------------------------------------- paket langganan
 -- pos.plans          : daftar paket + urutannya (rank lebih besar = lebih tinggi)
 -- pos.plan_features  : paket minimal tiap fitur (ubah dengan UPDATE bila pembagian fitur berubah)
--- pos.owner_plan     : paket yang dimiliki tiap pemilik; seluruh toko & cabangnya ikut paket ini. Tanpa baris = Free. expires_at lewat = Free.
+-- pos.owner_plan     : paket yang dimiliki tiap pemilik; seluruh toko & cabangnya ikut paket ini. Tanpa baris = Starter. expires_at lewat = Starter.
 -- pos.owner_feat     : pengecualian per pemilik: allow=true membuka fitur di luar paketnya, false mengunci fitur yang ada di paketnya.
 -- Tabel hanya bisa diubah dari SQL Editor (service role), tidak terbuka lewat API.
-create table if not exists pos.plans(code text primary key, name text not null, rank int not null unique);
+create table if not exists pos.plans(code text primary key, name text not null, rank int not null, sort int not null default 0);
+alter table pos.plans drop constraint if exists plans_rank_key;
+alter table pos.plans add column if not exists sort int not null default 0;
 create table if not exists pos.plan_features(feat text primary key, min_rank int not null default 1);
 create table if not exists pos.owner_plan(
   owner_id bigint primary key references pos.t_users(id) on delete cascade,
@@ -278,13 +280,19 @@ create table if not exists pos.owner_feat(
   primary key (owner_id, feat));
 alter table pos.plans enable row level security; alter table pos.plan_features enable row level security;
 alter table pos.owner_plan enable row level security; alter table pos.owner_feat enable row level security;
-insert into pos.plans(code, name, rank) values ('free', 'Free', 0), ('pro', 'Pro', 1), ('business', 'Business', 2) on conflict (code) do nothing;
+-- rank menentukan akses (fitur dengan min_rank <= rank terbuka). Legacy Access sama tingginya dengan Enterprise (semua fitur).
+insert into pos.plans(code, name, rank, sort) values ('starter', 'Starter', 0, 0), ('pro', 'Pro', 1, 1), ('business', 'Business', 2, 2),
+  ('enterprise', 'Enterprise', 3, 3), ('legacy', 'Legacy Access', 3, 4)
+  on conflict (code) do update set name = excluded.name, rank = excluded.rank, sort = excluded.sort;
+update pos.owner_plan set plan = 'starter' where plan = 'free';
+delete from pos.plans where code = 'free';
 insert into pos.plan_features(feat, min_rank) values
   ('ai', 1), ('promo', 1), ('mem', 1), ('opn', 1), ('kds', 1),
   ('buy', 2), ('att', 2), ('integ', 2), ('branch', 2) on conflict (feat) do nothing;
--- Pemilik yang sudah ada dibiarkan tetap memakai semua fitur (Business) supaya tidak tiba-tiba terkunci. Turunkan lewat UPDATE pos.owner_plan bila perlu.
+-- Pemilik yang sudah ada diberi Legacy Access (semua fitur) supaya tidak tiba-tiba terkunci. Ubah lewat UPDATE pos.owner_plan.
+update pos.owner_plan set plan = 'legacy' where plan = 'business' and note = 'pemilik lama';
 insert into pos.owner_plan(owner_id, plan, note)
-  select u.id, 'business', 'pemilik lama' from pos.t_users u where u.role = 'owner' on conflict (owner_id) do nothing;
+  select u.id, 'legacy', 'pemilik lama' from pos.t_users u where u.role = 'owner' on conflict (owner_id) do nothing;
 
 create or replace function pos.plan_of(p_store bigint) returns jsonb language sql stable set search_path = '' as $$
   with o as (select st.owner_id from pos.stores st where st.id = p_store),
@@ -294,13 +302,13 @@ create or replace function pos.plan_of(p_store bigint) returns jsonb language sq
       where op.expires_at is null or op.expires_at > now()),
   eff as (select coalesce((select c.rank from cur c), 0) as rank),
   lk as (
-    select f.feat, (select pn.name from pos.plans pn where pn.rank >= f.min_rank order by pn.rank limit 1) as need
+    select f.feat, (select pn.name from pos.plans pn where pn.rank >= f.min_rank order by pn.rank, pn.sort limit 1) as need
     from pos.plan_features f
     where case (select x.allow from pos.owner_feat x, o where x.owner_id = o.owner_id and x.feat = f.feat)
             when true then false when false then true else f.min_rank > (select rank from eff) end)
   select jsonb_build_object(
-    'name', coalesce((select c.name from cur c), 'Free'),
-    'code', coalesce((select c.code from cur c), 'free'),
+    'name', coalesce((select c.name from cur c), 'Starter'),
+    'code', coalesce((select c.code from cur c), 'starter'),
     'rank', (select rank from eff),
     'expires', (select pos.iso(c.expires_at) from cur c),
     'locks', coalesce((select jsonb_object_agg(lk.feat, coalesce(lk.need, 'Business')) from lk), '{}'::jsonb))

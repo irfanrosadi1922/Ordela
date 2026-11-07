@@ -333,7 +333,7 @@
         var canRep = ok('home');
         var cta = CTA[APP] || CTA.all; if (!ok(cta[0])) cta = ok('home') ? CTA.admin : null;
         var planNm = (typeof CL !== 'undefined' && CL.on && CL.me && CL.me.plan && CL.me.plan.name) || '';
-        var hero = '<div class="adh">' + (planNm ? '<span class="adplan" title="Paket langganan ' + esc(planNm) + '">' + esc(planNm) + '</span>' : '<span class="adplan" title="Paket langganan">Free</span>') + '<div class="adchips"><span class="adchip"><i>' + ico('spark') + '</i>' + (LBL[APP] || 'Ordela') + '</span><span class="adchip g">' + esc(store) + '</span></div>' +
+        var hero = '<div class="adh">' + (planNm ? '<span class="adplan" title="Paket langganan ' + esc(planNm) + '">' + esc(planNm) + '</span>' : '<span class="adplan" title="Paket langganan">Starter</span>') + '<div class="adchips"><span class="adchip"><i>' + ico('spark') + '</i>' + (LBL[APP] || 'Ordela') + '</span><span class="adchip g">' + esc(store) + '</span></div>' +
           '<small>' + g + ', ' + esc(nm) + '</small><h2>' + (canRep ? esc(money(tsum)) : (LBL[APP] || 'Ringkasan')) + '</h2>' +
           '<p class="sub">' + (canRep ? 'Penjualan hari ini · ' + today.length + ' transaksi' : new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })) + '</p>' +
           (cta ? '<button class="adbtn" onclick="go(\'' + cta[0] + '\')">' + ico(cta[2]) + cta[1] + '</button>' : '') + '</div>';
