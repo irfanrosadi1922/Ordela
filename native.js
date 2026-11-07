@@ -51,6 +51,34 @@
     };
   }
 
+  /* Pembaruan aplikasi (APK): membandingkan nomor build terpasang dengan rilis "apk-latest" di GitHub.
+     Android tidak mengizinkan pemasangan senyap di luar Play Store, jadi pengguna tinggal menekan "Perbarui" lalu "Pasang". */
+  if(P.ClassicBt&&P.ClassicBt.appInfo){
+    var REPO=window.POS_UPDATE_REPO||'irfanrosadi1922/Ordela',info=null,meta=null,lastChk=0;
+    var note=function(t,b,fn,label){try{if(window.OrdelaSkin)OrdelaSkin.island({kind:'new',title:t,body:b,ms:12000,action:fn?{label:label||'Perbarui',fn:fn}:null})}catch(e){}};
+    var urlFor=function(){return meta&&info?(/\.admin$/.test(info.id)?meta.admin:meta.kasir):''};
+    var download=function(){var u=urlFor();if(u)window.open(u,'_blank')};
+    var check=async function(manual){
+      try{
+        if(!info)info=await P.ClassicBt.appInfo();
+        var r=await fetch('https://api.github.com/repos/'+REPO+'/releases/tags/apk-latest',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+        if(!r.ok){if(manual)note('Gagal memeriksa','Periksa sambungan internet.');return}
+        var rel=await r.json();meta=JSON.parse(rel.body||'{}');lastChk=Date.now();
+        if(+meta.build>+info.build){
+          var k='pos_upd_n',seen='';try{seen=localStorage.getItem(k)||''}catch(e){}
+          note('Pembaruan tersedia','Ordela '+meta.version+' siap diunduh. Versi Anda '+info.version+'.',download);
+          if(seen!==String(meta.build)){try{localStorage.setItem(k,String(meta.build))}catch(e){}
+            if(window.nativeNotify)window.nativeNotify.show('Pembaruan Ordela tersedia','Versi '+meta.version+' siap diunduh. Buka aplikasi lalu tekan Perbarui.')}
+        }else if(manual)note('Sudah terbaru','Ordela '+info.version+' adalah versi terakhir.');
+      }catch(e){if(manual)note('Gagal memeriksa','Coba lagi nanti.')}
+    };
+    window.OrdelaUpdate={check:check,open:function(){
+      if(meta&&info&&+meta.build>+info.build)download();else check(true);
+    }};
+    setTimeout(function(){check(false)},6000);
+    document.addEventListener('visibilitychange',function(){if(!document.hidden&&Date.now()-lastChk>6*36e5)check(false)});
+  }
+
   /* Bluetooth KLASIK (printer thermal yang dipasangkan di pengaturan Bluetooth HP) -> dipakai lewat mode "Bluetooth klasik / USB" */
   var CB=P.ClassicBt;
   if(CB){

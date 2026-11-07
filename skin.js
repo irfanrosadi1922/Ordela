@@ -135,6 +135,7 @@
       cash: '<rect class="d" x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.01M18 12h.01"/>',
       store: '<path class="d" d="M5 12v8h14v-8"/><path d="M3 9.5L4.5 4.5h15L21 9.5a2.8 2.8 0 0 1-5.5 0 2.8 2.8 0 0 1-5.5 0 2.8 2.8 0 0 1-5.5 0z"/><path d="M10 20v-4h4v4"/>',
       nodes: '<circle class="d" cx="6" cy="12" r="2.8"/><circle class="d" cx="18" cy="6" r="2.8"/><circle class="d" cx="18" cy="18" r="2.8"/><path d="M8.6 10.8l6.8-3.6M8.6 13.2l6.8 3.6"/>',
+      dl: '<path d="M12 4v11M7.5 11l4.5 4.5 4.5-4.5"/><path class="d" d="M4.5 19.5h15"/>',
       printer: '<rect class="d" x="3.5" y="9" width="17" height="8" rx="2.5"/><path d="M7 9V3.5h10V9M7 14h10v6.5H7z"/>',
       set: '<path d="M4 7h8M16 7h4M4 17h4M12 17h8"/><circle class="d" cx="14" cy="7" r="2.3"/><circle class="d" cx="10" cy="17" r="2.3"/>',
       spark: '<path class="d" d="M10 4l1.8 4.7L16.5 10.5l-4.7 1.8L10 17l-1.8-4.7L3.5 10.5l4.7-1.8z"/><path d="M18 3v4M16 5h4M18.5 14v3.5M16.8 15.8h3.4"/>',
@@ -307,6 +308,7 @@
         ['branch', 'Cabang', 'Pindah stok antar cabang', 'store', '#d946ef'],
         ['integ', 'Integrasi', 'GoFood, GrabFood, ShopeeFood, webhook', 'nodes', '#0ea5e9'],
         ['prn', 'Printer', 'Struk & printer', 'printer', '#475569'],
+        ['upd', 'Pembaruan aplikasi', 'Periksa & unduh versi terbaru', 'dl', 'var(--ad)'],
         ['set', 'Pengaturan', 'Toko, pajak, pembayaran, warna', 'set', 'var(--ad)']]]
     ];
     var CHEV = '<svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
@@ -337,10 +339,10 @@
         var stats = canRep ? '<div class="adst"><div class="adc"><h4>Target harian</h4><div class="adring"><svg viewBox="0 0 60 60"><circle class="tr" cx="30" cy="30" r="24"/><circle class="pg" cx="30" cy="30" r="24" stroke-dasharray="' + (C * pct).toFixed(1) + ' ' + C.toFixed(1) + '"/></svg><div><b>' + Math.round(pct * 100) + '%</b><span>dari rata-rata 7 hari</span></div></div></div>' +
           '<div class="adc w ' + (low ? '' : 'ok') + '"><h4>Stok</h4><div class="big"><i><i class="ic" data-ic="' + (low ? 'alert' : 'check') + '"></i></i>' + low + '</div><small>' + (low ? 'item menipis' : 'semua aman') + '</small></div></div>' : '';
         var secs = G.map(function (gr) {
-          var rows = gr[2].filter(function (r) { return show(r[0]); });
+          var rows = gr[2].filter(function (r) { return r[0] === 'upd' ? !!window.OrdelaUpdate : show(r[0]); });
           if (!rows.length) return '';
           return '<div class="adgt"><h3>' + gr[0] + '</h3><span>' + gr[1] + '</span></div><div class="adl">' + rows.map(function (r) {
-            var act = r[0] === 'branch' ? 'P2.branch()' : "go('" + r[0] + "')";
+            var act = r[0] === 'branch' ? 'P2.branch()' : r[0] === 'upd' ? 'OrdelaUpdate.open()' : "go('" + r[0] + "')";
             var lk = lockOf(r[0]);
             return '<button class="adr' + (lk ? ' lkd' : '') + '" onclick="' + act + '"><span class="ti" style="--c:' + r[4] + '">' + ico(r[3]) + (r[0] === 'co' && nb ? '<b class="nb">' + nb + '</b>' : '') + '</span><span class="tx"><b>' + esc(r[1]) + '</b><span>' + esc(lk ? 'Mulai paket ' + lk : r[2]) + '</span></span>' + (lk ? LOCKSVG : CHEV) + '</button>';
           }).join('') + '</div>';

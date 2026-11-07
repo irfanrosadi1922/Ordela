@@ -41,6 +41,11 @@ jobs:
           cat capacitor.config.json
       - run: npm install --no-audit --no-fund
       - run: npx cap add android
+      - name: Nomor versi (dipakai pemeriksa pembaruan)
+        run: |
+          B=${{ github.run_number }}
+          sed -i "s/versionCode [0-9]*/versionCode $B/; s/versionName \"[^\"]*\"/versionName \"1.0.$B\"/" android/app/build.gradle
+          grep -n "versionCode\|versionName" android/app/build.gradle
       - name: Izin kamera, lokasi, ikon
         run: |
           M=android/app/src/main/AndroidManifest.xml
@@ -227,6 +232,20 @@ jobs:
               }
 
               @PluginMethod
+              public void appInfo(PluginCall call) {
+                  try {
+                      android.content.pm.PackageInfo pi = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0);
+                      JSObject res = new JSObject();
+                      res.put("build", Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode);
+                      res.put("version", pi.versionName);
+                      res.put("id", getContext().getPackageName());
+                      call.resolve(res);
+                  } catch (Exception e) {
+                      call.reject("Info aplikasi tidak tersedia");
+                  }
+              }
+
+              @PluginMethod
               public void hasFcm(PluginCall call) {
                   int id = getContext().getResources().getIdentifier("google_app_id", "string", getContext().getPackageName());
                   JSObject res = new JSObject();
@@ -303,3 +322,31 @@ jobs:
         with:
           name: Ordela-${{ matrix.app }}-apk
           path: out/*
+  release:
+    name: Terbitkan rilis apk-latest
+    needs: apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          pattern: Ordela-*-apk
+          merge-multiple: true
+      - name: Terbitkan (hanya bila kunci tanda tangan tetap tersedia)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          rm -f out/KUNCI-SIMPAN-INI.jks      # kunci sementara tidak boleh dipublikasikan
+          if [ -z "$KS_B64" ]; then
+            echo "::warning::KEYSTORE_BASE64 belum diisi. Rilis apk-latest TIDAK diterbitkan karena APK bertanda tangan kunci sementara tidak bisa memperbarui APK sebelumnya."
+            exit 0
+          fi
+          B=${{ github.run_number }}
+          BASE="https://github.com/${{ github.repository }}/releases/download/apk-latest"
+          META=$(printf '{"build":%s,"version":"1.0.%s","kasir":"%s/Ordela-Kasir.apk","admin":"%s/Ordela-Admin.apk"}' "$B" "$B" "$BASE" "$BASE")
+          gh release delete apk-latest --cleanup-tag -y --repo "${{ github.repository }}" || true
+          gh release create apk-latest out/*.apk --repo "${{ github.repository }}" --title "Ordela APK build $B" --notes "$META" --latest=false
+          echo "$META"
