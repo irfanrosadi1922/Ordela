@@ -421,7 +421,8 @@ html[data-skin] .thp .tpg{background:var(--ad)}
   html[data-skin] .bnav .lens{z-index:0;overflow:hidden;top:6px;height:calc(100% - 12px);scale:1;
     transition:transform .55s cubic-bezier(.3,1.45,.5,1),width .55s cubic-bezier(.3,1.45,.5,1),opacity .2s,scale .35s cubic-bezier(.3,1.5,.5,1),top .3s,height .3s}
   html[data-skin] .bnav .lens.press{z-index:3;top:-7px;height:calc(100% + 14px);scale:1.04;
-    background:radial-gradient(130% 90% at 50% -10%,rgba(255,255,255,.85),rgba(255,255,255,.1) 55%),color-mix(in srgb,var(--adt) 45%,rgba(255,255,255,.2));
+    -webkit-backdrop-filter:none;backdrop-filter:none;
+    background:radial-gradient(130% 90% at 50% -10%,rgba(255,255,255,.98),rgba(255,255,255,.55) 60%),color-mix(in srgb,var(--adt) 55%,#fff);
     box-shadow:inset 0 2px 2px rgba(255,255,255,1),inset 0 -3px 6px color-mix(in srgb,var(--ad) 25%,transparent),inset 4px 0 8px -2px rgba(255,110,200,.4),inset -4px 0 8px -2px rgba(70,200,255,.45),0 14px 28px -8px color-mix(in srgb,var(--ad) 55%,transparent),0 0 0 1.5px rgba(255,255,255,.8)}
   html[data-skin] .bnav .lens:after{content:"";position:absolute;inset:0;border-radius:inherit;padding:2px;pointer-events:none;opacity:0;transition:opacity .25s;
     background:conic-gradient(from 210deg,#6cf,#f8c,#fd9,#8f9,#6cf);
@@ -429,7 +430,8 @@ html[data-skin] .thp .tpg{background:var(--ad)}
   html[data-skin] .bnav .lens.press:after{opacity:.75}
   html[data-skin] .bnav .lc{position:absolute;left:0;top:0;display:none;pointer-events:none}
   html[data-skin] .bnav .lens.press .lc{display:block}
-  html[data-skin] .bnav .lm{display:block;position:absolute;left:0;top:0;transform:scale(1.18);transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
+  html[data-skin] .bnav .lens,html[data-skin] .bnav .lens *{font-style:normal}
+  html[data-skin] .bnav .lm{display:block;position:absolute;left:0;top:0;transform:scale(1.12);transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
   html[data-skin] .bnav .lm button{flex:1;color:var(--ad)!important;background:none!important;box-shadow:none!important;transition:none}
   html[data-skin] .bnav .lm button svg{transform:none!important}
 }

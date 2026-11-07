@@ -208,7 +208,7 @@
     }
     function lensMove(n, l, cx) {
       var btns = n.querySelectorAll(':scope > button'); if (!btns.length) return null;
-      var w = btns[0].offsetWidth + 14, nw = n.clientWidth, nh = n.clientHeight;
+      var w = btns[0].offsetWidth + 26, nw = n.clientWidth, nh = n.clientHeight;
       var x = Math.max(2, Math.min(nw - w - 2, cx - w / 2));
       l.style.width = w + 'px'; l.style.transform = 'translate3d(' + x + 'px,0,0)';
       var lc = l.querySelector('.lc'), lm = l.querySelector('.lm');
