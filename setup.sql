@@ -115,6 +115,13 @@ create table if not exists pos.stores(
   name text not null, owner_id bigint, created_at timestamptz not null default now());
 alter table pos.stores enable row level security;
 alter table pos.stores add column if not exists grp bigint;   -- toko pusat (grup cabang); null = toko mandiri/pusat
+-- Preferensi tampilan milik pemilik akun, dipakai bersama seluruh toko dan cabangnya.
+create table if not exists pos.owner_theme(
+  owner_id bigint primary key references pos.t_users(id) on delete cascade,
+  color text not null default 'biru' check (color in ('biru','hijau','ungu','oranye','mawar','teal','slate')),
+  updated_at timestamptz not null default now()
+);
+alter table pos.owner_theme enable row level security;
 alter table pos.sessions add column if not exists act_sid bigint;   -- cabang yang sedang dibuka sesi owner
 alter table pos.t_users add column if not exists store_id bigint references pos.stores(id);
 alter table pos.t_audit add column if not exists store_id bigint;
@@ -263,7 +270,8 @@ create or replace function pos.me_self(u pos.users) returns jsonb language sql s
   select pos.me_view(u) || jsonb_build_object('photo', u.photo, 'birth', coalesce(u.birth::text, ''), 'address', u.address,
     'hasAuth', u.auth_id is not null, 'store', (select jsonb_build_object('code', s.code, 'name', s.name) from pos.stores s where s.id = u.store_id),
     'emailVerified', coalesce((select a.email_confirmed_at is not null from auth.users a where a.id = u.auth_id), false),
-    'pendingEmail', coalesce((select nullif(lower(a.email_change), '') from auth.users a where a.id = u.auth_id), '')) $$;
+    'pendingEmail', coalesce((select nullif(lower(a.email_change), '') from auth.users a where a.id = u.auth_id), ''),
+    'theme', coalesce((select ot.color from pos.owner_theme ot join pos.stores st on st.owner_id = ot.owner_id where st.id = u.store_id), 'biru')) $;
 
 -- ---- sandi: akun Supabase Auth memakai hash di auth.users, akun lama (dan staf) memakai pos.users.pw
 create or replace function pos.pw_ok(u pos.users, pw text) returns boolean language plpgsql as $$
@@ -829,6 +837,27 @@ begin
   end if;
   perform set_config('pos.sid', coalesce(me.store_id, 0)::text, true);
   own := me.role = 'owner';
+  -- Tema dibagikan oleh owner_id, sehingga seluruh toko milik pemilik yang sama ikut berubah.
+  if u = '/api/theme' and m = 'GET' then
+    select coalesce(ot.color, 'biru') into nm
+      from pos.stores st left join pos.owner_theme ot on ot.owner_id = st.owner_id
+      where st.id = me.store_id;
+    return pos.r(200, jsonb_build_object('color', coalesce(nm, 'biru')));
+  end if;
+  if u = '/api/theme' and m = 'PUT' then
+    if not own then return pos.r(403, '{"error":"Hanya owner yang boleh mengubah warna tampilan"}'); end if;
+    nm := lower(btrim(coalesce(b ->> 'color', '')));
+    if nm not in ('biru','hijau','ungu','oranye','mawar','teal','slate') then
+      return pos.r(400, '{"error":"Warna tampilan tidak valid"}');
+    end if;
+    if not exists (select 1 from pos.stores st where st.id = me.store_id and st.owner_id = me.id) then
+      return pos.r(403, '{"error":"Pemilik toko tidak valid"}');
+    end if;
+    insert into pos.owner_theme(owner_id, color, updated_at) values (me.id, nm, now())
+      on conflict (owner_id) do update set color = excluded.color, updated_at = now();
+    perform pos.audit(me.id, me.username, 'ubah-warna-tampilan', nm);
+    return pos.r(200, jsonb_build_object('color', nm));
+  end if;
   if me.role = 'new' and not (u in ('/api/me', '/api/logout', '/api/me/password', '/api/store/setup')) then
     return pos.r(403, '{"error":"Siapkan toko Anda dulu","code":"no-store"}');
   end if;
