@@ -237,6 +237,15 @@ td .th img{width:100%;height:100%;object-fit:cover}
 .chg.neg{background:var(--redbg);color:var(--bad)}
 .chg{gap:12px}.chg>span:first-child{flex:none}.chg>span:last-child{text-align:right}
 .acts{display:flex;gap:10px}
+.drawer button.lk,.bnav button.lk,.rail button.lk{position:relative}
+.drawer button.lk::after,.bnav button.lk::after,.rail button.lk::after{content:"";position:absolute;top:6px;right:8px;width:12px;height:12px;opacity:.6;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='9' rx='2.5'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center/contain no-repeat}
+.updlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:300}
+.upbox{background:var(--card);color:var(--tx);border-radius:24px;padding:26px 22px 20px;width:100%;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.upbox .uplk{width:52px;height:52px;border-radius:16px;background:var(--ac);color:var(--acx);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.upbox h3{margin:0 0 8px;font-size:17px;line-height:1.35}
+.upbox p{margin:0 0 18px;font-size:14px;line-height:1.55;color:var(--mu)}
+.upbox .upok{width:100%;border:0;border-radius:999px;padding:13px;font-weight:700;font-size:15px;background:var(--b);color:#fff;cursor:pointer}
+.upbox .upok:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(30px);background:#111827;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:200;max-width:90vw;text-align:center}
 .toast.on{opacity:1;transform:translateX(-50%)}
 .sesw{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:220;background:#111827;color:#fff;border-radius:16px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:12px;max-width:92vw;width:max-content;font-size:13px;line-height:1.35;box-shadow:0 10px 30px rgba(0,0,0,.3)}
@@ -1168,6 +1177,7 @@ function go(v){
   if(v==='hist'||v==='rep')v='home';   // Riwayat & Laporan sudah menyatu di Beranda
   if(ACCV.includes(v)&&!(CL.on&&CL.me))v='set';
   if(!canView(v)){if(v!=='pos')toast('Anda tidak punya akses ke halaman itu');v=landing()}
+  if(isOwner()&&viewLock(v)){upgradeDlg(v);return}
   if(v==='editacc'&&S.view!=='editacc'&&S.view!=='accphoto'){const eb=$('#editAccPage');if(eb)eb.dataset.built=''}
   if(v==='pyr'&&S.view!=='pyr'){PY.built=false;PY.d=null;PY.rowsKey=''}
   if(v==='accdel'&&S.view!=='accdel'){const db_=$('#accDelPage');if(db_)db_.dataset.built='';ACC.delSole=undefined}
@@ -3948,7 +3958,26 @@ CL.me=null;try{CL.me=JSON.parse(localStorage.getItem('pos_me')||'null')}catch(e)
 function setMe(m){CL.me=m||null;try{if(m)localStorage.setItem('pos_me',JSON.stringify(m));else localStorage.removeItem('pos_me')}catch(e){}if(m&&m.theme&&window.OrdelaSkin)window.OrdelaSkin.applyOwnerColor(m.theme)}
 /* tanpa server (mode offline/standalone) tidak ada akun: semua terbuka */
 function isOwner(){return !CL.on||(!!CL.me&&CL.me.role==='owner')}
-function can(p){return !CL.on||(!!CL.me&&(CL.me.role==='owner'||(CL.me.perms||[]).includes(p)))}
+/* Pembatasan fitur per paket langganan: server mengirim me.locks = {kunci: nama paket minimal}. Tanpa data itu tidak ada yang terkunci. */
+const LOCK_NAME={att:'Absensi',buy:'Pembelian & Pemasok',inv:'Inventori',opn:'Stok Opname',co:'Pesanan Online',mem:'Member',kds:'Layar Dapur',ai:'AI Manager',promo:'Promo',integ:'Integrasi',branch:'Multi-outlet'};
+const VIEW_LOCK={att:'att',buy:'buy',inv:'inv',opname:'opn',co:'co',mem:'mem',kds:'kds',ai:'ai',promo:'promo',integ:'integ',branch:'branch'};
+function lockNeed(k){return(CL.on&&CL.me&&CL.me.locks&&CL.me.locks[k])||null}
+function viewLock(v){const k=VIEW_LOCK[v];return k&&lockNeed(k)?k:null}
+function upgradeDlg(v){
+  const k=VIEW_LOCK[v],need=lockNeed(k)||'yang lebih tinggi',nm=LOCK_NAME[k]||'Fitur ini',cur=(CL.me&&CL.me.plan&&CL.me.plan.name)||'saat ini';
+  const old=$('#upDlg');if(old)old.remove();
+  const d=document.createElement('div');d.id='upDlg';d.className='updlg';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','upT');
+  const box=document.createElement('div');box.className='upbox';
+  const ic=document.createElement('div');ic.className='uplk';ic.innerHTML='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  const t=document.createElement('h3');t.id='upT';t.textContent=nm+' belum termasuk di paket '+cur;
+  const m=document.createElement('p');m.textContent='Fitur ini tersedia mulai paket '+need+'. Hubungi Ordela untuk upgrade paket langganan Anda.';
+  const b=document.createElement('button');b.type='button';b.className='upok';b.textContent='Mengerti';
+  const close=()=>{d.remove();document.removeEventListener('keydown',esc)};
+  const esc=e=>{if(e.key==='Escape')close()};
+  b.addEventListener('click',close);d.addEventListener('click',e=>{if(e.target===d)close()});document.addEventListener('keydown',esc);
+  box.append(ic,t,m,b);d.append(box);document.body.append(d);b.focus();
+}
+function can(p){return !CL.on||(!!CL.me&&(CL.me.role==='owner'?!lockNeed(p):(CL.me.perms||[]).includes(p)))}
 /* karyawan yang HANYA punya izin Absensi: tidak boleh memakai Kasir, Meja, Beranda, atau Notifikasi (tidak ada transaksi) */
 function attOnly(){const m=CL.on&&CL.me;if(!m||m.role==='owner')return false;const p=m.perms||[];return p.length>0&&p.every(x=>x==='att')}
 /* Profil aplikasi (subdomain kasir / admin / dapur): window.POS_APP diisi config.js hasil build. Tanpa POS_APP = aplikasi penuh. */
@@ -3957,10 +3986,11 @@ const APP_VIEWS={kasir:['pos','table','riw','co','prn','rc','shift','exp','mem',
   dapur:['kds','alert','menu','att']};
 const APP_HOME={kasir:'pos',admin:'home',dapur:'kds'};
 function appOk(v){const a=window.POS_APP;if(!a||!APP_VIEWS[a])return true;return ACCV.includes(v)||APP_VIEWS[a].includes(v)}
-function landing(){if(window.POS_APP&&APP_VIEWS[POS_APP]){const h=APP_HOME[POS_APP];return canView(h)?h:(CL.on&&CL.me?'menu':'acc')}
-  if(CL.on&&CL.me)return 'menu';return ['pos','home','co','inv','att','set','prn'].find(v=>canView(v))||'acc'}
+function landing(){if(window.POS_APP&&APP_VIEWS[POS_APP]){const h=APP_HOME[POS_APP];return canView(h)&&!viewLock(h)?h:(CL.on&&CL.me?'menu':'acc')}
+  if(CL.on&&CL.me)return 'menu';return ['pos','home','co','inv','att','set','prn'].find(v=>canView(v)&&!viewLock(v))||'acc'}
 function canView(v){
   if(!appOk(v))return false;
+  if(isOwner()&&viewLock(v))return true;   // terkunci paket: menu tampil dengan gembok, go() menampilkan ajakan upgrade
   if(v==='table'&&can('co'))return true;   // server/pelayan melihat status meja dari antrean pesanan
   if(v==='home'&&can('hist'))return true;   // Rekap & Riwayat tampil di Beranda
   if(v==='riw')return can('pos')||can('hist')||can('co');
@@ -3985,6 +4015,7 @@ function openDash(){closeAll();location.href='dashboard.html'}
 function applyAccess(){
   document.querySelectorAll('.drawer button[data-v],.bnav button[data-v],.rail button[data-v]').forEach(b=>{
     const ok=b.dataset.v==='acc'||canView(b.dataset.v);
+    b.classList.toggle('lk',!!(isOwner()&&viewLock(b.dataset.v)));
     if(b.closest('.bnav'))b.style.display=ok?'':'none';else b.hidden=!ok;
   });
   {const bn=$('#bnav');if(bn){const n=[...bn.querySelectorAll('button[data-v]')].filter(b=>b.style.display!=='none').length;bn.style.gridTemplateColumns='repeat('+Math.max(1,n)+',1fr)';
@@ -3994,7 +4025,7 @@ function applyAccess(){
   navGroups();
   renderAcct();
   document.body.classList.toggle('attonly',attOnly());
-  if(S.view&&!canView(S.view))go(landing());
+  if(S.view&&(!canView(S.view)||(isOwner()&&viewLock(S.view))))go(landing());
 }
 function renderAcct(){
   const ba=$('#bnAcc'),lo=$('#lgout'),an=$('#accNav'),on=!!(CL.on&&CL.me);
