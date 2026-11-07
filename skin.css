@@ -463,3 +463,10 @@ html[data-skin] #v-riw .li:active{background:var(--peach)}
 .rwempty .ic{width:52px;height:52px;margin:0 0 8px;background:color-mix(in srgb,var(--ad) 55%,#fff)}
 .rwempty b{font-size:16px;font-weight:800;color:var(--tx)}
 .rwempty small{font-size:13px;color:var(--mu);max-width:240px;line-height:1.45}
+
+/* paket langganan */
+.adplan{position:absolute!important;top:16px;right:16px;display:inline-flex;align-items:center;background:rgba(255,255,255,.95);color:var(--ad);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:800;letter-spacing:.01em;white-space:nowrap;z-index:2}
+.adchips{padding-right:66px}
+.adr.lkd .ti,.adr.lkd .tx b{opacity:.55}
+.adr.lkd .tx span{color:var(--mu)}
+.adr .lksv{flex:none;width:18px;height:18px;fill:none;stroke:var(--mu);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.8}

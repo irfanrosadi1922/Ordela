@@ -146,6 +146,11 @@
     };
     function ico(k) { return '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">' + (ICO[k] || '') + '</svg>'; }
     function ok(v) { return typeof canView === 'function' ? canView(v) : true; }
+    /* paket langganan: fitur di luar paket terkunci untuk owner (ajakan upgrade) dan disembunyikan untuk staf */
+    function lockOf(v) { return typeof viewLock === 'function' && viewLock(v) ? (lockNeed(VIEW_LOCK[v]) || 'yang lebih tinggi') : null; }
+    function isOwn() { return typeof isOwner === 'function' ? isOwner() : true; }
+    function show(v) { return ok(v) && (isOwn() || !lockOf(v)); }
+    var LOCKSVG = '<svg class="lksv" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg>';
 
     /* tab bawah per aplikasi */
     var TABS = {
@@ -324,21 +329,24 @@
         var nb = (typeof CO !== 'undefined' && CO.list) ? CO.list.filter(function (o) { return o.status === 'new'; }).length : 0;
         var canRep = ok('home');
         var cta = CTA[APP] || CTA.all; if (!ok(cta[0])) cta = ok('home') ? CTA.admin : null;
-        var hero = '<div class="adh"><div class="adchips"><span class="adchip"><i>' + ico('spark') + '</i>' + (LBL[APP] || 'Ordela') + '</span><span class="adchip g">' + esc(store) + '</span></div>' +
+        var planNm = (typeof CL !== 'undefined' && CL.on && CL.me && CL.me.plan && CL.me.plan.name) || '';
+        var hero = '<div class="adh">' + (planNm ? '<span class="adplan" title="Paket langganan ' + esc(planNm) + '">' + esc(planNm) + '</span>' : '') + '<div class="adchips"><span class="adchip"><i>' + ico('spark') + '</i>' + (LBL[APP] || 'Ordela') + '</span><span class="adchip g">' + esc(store) + '</span></div>' +
           '<small>' + g + ', ' + esc(nm) + '</small><h2>' + (canRep ? esc(money(tsum)) : (LBL[APP] || 'Ringkasan')) + '</h2>' +
           '<p class="sub">' + (canRep ? 'Penjualan hari ini · ' + today.length + ' transaksi' : new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })) + '</p>' +
           (cta ? '<button class="adbtn" onclick="go(\'' + cta[0] + '\')">' + ico(cta[2]) + cta[1] + '</button>' : '') + '</div>';
         var stats = canRep ? '<div class="adst"><div class="adc"><h4>Target harian</h4><div class="adring"><svg viewBox="0 0 60 60"><circle class="tr" cx="30" cy="30" r="24"/><circle class="pg" cx="30" cy="30" r="24" stroke-dasharray="' + (C * pct).toFixed(1) + ' ' + C.toFixed(1) + '"/></svg><div><b>' + Math.round(pct * 100) + '%</b><span>dari rata-rata 7 hari</span></div></div></div>' +
           '<div class="adc w ' + (low ? '' : 'ok') + '"><h4>Stok</h4><div class="big"><i><i class="ic" data-ic="' + (low ? 'alert' : 'check') + '"></i></i>' + low + '</div><small>' + (low ? 'item menipis' : 'semua aman') + '</small></div></div>' : '';
         var secs = G.map(function (gr) {
-          var rows = gr[2].filter(function (r) { return ok(r[0]); });
+          var rows = gr[2].filter(function (r) { return show(r[0]); });
           if (!rows.length) return '';
           return '<div class="adgt"><h3>' + gr[0] + '</h3><span>' + gr[1] + '</span></div><div class="adl">' + rows.map(function (r) {
             var act = r[0] === 'branch' ? 'P2.branch()' : "go('" + r[0] + "')";
-            return '<button class="adr" onclick="' + act + '"><span class="ti" style="--c:' + r[4] + '">' + ico(r[3]) + (r[0] === 'co' && nb ? '<b class="nb">' + nb + '</b>' : '') + '</span><span class="tx"><b>' + esc(r[1]) + '</b><span>' + esc(r[2]) + '</span></span>' + CHEV + '</button>';
+            var lk = lockOf(r[0]);
+            return '<button class="adr' + (lk ? ' lkd' : '') + '" onclick="' + act + '"><span class="ti" style="--c:' + r[4] + '">' + ico(r[3]) + (r[0] === 'co' && nb ? '<b class="nb">' + nb + '</b>' : '') + '</span><span class="tx"><b>' + esc(r[1]) + '</b><span>' + esc(lk ? 'Mulai paket ' + lk : r[2]) + '</span></span>' + (lk ? LOCKSVG : CHEV) + '</button>';
           }).join('') + '</div>';
         }).join('');
-        var ai = ok('ai') ? '<div class="adgt"><h3>Asisten</h3><span>Tanya data toko</span></div><div class="adl"><button class="adr" onclick="go(\'ai\')"><span class="ti" style="--c:#7c3aed">' + ico('spark') + '</span><span class="tx"><b>Asisten Ordela</b><span>Tanya omzet, menu terlaris, stok menipis</span></span>' + CHEV + '</button></div>' : '';
+        var aiLk = lockOf('ai');
+        var ai = show('ai') ? '<div class="adgt"><h3>Asisten</h3><span>Tanya data toko</span></div><div class="adl"><button class="adr' + (aiLk ? ' lkd' : '') + '" onclick="go(\'ai\')"><span class="ti" style="--c:#7c3aed">' + ico('spark') + '</span><span class="tx"><b>Asisten Ordela</b><span>' + esc(aiLk ? 'Mulai paket ' + aiLk : 'Tanya omzet, menu terlaris, stok menipis') + '</span></span>' + (aiLk ? LOCKSVG : CHEV) + '</button></div>' : '';
         el.innerHTML = hero + stats + ai + secs;
       } catch (e) { /* biarkan tampilan lama bila data belum siap */ }
     }
