@@ -262,6 +262,52 @@ $$ select case when u.role = 'owner' then '["pos","shift","co","kds","mem","inv"
 create or replace function pos.can(u pos.users, k text) returns boolean language sql immutable as
 $$ select u.role = 'owner' or pos.perms_of(u) ? k $$;
 
+-- ---------------------------------------------------------------- paket langganan
+-- pos.plans          : daftar paket + urutannya (rank lebih besar = lebih tinggi)
+-- pos.plan_features  : paket minimal tiap fitur (ubah dengan UPDATE bila pembagian fitur berubah)
+-- pos.owner_plan     : paket yang dimiliki tiap pemilik; seluruh toko & cabangnya ikut paket ini. Tanpa baris = Free. expires_at lewat = Free.
+-- pos.owner_feat     : pengecualian per pemilik: allow=true membuka fitur di luar paketnya, false mengunci fitur yang ada di paketnya.
+-- Tabel hanya bisa diubah dari SQL Editor (service role), tidak terbuka lewat API.
+create table if not exists pos.plans(code text primary key, name text not null, rank int not null unique);
+create table if not exists pos.plan_features(feat text primary key, min_rank int not null default 1);
+create table if not exists pos.owner_plan(
+  owner_id bigint primary key references pos.t_users(id) on delete cascade,
+  plan text not null references pos.plans(code), expires_at timestamptz, note text, updated_at timestamptz not null default now());
+create table if not exists pos.owner_feat(
+  owner_id bigint not null references pos.t_users(id) on delete cascade, feat text not null, allow boolean not null,
+  primary key (owner_id, feat));
+alter table pos.plans enable row level security; alter table pos.plan_features enable row level security;
+alter table pos.owner_plan enable row level security; alter table pos.owner_feat enable row level security;
+insert into pos.plans(code, name, rank) values ('free', 'Free', 0), ('pro', 'Pro', 1), ('business', 'Business', 2) on conflict (code) do nothing;
+insert into pos.plan_features(feat, min_rank) values
+  ('ai', 1), ('promo', 1), ('mem', 1), ('opn', 1), ('kds', 1),
+  ('buy', 2), ('att', 2), ('integ', 2), ('branch', 2) on conflict (feat) do nothing;
+-- Pemilik yang sudah ada dibiarkan tetap memakai semua fitur (Business) supaya tidak tiba-tiba terkunci. Turunkan lewat UPDATE pos.owner_plan bila perlu.
+insert into pos.owner_plan(owner_id, plan, note)
+  select u.id, 'business', 'pemilik lama' from pos.t_users u where u.role = 'owner' on conflict (owner_id) do nothing;
+
+create or replace function pos.plan_of(p_store bigint) returns jsonb language sql stable set search_path = '' as $$
+  with o as (select st.owner_id from pos.stores st where st.id = p_store),
+  cur as (
+    select pl.code, pl.name, pl.rank, op.expires_at from o
+      join pos.owner_plan op on op.owner_id = o.owner_id join pos.plans pl on pl.code = op.plan
+      where op.expires_at is null or op.expires_at > now()),
+  eff as (select coalesce((select c.rank from cur c), 0) as rank),
+  lk as (
+    select f.feat, (select pn.name from pos.plans pn where pn.rank >= f.min_rank order by pn.rank limit 1) as need
+    from pos.plan_features f
+    where case (select x.allow from pos.owner_feat x, o where x.owner_id = o.owner_id and x.feat = f.feat)
+            when true then false when false then true else f.min_rank > (select rank from eff) end)
+  select jsonb_build_object(
+    'name', coalesce((select c.name from cur c), 'Free'),
+    'code', coalesce((select c.code from cur c), 'free'),
+    'rank', (select rank from eff),
+    'expires', (select pos.iso(c.expires_at) from cur c),
+    'locks', coalesce((select jsonb_object_agg(lk.feat, coalesce(lk.need, 'Business')) from lk), '{}'::jsonb))
+$$;
+create or replace function pos.feat_ok(p_store bigint, p_feat text) returns boolean language sql stable set search_path = '' as $$
+  select not (pos.plan_of(p_store) -> 'locks' ? p_feat) $$;
+
 create or replace function pos.me_view(u pos.users) returns jsonb language sql stable as $$
   select jsonb_build_object('id', u.id, 'username', u.username, 'name', u.name, 'role', u.role, 'perms', pos.perms_of(u),
     'single', coalesce(u.single, u.role <> 'owner'), 'active', u.active, 'lastLogin', coalesce(pos.iso(u.last_login), ''), 'createdAt', pos.iso(u.created_at),
@@ -271,7 +317,8 @@ create or replace function pos.me_self(u pos.users) returns jsonb language sql s
     'hasAuth', u.auth_id is not null, 'store', (select jsonb_build_object('code', s.code, 'name', s.name) from pos.stores s where s.id = u.store_id),
     'emailVerified', coalesce((select a.email_confirmed_at is not null from auth.users a where a.id = u.auth_id), false),
     'pendingEmail', coalesce((select nullif(lower(a.email_change), '') from auth.users a where a.id = u.auth_id), ''),
-    'theme', coalesce((select ot.color from pos.owner_theme ot join pos.stores st on st.owner_id = ot.owner_id where st.id = u.store_id), 'biru')) $$;
+    'theme', coalesce((select ot.color from pos.owner_theme ot join pos.stores st on st.owner_id = ot.owner_id where st.id = u.store_id), 'biru'),
+    'plan', pos.plan_of(u.store_id) - 'locks', 'locks', pos.plan_of(u.store_id) -> 'locks') $$;
 
 -- ---- sandi: akun Supabase Auth memakai hash di auth.users, akun lama (dan staf) memakai pos.users.pw
 create or replace function pos.pw_ok(u pos.users, pw text) returns boolean language plpgsql as $$
@@ -985,6 +1032,9 @@ begin
   end if;
 
   if u = '/api/ai/use' and m = 'POST' then   -- kuota asisten AI per pengguna (dipanggil fungsi ai-chat sebelum menghubungi penyedia AI)
+    if not pos.feat_ok(me.store_id, 'ai') then
+      return pos.r(403, '{"error":"Asisten AI belum termasuk di paket langganan toko ini. Upgrade paket untuk memakainya."}');
+    end if;
     if (select count(*) from pos.rl where rl.k = 'ai:' || me.id and rl.t > now() - interval '1 hour') >= 30 then
       return pos.r(429, '{"error":"Batas pertanyaan AI per jam tercapai. Coba lagi nanti."}');
     end if;

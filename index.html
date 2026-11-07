@@ -3975,7 +3975,7 @@ function tierOf(k){return FEAT_TIER[k]||null}
 function lockNeed(k){
   if(!CL.on||!CL.me)return null;
   if(CL.me.locks&&CL.me.locks[k])return CL.me.locks[k];
-  if(CL.me.locks&&Object.keys(CL.me.locks).length)return null;   // server yang menentukan
+  if(CL.me.plan&&CL.me.locks)return null;   // server mengirim paket toko → server yang menentukan, tidak ada tebakan klien
   const t=FEAT_TIER[k];return t&&PLAN_RANK(CL.me.plan&&CL.me.plan.name)<TIER_RANK[t]?t:null}
 function viewLock(v){const k=VIEW_LOCK[v];return k&&lockNeed(k)?k:null}
 function upgradeDlg(v){
