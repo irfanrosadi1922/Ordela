@@ -266,7 +266,7 @@ create or replace function pos.me_view(u pos.users) returns jsonb language sql s
   select jsonb_build_object('id', u.id, 'username', u.username, 'name', u.name, 'role', u.role, 'perms', pos.perms_of(u),
     'single', coalesce(u.single, u.role <> 'owner'), 'active', u.active, 'lastLogin', coalesce(pos.iso(u.last_login), ''), 'createdAt', pos.iso(u.created_at),
     'email', u.email, 'phone', u.phone, 'hasPhoto', u.photo <> '') $$;
-create or replace function pos.me_self(u pos.users) returns jsonb language sql stable as $$
+create or replace function pos.me_self(u pos.users) returns jsonb language sql stable set search_path = '' as $
   select pos.me_view(u) || jsonb_build_object('photo', u.photo, 'birth', coalesce(u.birth::text, ''), 'address', u.address,
     'hasAuth', u.auth_id is not null, 'store', (select jsonb_build_object('code', s.code, 'name', s.name) from pos.stores s where s.id = u.store_id),
     'emailVerified', coalesce((select a.email_confirmed_at is not null from auth.users a where a.id = u.auth_id), false),
@@ -734,7 +734,7 @@ alter table pos.t_integ add column if not exists hh text;
 create unique index if not exists integ_hh on pos.t_integ(hh) where hh is not null;
 alter table pos.t_integ enable row level security;
 
-create or replace function pos.route(m text, u text, q jsonb, b jsonb, t text) returns jsonb language plpgsql as $$
+create or replace function pos.route(m text, u text, q jsonb, b jsonb, t text) returns jsonb language plpgsql set search_path = '' as $
 declare me pos.users; v_auth uuid; mt text[]; r pos.co; tu pos.users; own boolean; nrole text; act boolean; nm text; nperms jsonb; un text; nsingle boolean;
   d pos.doc; gerr text; nv int; cnt int; rv bigint; wt numeric; ms bigint; x jsonb; v_proof text; v_act bigint; v_from timestamptz; v_hq bigint; v_id bigint; v_name text; v_code text; v_tz text;
 begin
