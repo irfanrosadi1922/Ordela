@@ -346,7 +346,7 @@
     /* halaman Pengaturan → Warna (menggantikan pilihan tema terang/gelap) */
     window.renderTheme = function () {
       var el = $('#themeForm'); if (!el) return; var cur = getColor();
-      el.innerHTML = '<h3>Warna aplikasi</h3><p class="pfhint" style="margin:0 0 12px">Pilih warna aksen. Tersimpan di perangkat ini.</p><div class="clg">' +
+      el.innerHTML = '<h3>Warna aplikasi</h3><p class="pfhint" style="margin:0 0 12px">Pilih warna aksen. Tersimpan di akun pemilik dan berlaku untuk semua toko milik Anda.</p><div class="clg">' +
         PAL.map(function (p) { return '<button type="button" class="clo' + (p[0] === cur ? ' on' : '') + '" style="--c:' + p[2] + '" onclick="OrdelaSkin.setColor(\'' + p[0] + '\')" aria-pressed="' + (p[0] === cur) + '"><i>' + ico('tick') + '</i><b>' + p[1] + '</b></button>'; }).join('') + '</div>';
     };
     window.setTheme = function () {};
