@@ -78,7 +78,8 @@ input,select,textarea{font:inherit;color:inherit}
 .grid.list .im .qov{font-size:38px}
 .p .im img{width:100%;height:100%;object-fit:cover}
 .p .nm{font-weight:700;text-align:center;font-size:clamp(11px,7.6cqw,16px);margin:12px 2px 0;line-height:1.25;min-height:2.5em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-.p .row{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 0;gap:6px;flex-wrap:wrap;width:100%}
+.p .row{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 0;gap:6px;flex-wrap:wrap;width:calc(100% - 4px)}
+@container (max-width:170px){.p .row{flex-direction:column;justify-content:center;gap:8px;margin-top:8px}.p .row .pr{text-align:center}.p .row .qty{justify-content:center}}
 .p .sub{color:#a0a0a0;font-size:clamp(9px,6.2cqw,12px);margin-top:1px}
 .p .pr{font-weight:700;color:var(--bt);font-size:clamp(12px,9.5cqw,18px)}
 .stk{font-size:clamp(9px,6.4cqw,12px);color:var(--mu);margin:2px 2px 0}
@@ -191,6 +192,11 @@ td .th img{width:100%;height:100%;object-fit:cover}
 .fi{width:100%;border:1.5px solid var(--ln);border-radius:12px;padding:10px 12px;outline:0;background:var(--card)}
 .fi:focus{border-color:var(--b)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.scanwrap{display:flex;align-items:flex-end}
+.btn.scanbtn{margin:0;width:100%;height:46px;min-height:46px;padding:0 10px;white-space:nowrap;font-size:14px;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:none}
+.btn.scanbtn .ic{flex:none;width:18px;height:18px}
+.fi.modsta{min-height:104px;line-height:1.55;font-size:14px;resize:vertical}
+.fi.modsta::placeholder{font-size:13px;line-height:1.55}
 #brand{display:flex;align-items:center;gap:8px;min-height:32px}
 .blogo{height:32px;max-width:120px;object-fit:contain;border-radius:6px;flex:none}
 .hfil{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -2163,11 +2169,11 @@ function itemForm(id,ns){
   <div><label class="fl">atau kategori baru</label><input class="fi" id="fC2" placeholder="Opsional"></div></div>
   <div class="two"><div><label class="fl">Harga jual *</label><input class="fi" id="fP" type="number" step="any" min="0" value="${i.price}"></div>
   <div><label class="fl">Harga modal</label><input class="fi" id="fK" type="number" step="any" min="0" value="${i.cost||''}"></div></div>
-  <div class="two"><div><label class="fl">Barcode (opsional)</label><input class="fi" id="fBC" value="${esc(i.bc||'')}" inputmode="text" autocomplete="off" placeholder="Scan / ketik"></div><div style="display:flex;align-items:flex-end"><button type="button" class="btn sec" style="margin:0;width:100%" onclick="P2.scan(c=>{$('#fBC').value=c;return true},{once:true,keep:true})"><i class="ic" data-ic="camera"></i>Scan kamera</button></div></div>
+  <div class="two"><div><label class="fl">Barcode (opsional)</label><input class="fi" id="fBC" value="${esc(i.bc||'')}" inputmode="text" autocomplete="off" placeholder="Scan / ketik"></div><div class="scanwrap"><button type="button" class="btn sec scanbtn" onclick="P2.scan(c=>{$('#fBC').value=c;return true},{once:true,keep:true})"><i class="ic" data-ic="camera"></i><span>Scan kamera</span></button></div></div>
   <div class="two"><div><label class="fl">Stasiun (opsional)</label><input class="fi" id="fSt" list="stL" maxlength="20" placeholder="Dapur / Bar" value="${esc(i.stn||'')}"><datalist id="stL"><option>Dapur</option><option>Bar</option><option>Dessert</option></datalist></div>
   <div><label class="fl">Satuan beli (opsional)</label><div style="display:flex;gap:6px"><input class="fi" id="fPuN" maxlength="12" placeholder="karung" value="${esc((i.pu||{}).n||'')}" style="flex:1;min-width:0"><input class="fi" id="fPuF" type="number" min="0" step="any" inputmode="decimal" placeholder="isi" value="${(i.pu||{}).f||''}" style="width:72px"></div></div></div>
   <small class="hint" style="display:block;margin:-2px 0 6px">Satuan beli: mis. 1 karung = 25000 (gram). Dipakai di Pembelian agar stok bertambah otomatis.</small>
-  <label class="fl">Varian &amp; tambahan (opsional)</label><textarea class="fi" id="fMods" rows="3" placeholder="Level pedas (wajib): Sedang, Pedas, Extra pedas +2000&#10;Topping (banyak): Keju +5000, Telur +4000" style="min-height:70px">${esc(modsText(i.mods))}</textarea>
+  <label class="fl">Varian &amp; tambahan (opsional)</label><textarea class="fi modsta" id="fMods" rows="4" placeholder="Level pedas (wajib): Sedang, Pedas +2000&#10;Topping (banyak): Keju +5000, Telur +4000">${esc(modsText(i.mods))}</textarea>
   <small class="hint">Satu baris satu grup. Tulis (wajib) bila harus dipilih, (banyak) bila boleh pilih lebih dari satu, dan +harga untuk tambahan biaya.</small>
   <label class="tgl"><input type="checkbox" id="fNS" ${i.ns?'checked':''} onchange="nsToggle()"><span>Bahan / tidak dijual (hanya untuk stok &amp; opname, tidak muncul di Kasir)</span></label>
   <label class="tgl" id="fBL" ${i.ns?'hidden':''}><input type="checkbox" id="fB" ${isB(i)?'checked':''} onchange="bdToggle()"><span>Item paket / resep (berisi beberapa item)</span></label>
