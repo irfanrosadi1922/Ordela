@@ -518,3 +518,35 @@ html[data-skin] .grid:not(.list) .p .stk{margin-bottom:0}
 .plh{display:flex;justify-content:space-between;align-items:center}.plh b{font-size:17px}.plp{font-weight:800;color:var(--ad,#2f6bff)}
 .pll{margin:2px 0 6px;padding:0;list-style:none;display:grid;gap:3px;font-size:13.5px}.pll li:before{content:"\2713";color:var(--ad,#2f6bff);font-weight:800;margin-right:8px}.pll li.mu{color:var(--mu,#7b8499)}.pll li.mu:before{content:""; margin:0}
 .pli{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid color-mix(in srgb,var(--ad,#2f6bff) 8%,transparent)}.pli small{display:block;color:var(--mu,#7b8499);font-size:12px}.plr{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+
+/* ===== Pembayaran ringkas (satu layar) & catatan invoice ===== */
+.payw{display:flex;flex-direction:column;margin:-20px;max-height:94vh}
+.payw .pbody{padding:20px 20px 4px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;flex:1;min-height:0}
+.payw h3{margin:0 0 4px}
+.payw .big{font-size:34px;line-height:1.1;margin:0 0 2px}
+.payw .fi{height:44px;padding:0 14px;font-size:15px;margin-bottom:8px}
+.payw .two{gap:8px}.payw .two>*{min-width:0}
+.payw .pmb .fi{margin-bottom:6px}
+.payw .fl{margin:8px 0 4px;font-size:12px}
+.payw .chips{gap:6px;margin:2px 0 8px}
+.payw .chip{height:36px;padding:0 10px;font-size:13px;min-width:0;white-space:nowrap}
+.payw .pmeth{gap:5px}
+.payw .pmore{border-radius:16px;background:rgba(127,127,127,.09);margin:0 0 10px;overflow:hidden}
+.payw .pmore summary{white-space:nowrap;list-style:none;display:flex;align-items:center;gap:8px;padding:11px 14px;font-weight:700;font-size:14px;cursor:pointer;min-height:44px}
+.payw .pmore summary::-webkit-details-marker{display:none}
+.payw .pmore summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .2s;opacity:.55;flex:none}
+.payw .pmore[open] summary::after{transform:rotate(-135deg)}
+.payw .pmore summary small{font-weight:500;color:var(--mu);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.payw .pmb{padding:0 14px 12px}
+.payw .payf{padding:8px 20px 20px;background:var(--card);border-top:1px solid rgba(127,127,127,.14)}
+.payw .payf .chg{margin:0 0 8px}
+.payw .pbtn{display:grid;grid-template-columns:1fr 2.2fr;gap:8px}
+.payw .pbtn .btn{margin:0;height:48px}
+.two2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
+.nbtn{max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.nbtn.has{font-weight:700}
+.qn{margin:0 0 8px}
+.inv-qn{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
+.inv-qn .chip{display:inline-flex;align-items:center;gap:6px}
+.inv-qn .chip b{opacity:.55;font-weight:700}
+.invh{margin:14px 0 4px;font-size:12px;color:var(--mu,#7b8499);font-weight:700;letter-spacing:.02em;text-transform:uppercase}

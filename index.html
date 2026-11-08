@@ -1055,6 +1055,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
       <div class="sr"><span>Diskon</span>
         <span class="dsc"><select id="dType" onchange="S.dType=this.value;totals()"><option value="%">%</option><option value="n">Rp</option></select><input id="dVal" type="number" step="any" min="0" value="0" oninput="S.dVal=+this.value||0;totals()"></span></div>
       <div class="sr"><span>Kode promo</span><span class="dsc"><input id="pcode" placeholder="Kode" autocapitalize="characters" onchange="applyCode(this.value)" style="width:92px;text-transform:uppercase"></span></div>
+      <div class="sr" id="noteR"><span>Catatan</span><button type="button" class="mini nbtn" id="noteB" onclick="noteEdit()">+ Tambah</button></div>
       <div class="sr" id="sPromoR" hidden><span id="sPromoN"></span><b id="sPromoV"></b></div>
       <div class="sr"><span>Potongan</span><b id="sDisc"></b></div>
       <div class="tot"><span>Total</span><span id="sTot"></span></div>
@@ -1380,9 +1381,10 @@ function totals(){
   {const r=$('#sPromoR');if(r){r.hidden=!c.promo;if(c.promo){$('#sPromoN').textContent='Promo: '+c.promo.name+(c.promo.code?' ('+c.promo.code+')':'');$('#sPromoV').textContent='− '+money(c.pd)}}
    const hb=$('#holdBtn');if(hb){const h=holdsOpen().length;hb.textContent='Tahanan'+(h?' ('+h+')':'')}}
   if(window.P2&&P2.cdPush)P2.cdPush();
+  noteUI();
   $('#placeBtn').disabled=!n;$('#fabN').innerHTML=`<i class="ic" data-ic="cart"></i>${n} item`;$('#fabT').textContent=money(c.total);
 }
-function clearCart(){S.cart={};S.cm={};S.dVal=0;S.promoId=null;{const e=$('#pcode');if(e)e.value=''}renderGrid();renderInvoice()}
+function clearCart(){S.cart={};S.cm={};S.note='';S.dVal=0;S.promoId=null;{const e=$('#pcode');if(e)e.value=''}renderGrid();renderInvoice()}
 
 /* ---------- payment & receipt ---------- */
 /* ---------- tahan pesanan ---------- */
@@ -1396,8 +1398,8 @@ function holdAsk(){
 }
 function holdSave(){
   const now=Date.now();
-  db.holds.unshift({id:'h'+now.toString(36)+Math.random().toString(36).slice(2,5),t:new Date(now).toISOString(),u:now,by:(CL.on&&CL.me)?CL.me.name:'',tbl:($('#hTbl').value||'').trim().slice(0,12),cust:$('#hCust').value.trim(),type:S.type,cart:{...S.cart},cm:JSON.parse(JSON.stringify(S.cm||{})),dType:S.dType,dVal:S.dVal,pid:S.promoId||null});
-  S.cart={};S.cm={};S.dVal=0;S.promoId=null;save();closeModal();renderGrid();renderInvoice();renderCats();toast('Pesanan ditahan')
+  db.holds.unshift({id:'h'+now.toString(36)+Math.random().toString(36).slice(2,5),t:new Date(now).toISOString(),u:now,by:(CL.on&&CL.me)?CL.me.name:'',tbl:($('#hTbl').value||'').trim().slice(0,12),cust:$('#hCust').value.trim(),type:S.type,cart:{...S.cart},cm:JSON.parse(JSON.stringify(S.cm||{})),dType:S.dType,dVal:S.dVal,pid:S.promoId||null,note:S.note||''});
+  S.cart={};S.cm={};S.note='';S.dVal=0;S.promoId=null;save();closeModal();renderGrid();renderInvoice();renderCats();toast('Pesanan ditahan')
 }
 function holdTotal(h){let t=0;for(const k in h.cart){const i=find(bid(k));if(!i)continue;const m=(h.cm||{})[k];t+=(i.price+(m?m.sel.reduce((a,x)=>a+(+x.p||0),0):0))*h.cart[k]}return t}
 function holdList(){
@@ -1409,7 +1411,7 @@ function holdList(){
 function holdResume(id){
   const h=db.holds.find(x=>x.id===id);if(!h||h.del)return;
   if(Object.keys(S.cart).length&&!confirm('Keranjang saat ini akan diganti dengan pesanan tahanan. Lanjutkan?'))return;
-  S.cart={...h.cart};S.cm=JSON.parse(JSON.stringify(h.cm||{}));S.type=h.type||S.type;S.dType=h.dType||'%';S.dVal=h.dVal||0;S.promoId=h.pid||null;{const e=$('#pcode');const p=h.pid&&db.promos.find(x=>x.id===h.pid);if(e)e.value=p&&p.code||''}S.holdMeta={tbl:h.tbl,cust:h.cust};
+  S.cart={...h.cart};S.cm=JSON.parse(JSON.stringify(h.cm||{}));S.type=h.type||S.type;S.dType=h.dType||'%';S.dVal=h.dVal||0;S.promoId=h.pid||null;S.note=h.note||'';{const e=$('#pcode');const p=h.pid&&db.promos.find(x=>x.id===h.pid);if(e)e.value=p&&p.code||''}S.holdMeta={tbl:h.tbl,cust:h.cust};
   h.del=1;h.u=Date.now();save();closeModal();go('pos');renderGrid();renderInvoice();renderCats();toast('Pesanan dilanjutkan')
 }
 function holdDel(id){const h=db.holds.find(x=>x.id===id);if(!h)return;if(!confirm('Hapus pesanan tahanan ini?'))return;h.del=1;h.u=Date.now();save();holdList();renderInvoice()}
@@ -1458,27 +1460,56 @@ function payTotals(){
   const gc=P.gift&&(db.gifts||[]).find(g=>g.id===P.gift&&!g.del),gv=gc?Math.min(+gc.bal||0,rnd(total+tip)):0;
   return{c,rd,pts,total,tip,gv,gc:gc||null,payable:rnd(total+tip-gv),mem:m||null};
 }
+/* pengaturan invoice & pembayaran (db.set.inv); bawaan: semua kolom tersedia, opsi tambahan dilipat */
+const INV_DEF={cust:1,tbl:1,note:1,noteRc:1,gift:1,mem:1,tip:1,split:1,more:0,pm:'Tunai',qn:['Tambah saus','Tanpa sambal','Pedas','Tanpa bawang','Bungkus','Es dipisah']};
+function invCfg(){const c=Object.assign({},INV_DEF,(db.set&&db.set.inv)||{});if(!Array.isArray(c.qn))c.qn=INV_DEF.qn;return c}
+function noteUI(){
+  const r=$('#noteR'),b=$('#noteB');if(!r||!b)return;const c=invCfg();r.hidden=!c.note;
+  const n=(S.note||'').trim();b.textContent=n?n:'+ Tambah';b.classList.toggle('has',!!n);
+}
+function noteEdit(){
+  const c=invCfg();
+  openModal(`<h3>Catatan pesanan</h3>
+  ${c.qn.length?`<div class="chips qn">${c.qn.map((q,i)=>`<button type="button" class="chip" onclick="noteChip(${i})">${esc(q)}</button>`).join('')}</div>`:''}
+  <textarea class="fi" id="nTxt" rows="3" maxlength="120" placeholder="Mis. tambah saus, tanpa es" style="height:auto;padding:12px 14px">${esc(S.note||'')}</textarea>
+  <button class="btn" onclick="noteSave()">Simpan</button>
+  <div class="two2"><button class="btn sec" onclick="closeModal()">Batal</button>${S.note?'<button class="btn sec" onclick="S.note=\'\';noteSave(1)">Hapus</button>':''}</div>`);
+  setTimeout(()=>{const e=$('#nTxt');if(e)e.focus()},60);
+}
+function noteChip(i){
+  const e=$('#nTxt'),q=invCfg().qn[i];if(!e||!q)return;
+  const v=e.value.trim();if(v.toLowerCase().split(/,\s*/).includes(q.toLowerCase()))return;
+  e.value=(v?v.replace(/[,\s]+$/,'')+', ':'')+q;e.focus()
+}
+function noteSave(clr){
+  if(!clr)S.note=(($('#nTxt')||{}).value||'').trim().slice(0,120);
+  closeModal();noteUI()
+}
 function payForm(){
   if(db.set.shiftReq&&can('shift')&&window.shiftCur&&!shiftCur()){toast('Buka shift kasir dulu');go('shift');return}
-  const co=S.coId?CO.list.find(x=>x.id===S.coId):null,pre=isOnl(co)?'QRIS':'Tunai';
+  const co=S.coId?CO.list.find(x=>x.id===S.coId):null,cf=invCfg(),isO=isOnl(co);
+  const pre=isO?'QRIS':(PAY_M.includes(cf.pm)?cf.pm:'Tunai');
   S.pay={m:pre,paid:0,split:false,parts:[],tip:0,mem:null,redeem:false,rd:0};
-  const t=payTotals();S.pay.paid=t.payable;const c=t.c;
-  openModal(`<h3>Pembayaran</h3><div class="big" id="pTot">${money(t.payable)}</div><small class="hint" id="pSub" style="display:block;text-align:center;min-height:16px"></small>
-  <div class="two"><div><label class="fl" for="pCust">Nama pelanggan</label><input class="fi" id="pCust" placeholder="Opsional" value="${esc((S.holdMeta||{}).cust||'')}"></div>
-  <div><label class="fl" for="pTbl">No. meja</label><input class="fi" id="pTbl" maxlength="12" inputmode="text" autocapitalize="characters" placeholder="Mis. 7" style="font-weight:700" value="${esc((S.holdMeta||{}).tbl||'')}"></div></div>
-  <label class="fl">Kartu hadiah (opsional)</label><div style="display:flex;gap:8px"><input class="fi" id="pGift" placeholder="Kode kartu" autocapitalize="characters" autocomplete="off" style="flex:1;min-width:0"><button type="button" class="btn sec" style="width:auto;margin:0" onclick="P2.giftUse()">Pakai</button></div><div id="pGiftR" class="hint"></div>
-  <label class="fl">Member (opsional)</label><input class="fi" id="pMemQ" placeholder="Cari nama / no. HP member" oninput="memSearch(this.value)" autocomplete="off"><div id="pMemR"></div><div id="pMemSel"></div>
-  <div class="two"><div><label class="fl">Tip (opsional)</label><input class="fi" id="pTip" type="number" step="any" min="0" oninput="S.pay.tip=+this.value||0;payRefresh()"></div>
-  <div><label class="fl">Bagi rata</label><input class="fi" id="pSplitN" type="number" min="1" max="30" placeholder="Jumlah orang" oninput="payRefresh()"></div></div>
-  ${Object.keys(S.cart).length>1||Object.values(S.cart).some(q=>q>1)?'<button type="button" class="btn sec" style="margin:6px 0" onclick="P2.splitForm()">Pisah tagihan per item</button>':''}
-  <label class="fl">Metode</label><div class="chips" id="pM">${PAY_M.map(m=>`<button class="chip ${m===pre?'on':''}" data-m="${m}" onclick="setM('${m}')">${m}</button>`).join('')}<button class="chip" id="pSplitB" onclick="paySplit(!S.pay.split)">Gabungan</button></div>
-  ${isOnl(co)?`<div class="chg ${co.pst===2?'':'neg'}" style="margin:8px 0"><span>${co.pst===2?'<i class="ic" data-ic="card"></i>Pelanggan membayar lewat QRIS, sudah Anda konfirmasi.':co.pst===1?'<i class="ic" data-ic="card"></i>Pelanggan mengaku sudah bayar lewat QRIS. Cek mutasi dulu sebelum lanjut.':'<i class="ic" data-ic="card"></i>Pelanggan memilih QRIS tetapi belum menandai sudah bayar.'}</span></div>`:''}
-  <div id="cashBox" style="${pre==='Tunai'?'':'display:none'}"><label class="fl">Uang diterima</label><input class="fi" id="pPaid" type="number" step="any" min="0" value="${t.payable}" oninput="payRefresh()">
-  <div class="chips"><button class="chip" onclick="quick(payTotals().payable)">Uang Pas</button>${quickAmts().map(v=>`<button class="chip" onclick="quick(${v})">${amtLbl(v)}</button>`).join('')}</div></div>
-  <div id="splitBox" style="display:none"></div>
-  <div class="chg" id="pChg"><span>Kembalian</span><span>${money(0)}</span></div>
-  <button class="btn" id="payOk" onclick="checkout()">Bayar & Cetak Struk</button>
-  <button class="btn sec" onclick="closeModal()">Batal</button>`);
+  const t=payTotals();S.pay.paid=t.payable;
+  const multi=Object.keys(S.cart).length>1||Object.values(S.cart).some(q=>q>1);
+  const ex=[];
+  if(cf.gift)ex.push(`<label class="fl">Kartu hadiah</label><div style="display:flex;gap:8px"><input class="fi" id="pGift" placeholder="Kode kartu" autocapitalize="characters" autocomplete="off" style="flex:1;min-width:0"><button type="button" class="btn sec" style="width:auto;margin:0" onclick="P2.giftUse()">Pakai</button></div><div id="pGiftR" class="hint"></div>`);
+  if(cf.mem)ex.push(`<label class="fl">Member</label><input class="fi" id="pMemQ" placeholder="Cari nama / no. HP member" oninput="memSearch(this.value)" autocomplete="off"><div id="pMemR"></div><div id="pMemSel"></div>`);
+  if(cf.tip||cf.split)ex.push(`<div class="two">${cf.tip?`<div><label class="fl">Tip</label><input class="fi" id="pTip" type="number" step="any" min="0" oninput="S.pay.tip=+this.value||0;payRefresh()"></div>`:''}${cf.split?`<div><label class="fl">Bagi rata</label><input class="fi" id="pSplitN" type="number" min="1" max="30" placeholder="Orang" oninput="payRefresh()"></div>`:''}</div>`);
+  if(cf.split&&multi)ex.push(`<button type="button" class="btn sec sm" style="margin:8px 0 0;width:100%" onclick="P2.splitForm()">Pisah tagihan per item</button>`);
+  const names=[cf.gift&&'Kartu hadiah',cf.mem&&'Member',cf.tip&&'Tip',cf.split&&'Bagi rata'].filter(Boolean).join(' · ');
+  const hm=S.holdMeta||{};
+  openModal(`<div class="payw"><div class="pbody"><h3>Pembayaran</h3><div class="big" id="pTot">${money(t.payable)}</div><small class="hint" id="pSub" style="display:block;text-align:center;min-height:14px"></small>
+  ${(cf.cust||cf.tbl)?`<div class="two">${cf.cust?`<input class="fi" id="pCust" aria-label="Nama pelanggan" placeholder="Pelanggan" value="${esc(hm.cust||'')}">`:''}${cf.tbl?`<input class="fi" id="pTbl" aria-label="No. meja" maxlength="12" inputmode="text" autocapitalize="characters" placeholder="No. meja" style="font-weight:700" value="${esc(hm.tbl||'')}">`:''}</div>`:''}
+  ${cf.note?`<input class="fi" id="pNote" aria-label="Catatan" maxlength="120" placeholder="Catatan (mis. tambah saus)" value="${esc(S.note||'')}" oninput="S.note=this.value.trim().slice(0,120);noteUI()">`:''}
+  ${ex.length?`<details class="pmore"${cf.more?' open':''}><summary>Opsi tambahan<small>${esc(names)}</small></summary><div class="pmb">${ex.join('')}</div></details>`:''}
+  <div class="chips pmeth" id="pM">${PAY_M.map(m=>`<button class="chip ${m===pre?'on':''}" data-m="${m}" onclick="setM('${m}')">${m}</button>`).join('')}<button class="chip" id="pSplitB" onclick="paySplit(!S.pay.split)">Gabungan</button></div>
+  ${isO?`<div class="chg ${co.pst===2?'':'neg'}" style="margin:8px 0"><span>${co.pst===2?'<i class="ic" data-ic="card"></i>Pelanggan membayar lewat QRIS, sudah Anda konfirmasi.':co.pst===1?'<i class="ic" data-ic="card"></i>Pelanggan mengaku sudah bayar lewat QRIS. Cek mutasi dulu sebelum lanjut.':'<i class="ic" data-ic="card"></i>Pelanggan memilih QRIS tetapi belum menandai sudah bayar.'}</span></div>`:''}
+  <div id="cashBox" style="${pre==='Tunai'?'':'display:none'}"><input class="fi" id="pPaid" type="number" step="any" min="0" aria-label="Uang diterima" placeholder="Uang diterima" value="${t.payable}" oninput="payRefresh()">
+  <div class="chips qk"><button class="chip" onclick="quick(payTotals().payable)">Uang Pas</button>${quickAmts().map(v=>`<button class="chip" onclick="quick(${v})">${amtLbl(v)}</button>`).join('')}</div></div>
+  <div id="splitBox" style="display:none"></div></div>
+  <div class="payf"><div class="chg" id="pChg"><span>Kembalian</span><span>${money(0)}</span></div>
+  <div class="pbtn"><button class="btn sec" onclick="closeModal()">Batal</button><button class="btn" id="payOk" onclick="checkout()">Bayar & Cetak Struk</button></div></div></div>`);
   payRefresh();
 }
 function setM(m){S.pay.m=m;if(S.pay.split)paySplit(false);document.querySelectorAll('#pM .chip[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('#cashBox').style.display=m==='Tunai'?'':'none';if(m!=='Tunai')S.pay.paid=payTotals().payable;payRefresh()}
@@ -1528,9 +1559,10 @@ function checkout(){
   const now=new Date(),pad=n=>String(n).padStart(2,'0');
   const no=`INV-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${CL.on?devTag()+'-':''}${String(db.seq).padStart(4,'0')}`;
   const mem=t.mem,earn=mem&&(+db.set.ptsPer>0)?Math.floor(t.total/(+db.set.ptsPer)):0;
-  const o={no,t:now.toISOString(),type:S.type,cust:$('#pCust').value.trim()||(mem?mem.name:''),tbl:($('#pTbl').value||'').trim().slice(0,12),cashier:(CL.on&&CL.me)?CL.me.name:'',
+  const o={no,t:now.toISOString(),type:S.type,cust:((($('#pCust')||{}).value||'').trim())||(mem?mem.name:''),tbl:((($('#pTbl')||{}).value||'')).trim().slice(0,12),cashier:(CL.on&&CL.me)?CL.me.name:'',
     lines:ids.map(id=>{const i=find(bid(id)),sx=lineSfx(id),l={id:bid(id),name:i.name+(sx?' ('+sx+')':''),bn:i.name,price:linePrice(id),cost:i.cost||0,qty:S.cart[id]};if(sx)l.mods=(S.cm[id]||{}).sel;if(isB(i))l.bd=i.bundle.map(c=>{const x=find(c.id);return{id:c.id,q:c.q,name:x?x.name:''}});return l}),
     sub:c.sub,disc:rnd(c.disc+t.rd),tax:c.tax,taxRate:db.set.tax,total:t.total,method:r.method,paid:r.paid,change:Math.max(0,r.change),cashIn:r.cash};
+  {const nt=(S.note||'').trim().slice(0,120);if(nt)o.note=nt}
   if(t.tip)o.tip=t.tip;if(r.pays&&r.pays.length>1)o.pays=r.pays;
   if(c.promo)o.promo={id:c.promo.id,name:c.promo.name,code:c.promo.code||'',amt:c.pd};
   if(mem)o.mem={id:mem.id,name:mem.name,earn,used:t.pts};
@@ -1541,10 +1573,10 @@ function checkout(){
     else{i.stock-=q;logAdd(i.name,-q,'Penjualan '+no,i.stock,o.t)}});
   if(mem){mem.pts=Math.max(0,(+mem.pts||0)-t.pts+earn);mem.visits=(+mem.visits||0)+1;mem.spent=rnd((+mem.spent||0)+t.total);mem.last=o.t;mem.u=Date.now()}
   if(o.tbl){const lim2=Date.now()-3*864e5;db.occ=db.occ.filter(x=>(+x.u||0)>lim2);db.occ.unshift({id:'t'+no,tbl:o.tbl,no,total:o.total,by:o.cashier||'',cust:o.cust||'',t:o.t,u:Date.now()})}
-  if(db.set.kdsOn){const lim=Date.now()-2*864e5;db.kds=db.kds.filter(k=>(+k.u||0)>lim);db.kds.unshift({id:'k'+no,no,t:o.t,tbl:o.tbl,cust:o.cust,lines:o.lines.map(l=>({id:l.id,name:l.name,qty:l.qty})),note:(S.holdMeta&&S.holdMeta.note)||'',st:0,u:Date.now()})}
+  if(db.set.kdsOn){const lim=Date.now()-2*864e5;db.kds=db.kds.filter(k=>(+k.u||0)>lim);db.kds.unshift({id:'k'+no,no,t:o.t,tbl:o.tbl,cust:o.cust,lines:o.lines.map(l=>({id:l.id,name:l.name,qty:l.qty})),note:o.note||'',st:0,u:Date.now()})}
   db.log=db.log.slice(0,LOG_MAX);db.orders.unshift(o);db.seq++;save();
   coLink(no);
-  S.cart={};S.cm={};S.dVal=0;S.promoId=null;S.holdMeta=null;{const e=$('#pcode');if(e)e.value=''}
+  S.cart={};S.cm={};S.note='';S.dVal=0;S.promoId=null;S.holdMeta=null;{const e=$('#pcode');if(e)e.value=''}
   if(S.rest){S.cart=S.rest.cart;S.cm=S.rest.cm;S.holdMeta=S.rest.meta;S.rest=null;setTimeout(()=>toast('Sisa tagihan kembali ke keranjang'),600)}
   renderGrid();renderInvoice();renderCats();
   showReceipt(o,true);
@@ -1577,6 +1609,7 @@ function receiptModel(o){
     else{m.push({t:'text',x:l.name,a:'left'});m.push({t:'row',l:'  '+l.qty+' x '+n(l.price),r:n(l.qty*l.price)})}
   });
   hr();
+  if(o.note&&invCfg().noteRc){m.push({t:'text',x:tr('Catatan')+': '+o.note,a:'left'});hr()}
   m.push({t:'row',l:tr('Subtotal'),r:money(o.sub)});
   if(r.showDisc&&o.disc)m.push({t:'row',l:tr('Diskon'),r:'-'+money(o.disc)});
   if(r.showTax)m.push({t:'row',l:tr('Pajak ('+o.taxRate+'%)'),r:money(o.tax)});
@@ -3625,7 +3658,7 @@ function ktOn(){const hasSt=(db.set.prns||[]).some(x=>(x.stations||[]).length)||
 function ktSet(v){try{localStorage.setItem('pos_kt',v?'1':'0')}catch(e){}}
 async function kitchenAuto(o){
   if(!ktOn()||!o||!o.lines||!o.lines.length)return;
-  const t={no:o.no,num:o.no,name:o.cust||'',tbl:o.tbl||'',type:o.type,t:o.t,lines:o.lines.map(l=>({id:l.id,name:l.name,qty:l.qty})),note:'',kt:true};
+  const t={no:o.no,num:o.no,name:o.cust||'',tbl:o.tbl||'',type:o.type,t:o.t,lines:o.lines.map(l=>({id:l.id,name:l.name,qty:l.qty})),note:o.note||'',kt:true};
   try{const ok=await printTicket(t);if(!ok)toast('Tiket dapur gagal dicetak: '+(CO.perr||'printer belum terhubung'))}
   catch(e){toast('Tiket dapur gagal dicetak')}
 }

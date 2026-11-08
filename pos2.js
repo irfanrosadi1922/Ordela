@@ -635,6 +635,37 @@ P2.planReq=async function(code){
   try{const r=await api('/api/plan/request',{method:'POST',body:JSON.stringify({plan:code,interval:P2.planIv})});const j=await r.json();if(!r.ok)throw new Error(j.error||'gagal');toast('Permintaan dikirim');P2.plan()}catch(e){toast(e.message||'Gagal mengirim permintaan')}
 };
 
+
+/* ================= PENGATURAN INVOICE & PEMBAYARAN ================= */
+P2.invSet=function(){
+  closeAll();
+  const c=invCfg();
+  const T=(k,t,d)=>`<label class="tgl"><input type="checkbox" ${c[k]?'checked':''} onchange="P2.invTog('${k}',this.checked)"><span>${t}${d?`<small>${d}</small>`:''}</span></label>`;
+  openModal(`<h3>Invoice &amp; pembayaran</h3>
+  <p class="hint" style="margin:0 0 6px">Pilih kolom yang tampil di layar pembayaran supaya kasir tidak perlu scroll.</p>
+  <h5 class="invh">Kolom utama</h5>
+  ${T('cust','Nama pelanggan')}${T('tbl','No. meja')}${T('note','Catatan pesanan','Mis. tambah saus; juga muncul di keranjang')}
+  <h5 class="invh">Opsi tambahan (dilipat)</h5>
+  ${T('gift','Kartu hadiah')}${T('mem','Member &amp; poin')}${T('tip','Tip')}${T('split','Bagi rata &amp; pisah tagihan')}
+  ${T('more','Buka opsi tambahan otomatis','Kalau mati, opsi tambahan tertutup sampai diketuk')}
+  <h5 class="invh">Struk</h5>
+  ${T('noteRc','Cetak catatan di struk','Catatan selalu tercetak di tiket dapur')}
+  <h5 class="invh">Metode bawaan</h5>
+  <div class="chips" id="invPm">${PAY_M.map(m=>`<button class="chip ${m===c.pm?'on':''}" onclick="P2.invPm('${m}')">${m}</button>`).join('')}</div>
+  <h5 class="invh">Catatan cepat</h5>
+  <p class="hint" style="margin:0">Ketuk saat menulis catatan. Contoh: tambah saus, tanpa sambal.</p>
+  <div class="inv-qn" id="invQn"></div>
+  <div style="display:flex;gap:8px"><input class="fi" id="invQnI" maxlength="30" placeholder="Tambah catatan cepat" style="flex:1;min-width:0;margin:0" onkeydown="if(event.key==='Enter'){event.preventDefault();P2.invQnAdd()}"><button class="btn sec" style="width:auto;margin:0" onclick="P2.invQnAdd()">Tambah</button></div>
+  <button class="btn" style="margin-top:14px" onclick="closeModal()">Selesai</button>`);
+  P2.invQnPaint();
+};
+P2.invSave=function(c){db.set.inv=c;save()};
+P2.invTog=function(k,v){const c=invCfg();c[k]=v?1:0;P2.invSave(c)};
+P2.invPm=function(m){const c=invCfg();c.pm=m;P2.invSave(c);document.querySelectorAll('#invPm .chip').forEach(b=>b.classList.toggle('on',b.textContent===m))};
+P2.invQnPaint=function(){const e=$('#invQn');if(!e)return;e.innerHTML=invCfg().qn.map((q,i)=>`<span class="chip">${esc(q)}<b onclick="P2.invQnDel(${i})" role="button" aria-label="Hapus">✕</b></span>`).join('')||'<small class="hint">Belum ada.</small>'};
+P2.invQnAdd=function(){const i=$('#invQnI'),v=(i.value||'').trim().slice(0,30);if(!v)return;const c=invCfg();if(c.qn.some(x=>x.toLowerCase()===v.toLowerCase())){i.value='';return}if(c.qn.length>=20){toast('Maksimal 20 catatan cepat');return}c.qn=c.qn.concat(v);P2.invSave(c);i.value='';P2.invQnPaint()};
+P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSave(c);P2.invQnPaint()};
+
 /* ================= CABANG ================= */
 P2.branch=async function(){
   closeAll();
