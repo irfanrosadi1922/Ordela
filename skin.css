@@ -480,3 +480,22 @@ html[data-skin] #v-riw .li:active{background:var(--peach)}
 
 /* nav bawah mengurus geser/ketuknya sendiri: tanpa ini browser sentuh (iOS) mengambil alih geseran dan membatalkan sentuhan (pointercancel) */
 html[data-skin] .bnav,html[data-skin] #bnav,html[data-skin] .bnav button,html[data-skin] #bnav button{touch-action:none!important}
+
+/* Inventori: baris judul + aksi dirapikan (ponsel = grid sama lebar, bukan tombol berserakan) */
+@media(max-width:700px){
+  html[data-skin] #v-inv>.bar{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;align-items:center;margin-bottom:14px}
+  html[data-skin] #v-inv>.bar h2{grid-column:1;margin:0;min-width:0}
+  html[data-skin] #v-inv>.bar .btn{width:100%;min-height:46px;margin:0;justify-content:center;text-align:center;white-space:nowrap;padding:0 14px;font-size:14px}
+  html[data-skin] #v-inv>.bar #opnBtn{grid-column:2;justify-self:end;width:auto;min-height:42px}
+  html[data-skin] #v-inv>.bar #addItemBtn{grid-column:1/-1}
+  html[data-skin] #v-inv>.bar #bulkDel{grid-column:1/-1}
+  html[data-skin] #v-inv>.bar .btn[hidden]{display:none!important}
+}
+
+/* Kartu menu: harga + tombol jumlah selalu menempel di dasar kartu (sejajar antar kartu sebaris), berapa pun jumlah baris teks di atasnya */
+html[data-skin] .grid:not(.list) .p .row{margin-top:auto!important;padding-top:10px}
+html[data-skin] .grid:not(.list) .p .stk{margin-bottom:0}
+@media(min-width:701px){
+  html[data-skin] #v-inv>.bar{display:flex!important;flex-wrap:wrap;gap:10px;align-items:center}
+  html[data-skin] #v-inv>.bar h2{flex:1 1 100%;margin:0 0 2px}
+}
