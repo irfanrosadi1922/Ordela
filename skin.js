@@ -347,7 +347,7 @@
         var stats = canRep ? '<div class="adst"><div class="adc"><h4>Target harian</h4><div class="adring"><svg viewBox="0 0 60 60"><circle class="tr" cx="30" cy="30" r="24"/><circle class="pg" cx="30" cy="30" r="24" stroke-dasharray="' + (C * pct).toFixed(1) + ' ' + C.toFixed(1) + '"/></svg><div><b>' + Math.round(pct * 100) + '%</b><span>dari rata-rata 7 hari</span></div></div></div>' +
           '<div class="adc w ' + (low ? '' : 'ok') + '"><h4>Stok</h4><div class="big"><i><i class="ic" data-ic="' + (low ? 'alert' : 'check') + '"></i></i>' + low + '</div><small>' + (low ? 'item menipis' : 'semua aman') + '</small></div></div>' : '';
         var secs = G.map(function (gr) {
-          var rows = gr[2].filter(function (r) { return r[0] === 'upd' ? !!window.OrdelaUpdate : r[0] === 'inv' ? (ok('set') && !!window.P2 && !!P2.invSet) : r[0] === 'plan' ? (isOwn() && typeof CL !== 'undefined' && CL.on && !!window.P2 && !!P2.plan) : show(r[0]); });
+          var rows = gr[2].filter(function (r) { return r[0] === 'upd' ? !!window.OrdelaUpdate : r[0] === 'inv' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.invSet) : r[0] === 'plan' ? (isOwn() && typeof CL !== 'undefined' && CL.on && !!window.P2 && !!P2.plan) : show(r[0]); });
           if (!rows.length) return '';
           return '<div class="adgt"><h3>' + gr[0] + '</h3><span>' + gr[1] + '</span></div><div class="adl">' + rows.map(function (r) {
             var act = r[0] === 'branch' ? 'P2.branch()' : r[0] === 'inv' ? 'P2.invSet()' : r[0] === 'plan' ? 'P2.plan()' : r[0] === 'upd' ? 'OrdelaUpdate.open()' : "go('" + r[0] + "')";
