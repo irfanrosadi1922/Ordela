@@ -1524,6 +1524,7 @@ function checkout(){
   const r=payCalc(),t=r.t,c=t.c;
   if(!r.valid){toast('Pembayaran belum sesuai');return}
   {const u=cartUse();for(const k in u){const x=find(k);if(!x||u[k]>x.stock){toast((x?x.name:'Item')+': stok tidak cukup');return}}}
+  {const lm=(typeof planLimitMsg==='function')?planLimitMsg():'';if(lm){planLimitDlg(lm);return}}   // batas transaksi paket
   const now=new Date(),pad=n=>String(n).padStart(2,'0');
   const no=`INV-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${CL.on?devTag()+'-':''}${String(db.seq).padStart(4,'0')}`;
   const mem=t.mem,earn=mem&&(+db.set.ptsPer>0)?Math.floor(t.total/(+db.set.ptsPer)):0;
@@ -1547,6 +1548,7 @@ function checkout(){
   if(S.rest){S.cart=S.rest.cart;S.cm=S.rest.cm;S.holdMeta=S.rest.meta;S.rest=null;setTimeout(()=>toast('Sisa tagihan kembali ke keranjang'),600)}
   renderGrid();renderInvoice();renderCats();
   showReceipt(o,true);
+  kitchenAuto(o);   // tiket dapur/bar (tidak menghalangi struk)
 }
 function fmtDT(o){const d=new Date(o.t);return d.toLocaleDateString(dloc())+' '+d.toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'}).replace('.',':')}
 
@@ -2726,6 +2728,7 @@ function renderPrn(){
     </div></div>
   <div class="panel"><h3>Printer Dapur / Bar</h3>
     <p class="mu" style="font-size:12.5px;line-height:1.5;margin:0 0 8px">Pengaturan printer tersimpan <b>di perangkat dan aplikasi ini saja</b>. Pesanan online hanya masuk ke aplikasi Kasir; tiketnya dibagi otomatis menurut <b>Stasiun</b> menu (diisi di Inventori → edit item) ke printer yang memuat stasiun itu. Menu tanpa stasiun / stasiun yang belum dipetakan dicetak di printer utama (Kasir).</p>
+    <label class="sw" style="display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:13.5px"><input type="checkbox" ${ktOn()?'checked':''} onchange="ktSet(this.checked);toast(this.checked?'Tiket dapur otomatis: hidup':'Tiket dapur otomatis: mati')"> <span><b>Cetak tiket dapur otomatis</b> untuk transaksi di toko (perangkat ini)</span></label>
     ${(db.set.prns||[]).map(x=>{const so=(a,v,t)=>`<option value="${v}" ${a===v?'selected':''}>${t}</option>`;return `
     <div class="panel" style="margin:8px 0;box-shadow:none;border:1px solid var(--ln)">
       <div class="two"><div><label class="fl">Nama printer</label><input class="fi" maxlength="20" value="${esc(x.name)}" onchange="prnSet('${x.id}','name',this.value)"></div>
@@ -3576,10 +3579,10 @@ function coApply(j){
 /* tiket pesanan (dapur) */
 function ticketModel(o){
   const m=[],hr=()=>m.push({t:'hr'});
-  m.push({t:'text',x:o.by?'PESANAN SERVER':'PESANAN ONLINE',a:'center',b:true});
+  m.push({t:'text',x:o.kt?'TIKET DAPUR':o.by?'PESANAN SERVER':'PESANAN ONLINE',a:'center',b:true});
   m.push({t:'text',x:o.num,a:'center',b:true,big:true});
   hr();
-  m.push({t:'row',l:'Nama',r:o.name,b:true});
+  if(o.name)m.push({t:'row',l:'Nama',r:o.name,b:true});
   if(o.tbl)m.push({t:'text',x:'MEJA '+o.tbl,a:'center',b:true,huge:3});
   m.push({t:'row',l:'Tipe',r:tr(o.type)});
   if(o.by)m.push({t:'row',l:'Server',r:o.by});
@@ -3589,9 +3592,9 @@ function ticketModel(o){
   {const g={};o.lines.forEach(l=>{const k=(find(l.id)||{}).stn||'';(g[k]=g[k]||[]).push(l)});const ks=Object.keys(g);
    ks.forEach(k=>{if(ks.length>1&&!o.stn)m.push({t:'text',x:'['+(k||'Umum')+']',a:'left',b:true});g[k].forEach(l=>m.push({t:'text',x:l.qty+'x '+l.name,a:'left',b:true}))})}
   if(o.note){hr();m.push({t:'text',x:'Catatan: '+o.note,a:'left'})}
-  hr();
+  if(!o.kt){hr();
   m.push({t:'row',l:'TOTAL',r:money(o.total),b:true});
-  m.push({t:'text',x:'BELUM DIBAYAR',a:'center',b:true});
+  m.push({t:'text',x:'BELUM DIBAYAR',a:'center',b:true})}
   return m;
 }
 const ticketOf=o=>({...o,ticket:true});
@@ -3602,17 +3605,29 @@ async function printTicket(o){
     const B=new Map();   // tujuan → baris
     o.lines.forEach(l=>{
       const k=stOf(l),pr=prnForStation(k);
+      if(o.kt&&!pr&&!db.set.stSplit)return;   // tiket dapur: baris tanpa stasiun tidak dicetak di printer kasir
       const key=pr?pr.id:(db.set.stSplit?'main:'+(k||'Umum'):'main');
       if(!B.has(key))B.set(key,{pr:pr||mainPrn(),st:pr?pr.name:(db.set.stSplit?(k||'Umum'):''),lines:[]});
       B.get(key).lines.push(l);
     });
+    if(!B.size)return true;   // tidak ada baris yang perlu dicetak
     if(B.size>1||[...B.values()][0].pr.id!=='main'||db.set.stSplit){
       let all=true;
       for(const g of B.values()){const ok=await printTicketTo(g.pr,{...o,lines:g.lines,stn:g.st||undefined});if(!ok)all=false;await sleep(400)}
       return all;
     }
   }
+  if(o.kt)return true;   // tiket dapur tanpa printer stasiun: tidak mencetak apa pun di printer kasir
   return printTicketTo(mainPrn(),o);
+}
+/* Tiket dapur/bar otomatis untuk transaksi di toko (bukan pesanan online). Hidup bila perangkat punya printer stasiun atau 'Pisah per stasiun'; bisa dimatikan per perangkat. */
+function ktOn(){const hasSt=(db.set.prns||[]).some(x=>(x.stations||[]).length)||!!db.set.stSplit;try{const v=localStorage.getItem('pos_kt');return v==null?hasSt:v==='1'}catch(e){return hasSt}}
+function ktSet(v){try{localStorage.setItem('pos_kt',v?'1':'0')}catch(e){}}
+async function kitchenAuto(o){
+  if(!ktOn()||!o||!o.lines||!o.lines.length)return;
+  const t={no:o.no,num:o.no,name:o.cust||'',tbl:o.tbl||'',type:o.type,t:o.t,lines:o.lines.map(l=>({id:l.id,name:l.name,qty:l.qty})),note:'',kt:true};
+  try{const ok=await printTicket(t);if(!ok)toast('Tiket dapur gagal dicetak: '+(CO.perr||'printer belum terhubung'))}
+  catch(e){toast('Tiket dapur gagal dicetak')}
 }
 async function printTicketTo(pr,o){
   const t=ticketOf(o);CO.perr='';
@@ -3988,7 +4003,10 @@ function upgradeDlg(v){
   const close=()=>{d.remove();document.removeEventListener('keydown',esc)};
   const esc=e=>{if(e.key==='Escape')close()};
   b.addEventListener('click',close);d.addEventListener('click',e=>{if(e.target===d)close()});document.addEventListener('keydown',esc);
-  box.append(ic,t,m,b);d.append(box);document.body.append(d);b.focus();
+  b.textContent=isOwner()?'Tutup':'Mengerti';
+  box.append(ic,t,m);
+  if(isOwner()&&typeof P2!=='undefined'&&P2.plan){const g=document.createElement('button');g.type='button';g.className='upok';g.textContent='Lihat paket';g.addEventListener('click',()=>{d.remove();document.removeEventListener('keydown',esc);P2.plan()});box.append(g);b.classList.add('sec')}
+  box.append(b);d.append(box);document.body.append(d);b.focus();
 }
 function can(p){return !CL.on||(!!CL.me&&(CL.me.role==='owner'?!lockNeed(p):(CL.me.perms||[]).includes(p)))}
 /* karyawan yang HANYA punya izin Absensi: tidak boleh memakai Kasir, Meja, Beranda, atau Notifikasi (tidak ada transaksi) */

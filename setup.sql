@@ -284,8 +284,8 @@ begin
       or (sub.status = 'past_due' and sub.grace_ends_at is not null and sub.grace_ends_at > now())) then
     v_code := sub.plan_code;
   end if;
-  select p.code, p.name, p.features into v_pl from billing.plans p where p.code = v_code;
-  if not found then select p.code, p.name, p.features into v_pl from billing.plans p where p.code = 'free'; end if;
+  select p.code, p.name, p.features, p.limits into v_pl from billing.plans p where p.code = v_code;
+  if not found then select p.code, p.name, p.features, p.limits into v_pl from billing.plans p where p.code = 'free'; end if;
   for m in select k as feat, v as bkey from jsonb_each_text(fmap) as t(k, v) loop
     select p.name into v_need from billing.plans p where p.is_active and coalesce((p.features ->> m.bkey)::boolean, false) order by p.sort_order limit 1;
     v_tiers := v_tiers || jsonb_build_object(m.feat, coalesce(v_need, 'Business'));
@@ -295,11 +295,29 @@ begin
   end loop;
   return jsonb_build_object('name', coalesce(v_pl.name, 'Starter'), 'code', coalesce(v_pl.code, 'free'),
     'status', coalesce(sub.status, 'none'),
+    'limits', case when sub.status is null then null else coalesce(v_pl.limits, '{}'::jsonb) end,
     'expires', case when sub.status = 'trialing' then pos.iso(sub.trial_ends_at) else pos.iso(sub.current_period_end) end,
     'locks', v_locks, 'tiers', v_tiers);
 end $$;
 create or replace function pos.feat_ok(p_store bigint, p_feat text) returns boolean language sql stable set search_path = '' as $$
   select not (pos.plan_of(p_store) -> 'locks' ? p_feat) $$;
+
+-- Batas angka paket (billing.plans.limits). null = tidak dibatasi / data langganan tidak ada; -1 = tanpa batas.
+create or replace function pos.plan_limit(p_store bigint, p_key text) returns int language sql stable set search_path = '' as $$
+  select case when jsonb_typeof(pos.plan_of(p_store) -> 'limits' -> p_key) = 'number' then (pos.plan_of(p_store) -> 'limits' ->> p_key)::numeric::int end $$;
+
+-- Pemakaian bulan ini untuk toko pusat + cabangnya: staf (bukan owner), jumlah outlet, pesan AI.
+create or replace function pos.plan_usage(p_store bigint) returns jsonb language plpgsql stable set search_path = '' as $$
+declare v_hq bigint := coalesce((select g.grp from pos.stores g where g.id = p_store), p_store); v_ai int := 0;
+begin
+  if to_regclass('billing.ai_usage') is not null then
+    execute 'select coalesce((select n from billing.ai_usage where store_id = $1 and period = date_trunc(''month'', now())::date), 0)' into v_ai using v_hq;
+  end if;
+  return jsonb_build_object(
+    'staff', (select count(*) from pos.t_users u where u.role <> 'owner' and u.store_id in (select v_hq union select x.id from pos.stores x where x.grp = v_hq)),
+    'outlets', 1 + (select count(*) from pos.stores x where x.grp = v_hq),
+    'ai', v_ai);
+end $$;
 
 create or replace function pos.me_view(u pos.users) returns jsonb language sql stable as $$
   select jsonb_build_object('id', u.id, 'username', u.username, 'name', u.name, 'role', u.role, 'perms', pos.perms_of(u),
@@ -553,6 +571,15 @@ declare st jsonb := pos.co_set(); d jsonb; s jsonb; nm text; kk text; ex pos.co;
 begin
   perform pg_advisory_xact_lock(7001);
   if v_by is null and not (st ->> 'on')::boolean then return pos.r(403, jsonb_build_object('error', 'closed', 'msg', st -> 'msg')); end if;
+  if v_by is null and pos.sid() is not null then   -- batas pesanan paket (hanya pesanan pelanggan; penjualan kasir tidak pernah ditolak server)
+    declare v_dl int := pos.plan_limit(pos.sid(), 'daily_orders'); v_ml int := pos.plan_limit(pos.sid(), 'monthly_orders'); v_today date := (now() at time zone pos.tz())::date;
+    begin
+      if (v_dl is not null and v_dl >= 0 and (select count(*) from pos.co where co.day = v_today) >= v_dl)
+         or (v_ml is not null and v_ml >= 0 and (select count(*) from pos.co where co.day >= date_trunc('month', v_today)::date) >= v_ml) then
+        return pos.r(403, jsonb_build_object('error', 'closed', 'msg', 'Toko sedang tidak menerima pesanan baru. Silakan coba lagi nanti.'));
+      end if;
+    end;
+  end if;
   select json into d from pos.doc where id = 1;
   if d is null then return pos.r(503, '{"error":"belum siap"}'); end if;
   if v_by is null and jsonb_typeof(b -> 'website') = 'string' and (b ->> 'website') <> '' then return pos.r(400, '{"error":"ditolak"}'); end if;
@@ -1024,6 +1051,39 @@ begin
     return pos.r(200, pos.me_self(me));
   end if;
 
+  if u = '/api/plan' and m = 'GET' then
+    declare v_hq bigint := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id); v_p jsonb := pos.plan_of(me.store_id); v_pl jsonb := '[]'; v_inv jsonb := '[]'; v_req jsonb; v_cur jsonb;
+    begin
+      if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
+      if to_regclass('billing.plans') is not null then
+        execute 'select coalesce(jsonb_agg(jsonb_build_object(''code'', p.code, ''name'', p.name, ''description'', coalesce(p.description, ''''), ''features'', p.features, ''limits'', p.limits,
+            ''prices'', (select coalesce(jsonb_agg(jsonb_build_object(''interval'', r."interval", ''currency'', r.currency, ''amount'', r.amount_minor, ''label'', r.display_amount) order by r."interval" desc), ''[]'') from billing.prices r where r.plan_code = p.code and r.is_active))
+          order by p.sort_order), ''[]'') from billing.plans p where p.is_active and p.code <> ''legacy''' into v_pl;
+        execute 'select coalesce(jsonb_agg(jsonb_build_object(''no'', i.invoice_number, ''status'', i.status, ''currency'', i.currency, ''total'', i.total_minor, ''due'', i.due_at, ''paid'', i.paid_at, ''url'', i.hosted_invoice_url) order by i.created_at desc), ''[]'')
+          from (select * from billing.invoices x where x.store_id = $1 order by x.created_at desc limit 12) i' into v_inv using v_hq;
+        execute 'select jsonb_build_object(''interval'', s."interval", ''currency'', s.currency, ''amount'', s.amount_minor, ''cancel'', s.cancel_at_period_end, ''end'', s.current_period_end, ''trial'', s.trial_ends_at)
+          from billing.subscriptions s where s.store_id = $1 order by s.created_at desc limit 1' into v_cur using v_hq;
+        execute 'select jsonb_build_object(''plan'', a.details ->> ''plan'', ''interval'', a.details ->> ''interval'', ''at'', a.created_at) from billing.audit_log a
+          where a.store_id = $1 and a.action = ''upgrade_requested'' and a.created_at > now() - interval ''14 days'' order by a.created_at desc limit 1' into v_req using v_hq;
+      end if;
+      return pos.r(200, jsonb_build_object('plan', v_p - 'locks' - 'tiers', 'usage', pos.plan_usage(me.store_id), 'plans', v_pl, 'invoices', v_inv, 'sub', v_cur, 'request', v_req));
+    end;
+  end if;
+  if u = '/api/plan/request' and m = 'POST' then
+    declare v_hq bigint := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id); v_code text := lower(btrim(coalesce(b ->> 'plan', ''))); v_iv text := case when b ->> 'interval' = 'yearly' then 'yearly' else 'monthly' end; v_ok boolean;
+    begin
+      if not own then return pos.r(403, '{"error":"Hanya owner"}'); end if;
+      if to_regclass('billing.plans') is null then return pos.r(503, '{"error":"Layanan langganan belum tersedia"}'); end if;
+      execute 'select exists (select 1 from billing.plans where code = $1 and is_active and code <> ''legacy'')' into v_ok using v_code;
+      if not v_ok then return pos.r(400, '{"error":"Paket tidak ditemukan"}'); end if;
+      if not pos.rate('planreq', 5, interval '1 hour') then return pos.r(429, '{"error":"Terlalu banyak permintaan. Coba lagi nanti."}'); end if;
+      execute 'insert into billing.audit_log(store_id, actor_type, actor_id, action, details) values ($1, ''owner'', $2, ''upgrade_requested'', jsonb_build_object(''plan'', $3::text, ''interval'', $4::text, ''from'', $5::text))'
+        using v_hq, me.username, v_code, v_iv, pos.plan_of(me.store_id) ->> 'code';
+      perform pos.audit(me.id, me.username, 'ajukan-paket', v_code || ' ' || v_iv);
+      return pos.r(200, '{"ok":true}');
+    end;
+  end if;
+
   if u = '/api/ai/use' and m = 'POST' then   -- kuota asisten AI per pengguna (dipanggil fungsi ai-chat sebelum menghubungi penyedia AI)
     if not pos.feat_ok(me.store_id, 'ai') then
       return pos.r(403, '{"error":"Asisten AI belum termasuk di paket langganan toko ini. Upgrade paket untuk memakainya."}');
@@ -1031,6 +1091,16 @@ begin
     if (select count(*) from pos.rl where rl.k = 'ai:' || me.id and rl.t > now() - interval '1 hour') >= 30 then
       return pos.r(429, '{"error":"Batas pertanyaan AI per jam tercapai. Coba lagi nanti."}');
     end if;
+    declare v_l int := pos.plan_limit(me.store_id, 'ai_messages_month'); v_hq bigint := coalesce((select g.grp from pos.stores g where g.id = me.store_id), me.store_id);
+    begin
+      if v_l is not null and v_l = 0 then return pos.r(403, '{"error":"Asisten AI belum termasuk di paket langganan toko ini. Upgrade paket untuk memakainya."}'); end if;
+      if v_l is not null and v_l > 0 and (pos.plan_usage(me.store_id) ->> 'ai')::int >= v_l then
+        return pos.r(429, jsonb_build_object('error', 'Kuota pesan AI bulan ini (' || v_l || ') sudah habis. Kuota diperbarui awal bulan atau upgrade paket.'));
+      end if;
+      if v_l is not null and to_regclass('billing.ai_usage') is not null then
+        execute 'insert into billing.ai_usage(store_id, period, n) values ($1, date_trunc(''month'', now())::date, 1) on conflict (store_id, period) do update set n = billing.ai_usage.n + 1' using v_hq;
+      end if;
+    end;
     insert into pos.rl(k, ip) values ('ai:' || me.id, '-');
     return pos.r(200, jsonb_build_object('ok', true, 'role', me.role));
   end if;
@@ -1106,6 +1176,12 @@ begin
     if not exists (select 1 from pos.stores h where h.id = v_hq and h.owner_id = me.id) then return pos.r(403, '{"error":"Hanya owner pusat yang boleh menambah cabang"}'); end if;
     if not pos.feat_ok(v_hq, 'branch') then return pos.r(403, jsonb_build_object('error', 'Multi-outlet belum termasuk di paket toko pusat. Upgrade ke paket ' || coalesce(pos.plan_of(v_hq) -> 'locks' ->> 'branch', 'yang lebih tinggi') || ' untuk menambah cabang.')); end if;
     if (select count(*) from pos.stores x where x.grp = v_hq) >= 20 then return pos.r(400, '{"error":"Maksimal 20 cabang"}'); end if;
+    declare v_l int := pos.plan_limit(v_hq, 'outlets');
+    begin
+      if v_l is not null and v_l >= 0 and (pos.plan_usage(v_hq) ->> 'outlets')::int >= v_l then
+        return pos.r(403, jsonb_build_object('error', 'Batas outlet paket ini (' || v_l || ') sudah tercapai. Upgrade paket untuk menambah outlet.'));
+      end if;
+    end;
     v_name := pos.clean(b ->> 'name', 60);
     if length(v_name) < 2 then return pos.r(400, '{"error":"Nama cabang wajib diisi (min. 2 karakter)"}'); end if;
     for i in 1..8 loop
@@ -1219,6 +1295,14 @@ begin
     if coalesce(jsonb_typeof(b -> 'password'), '') <> 'string' or length(b ->> 'password') < 6 then return pos.r(400, '{"error":"Sandi minimal 6 karakter"}'); end if;
     if exists (select 1 from pos.t_users where username = un) then return pos.r(409, '{"error":"Username sudah dipakai"}'); end if;
     nrole := case when lower(btrim(coalesce(b ->> 'role', ''))) = 'owner' then 'owner' else left(btrim(coalesce(b ->> 'role', 'staff')), 32) end;
+    if nrole <> 'owner' then
+      declare v_l int := pos.plan_limit(me.store_id, 'staff');
+      begin
+        if v_l is not null and v_l >= 0 and (pos.plan_usage(me.store_id) ->> 'staff')::int >= v_l then
+          return pos.r(403, jsonb_build_object('error', 'Batas karyawan paket ini (' || v_l || ') sudah tercapai. Upgrade paket untuk menambah karyawan.'));
+        end if;
+      end;
+    end if;
     nperms := case when nrole = 'owner' then '[]'::jsonb
       else pos.clean_perms(case when b -> 'perms' is null or jsonb_typeof(b -> 'perms') = 'null' then '["pos","shift","mem","co","prn"]'::jsonb else b -> 'perms' end) end;
     insert into pos.users(username, name, role, perms, pw, single) values (un, nm, nrole, nperms, extensions.crypt(b ->> 'password', extensions.gen_salt('bf', 10)),

@@ -573,6 +573,68 @@ P2.igReload=function(){IGL=null;V.integ()};
 P2.igTest=async function(k){try{await igCall('/api/integrations/test',{kind:k});toast(IG[k].food?'Pesanan contoh dibuat — cek halaman Pesanan':'Tes terkirim');V.integ()}catch(e){toast(e.message)}};
 P2.igDel=async function(k){if(!confirm('Putuskan '+IG[k].n+'? Kredensial dan URL penerima dihapus.'))return;try{await igCall('/api/integrations/delete',{kind:k});closeModal();toast('Diputuskan');V.integ()}catch(e){toast(e.message)}};
 
+
+/* ================= PAKET & LANGGANAN ================= */
+const PLN_FEAT={ai_manager:'Asisten AI',ai_sales_analysis:'Analisis penjualan AI',ai_recommendations:'Rekomendasi AI',promotions:'Promo',loyalty:'Member & poin',kds:'Layar Dapur',multi_outlet:'Multi-outlet',staff_attendance:'Absensi',inventory_advanced:'Stok lanjutan',supplier_management:'Pembelian & pemasok',api_integrations:'Integrasi',advanced_reports:'Laporan lanjutan',exports:'Ekspor data',qr_ordering:'Pesan via QR',audit_log:'Log audit',advanced_permissions:'Izin lanjutan',central_dashboard:'Dasbor pusat',priority_support:'Dukungan prioritas'};
+const PLN_ST={active:['Aktif','ok'],trialing:['Masa uji coba','w'],past_due:['Menunggu pembayaran','bad'],grandfathered:['Akses khusus','ok'],cancelled:['Dibatalkan','bad'],expired:['Berakhir','bad'],suspended:['Ditangguhkan','bad'],none:['Belum ada langganan','w']};
+P2.planIv=P2.planIv||'monthly';
+function plnLim(v){return v==null?'—':v<0?'Tanpa batas':String(v)}
+function plnDate(x){try{return new Date(x).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}catch(e){return ''}}
+function plnMoney(cur,minor){try{return new Intl.NumberFormat('id-ID',{style:'currency',currency:cur||'USD'}).format((+minor||0)/100)}catch(e){return (minor/100)+' '+cur}}
+function plnBar(label,used,lim){
+  const unl=lim==null||lim<0,pct=unl||!lim?0:Math.min(100,Math.round(used/lim*100));
+  return `<div class="plb"><div class="plbh"><span>${esc(label)}</span><b>${used}${unl?'':' / '+lim}${unl&&lim<0?' · tanpa batas':''}</b></div>${unl?'':`<div class="plbt"><i class="${pct>=100?'full':pct>=80?'hi':''}" style="width:${pct}%"></i></div>`}</div>`}
+/* hitung transaksi hari ini / bulan ini dari data perangkat (penjualan kasir tidak pernah ditolak server; batasnya diperiksa di sini saat bayar) */
+function planOrderCounts(){
+  const n=new Date(),d0=new Date(n.getFullYear(),n.getMonth(),n.getDate()).getTime(),m0=new Date(n.getFullYear(),n.getMonth(),1).getTime();
+  let d=0,m=0;(db.orders||[]).forEach(o=>{const t=new Date(o.t).getTime();if(t>=m0){m++;if(t>=d0)d++}});return{d,m}}
+function planLimitMsg(){
+  const p=CL.on&&CL.me&&CL.me.plan;if(!p||!p.limits)return'';
+  const L=p.limits,c=planOrderCounts();
+  if(L.daily_orders>=0&&c.d>=L.daily_orders)return `Batas transaksi harian paket ${p.name} (${L.daily_orders}) sudah tercapai.`;
+  if(L.monthly_orders>=0&&c.m>=L.monthly_orders)return `Batas transaksi bulanan paket ${p.name} (${L.monthly_orders}) sudah tercapai.`;
+  return''}
+function planLimitDlg(msg){
+  const old=$('#upDlg');if(old)old.remove();
+  const d=document.createElement('div');d.id='upDlg';d.className='updlg';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');
+  const own=isOwner();
+  d.innerHTML=`<div class="upbox"><h3>Batas paket tercapai</h3><p>${esc(msg)}</p><p>${own?'Upgrade paket untuk melanjutkan transaksi.':'Hubungi owner untuk upgrade paket.'}</p>${own?'<button type="button" class="upok" id="upGo">Lihat paket</button>':''}<button type="button" class="upok sec" id="upX">Tutup</button></div>`;
+  document.body.append(d);const close=()=>d.remove();
+  d.addEventListener('click',e=>{if(e.target===d)close()});d.querySelector('#upX').onclick=close;
+  const g=d.querySelector('#upGo');if(g)g.onclick=()=>{close();P2.plan()}}
+window.planLimitMsg=planLimitMsg;window.planLimitDlg=planLimitDlg;
+
+P2.plan=async function(){
+  closeAll();
+  let j;try{j=await (await api('/api/plan')).json();if(!j.plan)throw 0}catch(e){toast('Gagal memuat paket (perlu koneksi)');return}
+  const pl=j.plan,L=pl.limits||{},U=j.usage||{},oc=planOrderCounts(),st=PLN_ST[pl.status]||['','w'],sub=j.sub||{};
+  const idx=j.plans.findIndex(x=>x.code===pl.code),iv=P2.planIv,pend=j.request;
+  let exp='';if(pl.status==='trialing'&&sub.trial)exp=`Uji coba sampai ${plnDate(sub.trial)}`;else if(sub.end&&pl.status!=='grandfathered')exp=`${sub.cancel?'Berakhir':'Berlaku sampai'} ${plnDate(sub.end)}`;
+  const prevFeat=i=>{const f={};for(let k=0;k<i;k++)Object.entries(j.plans[k].features||{}).forEach(([a,b])=>{if(b)f[a]=1});return f};
+  const cards=j.plans.map((x,i)=>{
+    const pf=prevFeat(i),add=Object.entries(x.features||{}).filter(([k,v])=>v&&!pf[k]&&PLN_FEAT[k]).map(([k])=>PLN_FEAT[k]);
+    const pr=(x.prices||[]).find(r=>r.interval===iv)||(x.prices||[])[0],lm=x.limits||{};
+    const cur=x.code===pl.code,up=idx>=0?i>idx:true,asked=pend&&pend.plan===x.code;
+    return `<div class="plc${cur?' cur':''}"><div class="plh"><b>${esc(x.name)}</b>${cur?'<span class="pst ok">Paket Anda</span>':''}</div>
+      <div class="plp">${pr?esc(pr.label||plnMoney(pr.currency,pr.amount)):'Gratis'}</div>
+      <ul class="pll"><li>${plnLim(lm.staff)} karyawan · ${plnLim(lm.outlets)} outlet</li><li>${plnLim(lm.daily_orders)} transaksi/hari</li>${(lm.ai_messages_month>0||lm.ai_messages_month<0)?`<li>${plnLim(lm.ai_messages_month)} pesan AI/bulan</li>`:''}${i>0?`<li class="mu">${j.plans[i-1]?'Semua di '+esc(j.plans[i-1].name)+', plus:':''}</li>`:''}${add.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>
+      ${cur?'':up?(asked?`<button class="btn sec" disabled>Permintaan dikirim ${esc(plnDate(pend.at))}</button>`:`<button class="btn" onclick="P2.planReq('${x.code}')">Ajukan ${esc(x.name)}</button>`):''}</div>`}).join('');
+  const inv=(j.invoices||[]).map(i=>`<div class="pli"><div><b>${esc(i.no)}</b><small>${i.paid?'Dibayar '+esc(plnDate(i.paid)):i.due?'Jatuh tempo '+esc(plnDate(i.due)):''}</small></div><div class="plr"><b>${esc(plnMoney(i.currency,i.total))}</b><span class="pst ${i.status==='paid'?'ok':i.status==='open'?'w':''}">${esc({paid:'Lunas',open:'Belum dibayar',draft:'Draf',void:'Batal',refunded:'Dikembalikan',uncollectible:'Gagal'}[i.status]||i.status)}</span>${i.url&&i.status==='open'?`<a class="lnk" href="${esc(i.url)}" target="_blank" rel="noopener">Bayar</a>`:''}</div></div>`).join('');
+  openModal(`<h3>Paket &amp; langganan</h3>
+  <div class="pln"><div class="plcur"><div><small>Paket saat ini</small><h4>${esc(pl.name)}</h4></div><div class="plsr"><span class="pst ${st[1]}">${esc(st[0])}</span>${exp?`<small>${esc(exp)}</small>`:''}</div></div>
+  ${pend?`<p class="hint" style="margin:8px 0 0;color:var(--ad)">Permintaan upgrade ke <b>${esc((j.plans.find(x=>x.code===pend.plan)||{}).name||pend.plan)}</b> sudah dikirim (${esc(plnDate(pend.at))}). Tim Ordela akan menghubungi Anda untuk tagihan.</p>`:''}
+  <div class="plu"><h5>Pemakaian</h5>${plnBar('Karyawan',U.staff||0,L.staff)}${plnBar('Outlet',U.outlets||1,L.outlets)}${plnBar('Transaksi hari ini',oc.d,L.daily_orders)}${plnBar('Transaksi bulan ini',oc.m,L.monthly_orders)}${(L.ai_messages_month!=null&&L.ai_messages_month!==0)?plnBar('Pesan AI bulan ini',U.ai||0,L.ai_messages_month):''}</div>
+  <div class="plt"><h5>Pilih paket</h5><div class="pliv"><button class="${iv==='monthly'?'on':''}" onclick="P2.planIv='monthly';P2.plan()">Bulanan</button><button class="${iv==='yearly'?'on':''}" onclick="P2.planIv='yearly';P2.plan()">Tahunan</button></div></div>
+  <div class="plg">${cards}</div>
+  ${inv?`<div class="plu"><h5>Tagihan</h5>${inv}</div>`:''}
+  <p class="hint" style="margin:10px 0 0">Setelah Anda mengajukan paket, tim Ordela mengirim tagihan dan mengaktifkannya. Pembayaran otomatis dalam aplikasi belum tersedia.</p></div>
+  <button class="btn sec" onclick="closeModal()">Tutup</button>`);
+};
+P2.planReq=async function(code){
+  if(!confirm('Ajukan upgrade paket ini? Tim Ordela akan menghubungi Anda untuk tagihan.'))return;
+  try{const r=await api('/api/plan/request',{method:'POST',body:JSON.stringify({plan:code,interval:P2.planIv})});const j=await r.json();if(!r.ok)throw new Error(j.error||'gagal');toast('Permintaan dikirim');P2.plan()}catch(e){toast(e.message||'Gagal mengirim permintaan')}
+};
+
 /* ================= CABANG ================= */
 P2.branch=async function(){
   closeAll();
