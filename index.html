@@ -3359,7 +3359,7 @@ async function syncNow(){
         const pr=await push(CL.ver);
         if(pr==='denied'){                                           // server menolak perubahan di luar izin: batalkan bagian itu
           const m2=restrictToServer(merge3(CL.ver>0?await getBase():null,db,j.data),j.data);
-          adopt(m2,j.version,true);toast('Perubahan di luar izin Anda dibatalkan: '+(CL.deniedMsg||''));
+          adopt(m2,j.version,true);{const dm=CL.deniedMsg||'';if(dm!==CL.deniedLast||Date.now()-(CL.deniedAt||0)>120000){CL.deniedLast=dm;CL.deniedAt=Date.now();toast('Perubahan di luar izin Anda dibatalkan: '+dm)}}   // jangan spam pesan yang sama
           ok=(await push(j.version))===true;
         }else ok=pr===true;
         continue}
@@ -4581,7 +4581,7 @@ function logoutAsk(){
 }
 
 /* ----- pembatasan saat sinkron: karyawan tidak mengirim perubahan di luar izinnya ----- */
-const SET_FREE_KEYS=['gv','lang','fsAuto','logoInit','logoApp'];
+const SET_FREE_KEYS=['gv','lang','fsAuto','logoInit','logoApp','prn','prns','paper'];   // prn/prns/paper: printer per perangkat
 function restrictToServer(M,S){
   const me=CL.me;if(!me||me.role==='owner')return M;
   const has=k=>(me.perms||[]).includes(k),out={...M};
