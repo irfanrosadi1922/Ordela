@@ -587,3 +587,4 @@ html[data-skin] .grid:not(.list) .p .stk{margin-bottom:0}
 .vc-sw{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--mu,#64748b)}
 @media (orientation:landscape) and (max-height:520px){#vcP{top:calc(env(safe-area-inset-top,0px) + 62px);max-width:min(560px,60vw);left:auto;right:12px;margin:0;padding:10px 14px}.vc-tx{font-size:15px;margin-top:6px}.vc-sw{margin-top:6px}}
 @media (prefers-reduced-motion:reduce){.vc-mic.rec,#vcP.on .vc-ind i{animation:none}}
+.vc-mic[hidden]{display:none}

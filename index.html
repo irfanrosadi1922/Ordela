@@ -2416,6 +2416,7 @@ const SETP=[
  ['catForm','Toko','tag','Kategori','Kelola kategori menu atau produk.','kategori menu produk'],
  ['coForm','Pesanan & Pembayaran','cart','Pesanan Online','Buka/tutup pemesanan lewat QR dan atur notifikasi pesanan.','qr pesan online tautan buka tutup'],
  ['invSet','Pesanan & Pembayaran','receipt','Invoice & Pembayaran','Kolom layar bayar, catatan pesanan, dan catatan cepat.','invoice catatan note saus tip meja pelanggan kolom bayar'],
+ ['voiceSet','Pesanan & Pembayaran','mic','Voice Cashier','Perintah suara untuk kasir: bahasa, suara balasan, dan nama panggilan menu.','suara voice mikrofon perintah bicara alias'],
  ['payForm','Pesanan & Pembayaran','shield','Pembayaran Online','QRIS dinamis dan DuitNow untuk pelanggan.','qris duitnow bayar payment'],
  ['rc','Struk & Printer','receipt','Desain Struk','Tata letak, teks, logo, dan ukuran kertas struk.','struk nota receipt kertas logo footer header','set'],
  ['prn','Struk & Printer','print','Printer','Sambungkan printer Bluetooth/USB dan atur cara cetak.','printer bluetooth usb cetak thermal ble','prn'],
@@ -2430,12 +2431,12 @@ function setOpen(id){S.setSub=id;applySetTab();const m=$('main');if(m&&m.scrollT
 function setHubList(){
   const box=$('#setHubList');if(!box)return;
   const q=(($('#setQ')||{}).value||'').trim().toLowerCase();
-  const its=SETP.filter(p=>p[6]==='#owner'?isOwner():can(p[6]||'set')).filter(p=>{if(p[0]==='rc'||p[0]==='prn'||p[0]==='invSet')return true;const e=$('#'+p[0]);return e&&!e.hidden}).filter(p=>!q||(p[3]+' '+p[4]+' '+p[5]+' '+p[1]).toLowerCase().includes(q));
+  const its=SETP.filter(p=>p[6]==='#owner'?isOwner():can(p[6]||'set')).filter(p=>{if(p[0]==='rc'||p[0]==='prn'||p[0]==='invSet'||p[0]==='voiceSet')return true;const e=$('#'+p[0]);return e&&!e.hidden}).filter(p=>!q||(p[3]+' '+p[4]+' '+p[5]+' '+p[1]).toLowerCase().includes(q));
   if(!its.length){box.innerHTML=`<p class="pfhint" style="text-align:center;padding:28px 0">Tidak ada pengaturan yang cocok dengan “${esc(q)}”.</p>`;return}
   let h='',g='';
   its.forEach(p=>{
     if(p[1]!==g){if(g)h+='</div>';g=p[1];h+=`<div class="pfgl">${esc(g)}</div><div class="pfgrp">`}
-    h+=`<button type="button" onclick="${p[0]==='invSet'?'P2.invSet()':p[0]==='rc'||p[0]==='prn'?`go('${p[0]}')`:`setOpen('${p[0]}')`}"><span class="ib2">${pfi(p[2],20)}</span><span class="tx"><b>${esc(p[3])}</b><small>${esc(p[4])}</small></span><span class="chev">${pfi('chev',18)}</span></button>`;
+    h+=`<button type="button" onclick="${p[0]==='invSet'?'P2.invSet()':p[0]==='voiceSet'?'P2.voiceSet()':p[0]==='rc'||p[0]==='prn'?`go('${p[0]}')`:`setOpen('${p[0]}')`}"><span class="ib2">${pfi(p[2],20)}</span><span class="tx"><b>${esc(p[3])}</b><small>${esc(p[4])}</small></span><span class="chev">${pfi('chev',18)}</span></button>`;
   });
   box.innerHTML=h+'</div>';
 }
@@ -4228,6 +4229,7 @@ function accStore(m){
 const APP_VER='1.0.0';
 /* ikon garis 24px untuk halaman profil */
 const PFI={
+ mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
  receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
  print:'<path d="M7 9V3h10v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',

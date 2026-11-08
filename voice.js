@@ -232,17 +232,17 @@
     id: { listen: 'Mendengarkan…', proc: 'Memproses…', idle: 'Ketuk mikrofon, lalu bicara', nosr: 'Perangkat ini belum mendukung pengenalan suara. Ketik perintah di bawah, atau pakai mikrofon di keyboard.',
       added: 'Ditambah', removed: 'Dikurangi', removedAll: 'Dihapus', set: 'Jumlah diubah', notfound: 'Menu tidak ditemukan', ambiguous: 'Maksud Anda yang mana?', total: 'Total pesanan', empty: 'Keranjang kosong', cart: 'Keranjang dibuka',
       stock: 'Stok tidak cukup', nomatch: 'Perintah belum dipahami. Contoh: “tambah dua nasi goreng”', notInCart: 'Menu itu belum ada di keranjang', noLast: 'Sebut nama menu yang diubah', mods: 'Menu ini punya pilihan, lengkapi di layar',
-      clearAsk: 'Kosongkan keranjang? Ucapkan “ya”.', cleared: 'Keranjang dikosongkan', cancelled: 'Dibatalkan', pay: 'Pembayaran dibuka', payNeed: 'Keranjang masih kosong', confirmNo: 'Buka layar pembayaran dulu', exact: 'Uang pas diisi', noted: 'Catatan disimpan',
+      clearAsk: 'Kosongkan keranjang? Ucapkan “ya”.', payOff: 'Pembayaran lewat suara dinonaktifkan di pengaturan', confirmOff: 'Selesaikan pembayaran dengan tombol Bayar. Suara dinonaktifkan di pengaturan.', cleared: 'Keranjang dikosongkan', cancelled: 'Dibatalkan', pay: 'Pembayaran dibuka', payNeed: 'Keranjang masih kosong', confirmNo: 'Buka layar pembayaran dulu', exact: 'Uang pas diisi', noted: 'Catatan disimpan',
       denied: 'Izin mikrofon ditolak. Izinkan di pengaturan peramban.', nospeech: 'Tidak ada suara terdengar. Coba lagi.', neterr: 'Pengenalan suara perlu koneksi internet.', err: 'Pengenalan suara gagal. Coba lagi atau ketik perintah.', each: 'item', hint: 'Coba: “tambah dua nasi goreng”, “berapa total?”', speakOn: 'Suara balasan', typeHolder: 'Ketik perintah…', send: 'Kirim', close: 'Tutup', mic: 'Perintah suara', heard: 'Terdengar', unsold: 'Menu tidak dijual' },
     en: { listen: 'Listening…', proc: 'Processing…', idle: 'Tap the mic, then speak', nosr: 'Speech recognition is not supported on this device. Type a command below, or use the keyboard microphone.',
       added: 'Added', removed: 'Reduced', removedAll: 'Removed', set: 'Quantity changed', notfound: 'Item not found', ambiguous: 'Which one did you mean?', total: 'Order total', empty: 'Cart is empty', cart: 'Cart opened',
       stock: 'Not enough stock', nomatch: 'Command not understood. Example: “add two fried rice”', notInCart: 'That item is not in the cart', noLast: 'Say which item to change', mods: 'This item has options, finish on screen',
-      clearAsk: 'Clear the cart? Say “yes”.', cleared: 'Cart cleared', cancelled: 'Cancelled', pay: 'Payment opened', payNeed: 'The cart is empty', confirmNo: 'Open the payment screen first', exact: 'Exact amount filled', noted: 'Note saved',
+      clearAsk: 'Clear the cart? Say “yes”.', payOff: 'Voice payment is turned off in settings', confirmOff: 'Finish payment with the Pay button. Voice is turned off in settings.', cleared: 'Cart cleared', cancelled: 'Cancelled', pay: 'Payment opened', payNeed: 'The cart is empty', confirmNo: 'Open the payment screen first', exact: 'Exact amount filled', noted: 'Note saved',
       denied: 'Microphone permission denied. Allow it in browser settings.', nospeech: 'No speech heard. Try again.', neterr: 'Speech recognition needs an internet connection.', err: 'Speech recognition failed. Try again or type the command.', each: 'items', hint: 'Try: “add two fried rice”, “what is the total?”', speakOn: 'Spoken replies', typeHolder: 'Type a command…', send: 'Send', close: 'Close', mic: 'Voice command', heard: 'Heard', unsold: 'Item not for sale' },
     ms: { listen: 'Mendengar…', proc: 'Memproses…', idle: 'Ketik mikrofon, kemudian cakap', nosr: 'Peranti ini tidak menyokong pengecaman suara. Taip arahan di bawah, atau guna mikrofon papan kekunci.',
       added: 'Ditambah', removed: 'Dikurangkan', removedAll: 'Dipadam', set: 'Kuantiti diubah', notfound: 'Menu tidak dijumpai', ambiguous: 'Yang mana satu?', total: 'Jumlah pesanan', empty: 'Bakul kosong', cart: 'Bakul dibuka',
       stock: 'Stok tidak mencukupi', nomatch: 'Arahan tidak difahami. Contoh: “tambah dua nasi goreng”', notInCart: 'Menu itu belum ada dalam bakul', noLast: 'Sebut nama menu yang hendak diubah', mods: 'Menu ini ada pilihan, lengkapkan di skrin',
-      clearAsk: 'Kosongkan bakul? Sebut “ya”.', cleared: 'Bakul dikosongkan', cancelled: 'Dibatalkan', pay: 'Pembayaran dibuka', payNeed: 'Bakul masih kosong', confirmNo: 'Buka skrin pembayaran dahulu', exact: 'Wang pas diisi', noted: 'Catatan disimpan',
+      clearAsk: 'Kosongkan bakul? Sebut “ya”.', payOff: 'Pembayaran melalui suara dimatikan dalam tetapan', confirmOff: 'Selesaikan pembayaran dengan butang Bayar. Suara dimatikan dalam tetapan.', cleared: 'Bakul dikosongkan', cancelled: 'Dibatalkan', pay: 'Pembayaran dibuka', payNeed: 'Bakul masih kosong', confirmNo: 'Buka skrin pembayaran dahulu', exact: 'Wang pas diisi', noted: 'Catatan disimpan',
       denied: 'Kebenaran mikrofon ditolak. Benarkan dalam tetapan pelayar.', nospeech: 'Tiada suara didengar. Cuba lagi.', neterr: 'Pengecaman suara memerlukan sambungan internet.', err: 'Pengecaman suara gagal. Cuba lagi atau taip arahan.', each: 'item', hint: 'Cuba: “tambah dua nasi goreng”, “berapa jumlah?”', speakOn: 'Suara balasan', typeHolder: 'Taip arahan…', send: 'Hantar', close: 'Tutup', mic: 'Arahan suara', heard: 'Didengar', unsold: 'Menu tidak dijual' }
   };
   var SRLANG = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
@@ -260,8 +260,10 @@
   var SR = root.SpeechRecognition || root.webkitSpeechRecognition;
   var st = { open: false, listening: false, rec: null, lang: 'id', speak: true, last: null, pending: null, busy: false, timer: 0, heard: '' };
   try { st.speak = localStorage.getItem('ordela_vc_speak') !== '0'; } catch (e) { /* abaikan */ }
-  try { var sl = localStorage.getItem('ordela_vc_lang'); if (sl && MSG[sl]) st.lang = sl; else if (typeof lang === 'function' && MSG[lang()]) st.lang = lang(); } catch (e) { /* abaikan */ }
+  function pickLang() { var l = null; try { l = localStorage.getItem('ordela_vc_lang'); } catch (e) { /* abaikan */ } if (l && MSG[l]) return l; var cl = cfg().lang; if (MSG[cl]) return cl; try { if (typeof lang === 'function' && MSG[lang()]) return lang(); } catch (e) { /* abaikan */ } return 'id'; }
+  st.lang = pickLang();
 
+  function cfg() { var c = (typeof db !== 'undefined' && db.set && db.set.vc) || {}; return { on: c.on !== 0 && c.on !== false, lang: c.lang || 'auto', speak: c.speak !== 0 && c.speak !== false, pay: c.pay !== 0 && c.pay !== false, confirm: c.confirm === 1 || c.confirm === true, al: Array.isArray(c.al) ? c.al : [] }; }
   function M(k) { return (MSG[st.lang] || MSG.id)[k] || MSG.id[k] || ''; }
   function money2(v) { return typeof money === 'function' ? money(v) : String(v); }
   function sellable() { return (typeof db !== 'undefined' && db.items ? db.items : []).filter(function (i) { return !i.ns; }); }
@@ -312,7 +314,9 @@
 
   /* ---------- eksekusi hasil parse ---------- */
   function resolve(name) {
-    var items = sellable(), r = matchItem(name, items);
+    var items = sellable(), key = clean(name), al = cfg().al;
+    for (var ai = 0; ai < al.length; ai++) { if (al[ai] && clean(al[ai].a) === key) { var hit = items.filter(function (i) { return i.id === al[ai].id; })[0]; if (hit) return { item: hit, score: 1, alts: [] }; } }
+    var r = matchItem(name, items);
     if (!r.item && !r.alts.length) { var any = (db.items || []).filter(function (i) { return i.ns; }); var r2 = matchItem(name, any); if (r2.item) return { unsold: r2.item }; }
     return r;
   }
@@ -344,6 +348,8 @@
       var ni = $('#pNote'); if (ni) ni.value = S.note;
       return { msg: M('noted') + ': ' + S.note };
     }
+    if ((p.intent === 'pay' || p.intent === 'exact') && !cfg().pay) return { msg: M('payOff'), warn: true };
+    if (p.intent === 'confirmpay' && !cfg().confirm) return { msg: M('confirmOff'), warn: true };
     if (p.intent === 'pay') {
       if (!Object.keys(S.cart).length) return { msg: M('payNeed'), warn: true };
       if (!$('#payOk')) { if (typeof closeModal === 'function' && $('#mw.on')) closeModal(); payForm(); }
@@ -424,7 +430,7 @@
     var b = document.createElement('button'); b.type = 'button'; b.id = 'vcMic'; b.className = 'vc-mic'; b.innerHTML = ICON_MIC;
     b.setAttribute('aria-label', 'Perintah suara'); b.title = 'Perintah suara';
     b.onclick = function () { openPanel(true); };
-    host.appendChild(b);
+    host.appendChild(b); applyCfg();
   }
   function paint() {
     var p = $('#vcP'); if (!p) return;
@@ -442,7 +448,7 @@
     var el = $('#vcRes'); el.textContent = r.msg || ''; el.classList.toggle('warn', !!r.warn); el.classList.toggle('big', !!r.big);
     var ch = $('#vcCh');
     ch.innerHTML = (r.chips || []).map(function (c) { return '<button type="button" class="chip" data-i="' + esc(c.id) + '" data-q="' + (c.qty || 1) + '" data-t="' + esc(c.intent === 'add' ? 'add' : c.intent === 'set' ? 'set' : 'rm') + '" data-x="' + (c.explicit ? '1' : '0') + '">' + esc(c.name) + '</button>'; }).join('');
-    if (r.msg && st.speak && root.speechSynthesis && !st.listening) say(r.say || r.msg.split('\n')[0]);
+    if (r.msg && st.speak && cfg().speak && root.speechSynthesis && !st.listening) say(r.say || r.msg.split('\n')[0]);
   }
   function say(t) {
     try {
@@ -450,7 +456,13 @@
       root.speechSynthesis.cancel(); root.speechSynthesis.speak(u);
     } catch (e) { /* abaikan */ }
   }
+  function applyCfg() {
+    var on = cfg().on, m = $('#vcMic'); if (m) m.hidden = !on;
+    if (!on && st.open) closePanel();
+    if (!on && root.speechSynthesis) try { root.speechSynthesis.cancel(); } catch (e) { /* abaikan */ }
+  }
   function openPanel(autoListen) {
+    if (!cfg().on) return;
     ensureUI();
     if (typeof S !== 'undefined' && S.view !== 'pos' && typeof go === 'function') { try { go('pos'); } catch (e) { /* abaikan */ } }
     var p = $('#vcP'); p.hidden = false; st.open = true; $('#vcTx').textContent = ''; $('#vcRes').textContent = ''; $('#vcCh').innerHTML = '';
@@ -534,11 +546,12 @@
     return 2;
   }
 
+  function localStorageLang() { try { return localStorage.getItem('ordela_vc_lang'); } catch (e) { return null; } }
   /* ---------- pasang ---------- */
   function init() {
     ensureUI(); injectMic();
     var n = 0, t = setInterval(function () { injectMic(); if ($('#vcMic') || ++n > 40) clearInterval(t); }, 500);
   }
-  root.VC = { parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, supported: !!SR };
+  root.VC = { refresh: function () { applyCfg(); if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, supported: !!SR };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })(typeof window !== 'undefined' ? window : globalThis);

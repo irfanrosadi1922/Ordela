@@ -667,6 +667,44 @@ P2.invQnPaint=function(){const e=$('#invQn');if(!e)return;e.innerHTML=invCfg().q
 P2.invQnAdd=function(){const i=$('#invQnI'),v=(i.value||'').trim().slice(0,30);if(!v)return;const c=invCfg();if(c.qn.some(x=>x.toLowerCase()===v.toLowerCase())){i.value='';return}if(c.qn.length>=20){toast('Maksimal 20 catatan cepat');return}c.qn=c.qn.concat(v);P2.invSave(c);i.value='';P2.invQnPaint()};
 P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSave(c);P2.invQnPaint()};
 
+
+/* ================= PENGATURAN VOICE CASHIER (db.set.vc) ================= */
+P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
+P2.voiceSet=function(){
+  closeAll();
+  const c=P2.vcCfg(),sup=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
+  const T=(k,t,d)=>`<label class="tgl"><input type="checkbox" ${c[k]?'checked':''} onchange="P2.vcTog('${k}',this.checked)"><span>${t}${d?`<small>${d}</small>`:''}</span></label>`;
+  const items=(db.items||[]).filter(i=>!i.ns).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  openModal(`<h3>Voice Cashier</h3>
+  <p class="hint" style="margin:0 0 6px">Kasir bisa memasukkan pesanan dengan suara. Tanpa AI dan tanpa biaya: pengenalan suara memakai fitur bawaan peramban. ${sup?'Perangkat ini mendukung suara.':'Perangkat ini tidak mendukung suara, kasir memakai kolom ketik.'}</p>
+  ${T('on','Aktifkan Voice Cashier','Menampilkan tombol mikrofon di kolom cari kasir')}
+  <h5 class="invh">Bahasa</h5>
+  <div class="chips" id="vcLg">${[['auto','Ikuti bahasa aplikasi'],['id','Indonesia'],['en','English'],['ms','Melayu']].map(([k,n])=>`<button class="chip ${c.lang===k?'on':''}" onclick="P2.vcLang('${k}')">${n}</button>`).join('')}</div>
+  <p class="hint" style="margin:0">Kasir tetap bisa mengganti bahasa di panel suara. Perintah dalam tiga bahasa dipahami sekaligus.</p>
+  <h5 class="invh">Perilaku</h5>
+  ${T('speak','Suara balasan','Total dan hasil perintah dibacakan')}
+  ${T('pay','Boleh membuka pembayaran dengan suara','Ucapan “bayar tunai” membuka layar bayar')}
+  ${T('confirm','Boleh menyelesaikan pembayaran dengan suara','Ucapan “konfirmasi pembayaran” langsung menyimpan transaksi. Matikan bila ragu.')}
+  <h5 class="invh">Nama panggilan menu</h5>
+  <p class="hint" style="margin:0">Untuk sebutan khusus yang sering dipakai. Contoh: “nasgor” untuk Nasi Goreng.</p>
+  <div class="inv-qn" id="vcAl"></div>
+  <input class="fi" id="vcAlA" maxlength="30" placeholder="Ucapan, mis. nasgor" style="margin-bottom:8px">
+  <div style="display:flex;gap:8px"><select class="fi" id="vcAlI" style="flex:1;min-width:0;margin:0">${items.map(i=>`<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</select><button class="btn sec" style="width:auto;margin:0" onclick="P2.vcAlAdd()">Tambah</button></div>
+  <button class="btn" style="margin-top:14px" onclick="closeModal()">Selesai</button>`);
+  P2.vcAlPaint();
+};
+P2.vcSave=function(c){db.set.vc=c;save();if(window.VC&&VC.refresh)VC.refresh()};
+P2.vcTog=function(k,v){const c=P2.vcCfg();c[k]=v?1:0;P2.vcSave(c)};
+P2.vcLang=function(l){const c=P2.vcCfg();c.lang=l;P2.vcSave(c);document.querySelectorAll('#vcLg .chip').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick')==="P2.vcLang('"+l+"')"))};
+P2.vcAlPaint=function(){const e=$('#vcAl');if(!e)return;e.innerHTML=P2.vcCfg().al.map((x,i)=>{const it=(db.items||[]).find(y=>y.id===x.id);return `<span class="chip">“${esc(x.a)}” → ${esc(it?it.name:'(menu dihapus)')}<b onclick="P2.vcAlDel(${i})" role="button" aria-label="Hapus">✕</b></span>`}).join('')||'<small class="hint">Belum ada.</small>'};
+P2.vcAlAdd=function(){
+  const a=$('#vcAlA'),sel=$('#vcAlI'),v=(a.value||'').trim().toLowerCase().replace(/\s+/g,' ').slice(0,30);
+  if(!v){toast('Tulis ucapannya dulu');return}if(!sel||!sel.value){toast('Pilih menu');return}
+  const c=P2.vcCfg();if(c.al.length>=60){toast('Maksimal 60 nama panggilan');return}
+  c.al=c.al.filter(x=>x.a!==v).concat({a:v,id:sel.value});P2.vcSave(c);a.value='';P2.vcAlPaint()
+};
+P2.vcAlDel=function(i){const c=P2.vcCfg();c.al=c.al.filter((_,j)=>j!==i);P2.vcSave(c);P2.vcAlPaint()};
+
 /* ================= CABANG ================= */
 P2.branch=async function(){
   closeAll();

@@ -119,6 +119,7 @@
     var ICO = {
       home: '<path class="d" d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/>',
       chart: '<rect class="d" x="3.5" y="12" width="4" height="8" rx="1.2"/><rect class="d" x="10" y="4" width="4" height="16" rx="1.2"/><rect class="d" x="16.5" y="9" width="4" height="11" rx="1.2"/>',
+      mic: '<rect class="d" x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
       receipt: '<path class="d" d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
       bag: '<path class="d" d="M5 8h14l-1 12H6z"/><path d="M9 8V7a3 3 0 0 1 6 0v1"/>',
       timer: '<circle class="d" cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/>',
@@ -313,6 +314,7 @@
       ['Toko', 'Pengaturan dan koneksi', [
         ['branch', 'Cabang', 'Pindah stok antar cabang', 'store', '#d946ef'],
         ['integ', 'Integrasi', 'GoFood, GrabFood, ShopeeFood, webhook', 'nodes', '#0ea5e9'],
+        ['voice', 'Voice Cashier', 'Bahasa, suara balasan, nama panggilan', 'mic', '#e11d48'],
         ['inv', 'Invoice & pembayaran', 'Kolom bayar, catatan cepat, struk', 'receipt', '#8b5cf6'],
         ['prn', 'Printer', 'Struk & printer', 'printer', '#475569'],
         ['plan', 'Paket & langganan', 'Paket, kuota & tagihan', 'wallet', 'var(--ad)'],
@@ -347,10 +349,10 @@
         var stats = canRep ? '<div class="adst"><div class="adc"><h4>Target harian</h4><div class="adring"><svg viewBox="0 0 60 60"><circle class="tr" cx="30" cy="30" r="24"/><circle class="pg" cx="30" cy="30" r="24" stroke-dasharray="' + (C * pct).toFixed(1) + ' ' + C.toFixed(1) + '"/></svg><div><b>' + Math.round(pct * 100) + '%</b><span>dari rata-rata 7 hari</span></div></div></div>' +
           '<div class="adc w ' + (low ? '' : 'ok') + '"><h4>Stok</h4><div class="big"><i><i class="ic" data-ic="' + (low ? 'alert' : 'check') + '"></i></i>' + low + '</div><small>' + (low ? 'item menipis' : 'semua aman') + '</small></div></div>' : '';
         var secs = G.map(function (gr) {
-          var rows = gr[2].filter(function (r) { return r[0] === 'upd' ? !!window.OrdelaUpdate : r[0] === 'inv' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.invSet) : r[0] === 'plan' ? (isOwn() && typeof CL !== 'undefined' && CL.on && !!window.P2 && !!P2.plan) : show(r[0]); });
+          var rows = gr[2].filter(function (r) { return r[0] === 'upd' ? !!window.OrdelaUpdate : r[0] === 'voice' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.voiceSet) : r[0] === 'inv' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.invSet) : r[0] === 'plan' ? (isOwn() && typeof CL !== 'undefined' && CL.on && !!window.P2 && !!P2.plan) : show(r[0]); });
           if (!rows.length) return '';
           return '<div class="adgt"><h3>' + gr[0] + '</h3><span>' + gr[1] + '</span></div><div class="adl">' + rows.map(function (r) {
-            var act = r[0] === 'branch' ? 'P2.branch()' : r[0] === 'inv' ? 'P2.invSet()' : r[0] === 'plan' ? 'P2.plan()' : r[0] === 'upd' ? 'OrdelaUpdate.open()' : "go('" + r[0] + "')";
+            var act = r[0] === 'branch' ? 'P2.branch()' : r[0] === 'voice' ? 'P2.voiceSet()' : r[0] === 'inv' ? 'P2.invSet()' : r[0] === 'plan' ? 'P2.plan()' : r[0] === 'upd' ? 'OrdelaUpdate.open()' : "go('" + r[0] + "')";
             var lk = lockOf(r[0]);
             return '<button class="adr' + (lk ? ' lkd' : '') + '" onclick="' + act + '"><span class="ti" style="--c:' + r[4] + '">' + ico(r[3]) + (r[0] === 'co' && nb ? '<b class="nb">' + nb + '</b>' : '') + '</span><span class="tx"><b>' + esc(r[1]) + tierBadge(VIEW_LOCK[r[0]] || '') + '</b><span>' + esc(lk ? 'Mulai paket ' + lk : r[2]) + '</span></span>' + (lk ? LOCKSVG : CHEV) + '</button>';
           }).join('') + '</div>';
