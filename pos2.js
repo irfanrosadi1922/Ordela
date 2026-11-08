@@ -650,6 +650,7 @@ P2.invSet=function(){
   ${T('more','Buka opsi tambahan otomatis','Kalau mati, opsi tambahan tertutup sampai diketuk')}
   <h5 class="invh">Struk</h5>
   ${T('noteRc','Cetak catatan di struk','Catatan selalu tercetak di tiket dapur')}
+  <label class="tgl"><input type="checkbox" ${(db.set.prn||{}).auto?'checked':''} onchange="setOpt('prn','auto',this.checked)"><span>Cetak struk otomatis setelah bayar<small>Berlaku di perangkat ini. Butuh printer Bluetooth (BLE), USB, atau RawBT. Cetak langsung tidak didukung semua peramban.</small></span></label>
   <h5 class="invh">Metode bawaan</h5>
   <div class="chips" id="invPm">${PAY_M.map(m=>`<button class="chip ${m===c.pm?'on':''}" onclick="P2.invPm('${m}')">${m}</button>`).join('')}</div>
   <h5 class="invh">Catatan cepat</h5>
