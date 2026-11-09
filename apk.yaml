@@ -1,6 +1,12 @@
 name: Buat APK
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Isi aplikasi: bundle = dibundel di APK (update = pasang APK baru), live = membuka situs live (update otomatis)'
+        type: choice
+        default: bundle
+        options: [bundle, live]
   push:
     tags: ['v*']
 jobs:
@@ -33,7 +39,7 @@ jobs:
           cp -r "dist/$APP/." www/
           rm -f www/CNAME www/.nojekyll
           # mode langsung (default): membuka situs live https://<app>.<domain>/ agar selalu terbaru. Isi variabel APP_LIVE=0 untuk mode luring (isi dibundel di APK).
-          LIVE="${{ vars.APP_LIVE }}"
+          LIVE="${{ inputs.mode == 'live' && '1' || (inputs.mode == 'bundle' && '0' || vars.APP_LIVE) }}"
           NAME="$NAME" APPID="$APPID" LIVE="$LIVE" URL="https://$APP.$POS_DOMAIN/" node -e "
             const c={appId:process.env.APPID,appName:process.env.NAME,webDir:'www',backgroundColor:'#ffffff'};
             if(process.env.LIVE!=='0')c.server={url:process.env.URL,cleartext:false};
