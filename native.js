@@ -3,6 +3,7 @@
 (function(){
   var C=window.Capacitor;
   if(!C||!C.isNativePlatform||!C.isNativePlatform())return;
+  try{if(C.getPlatform&&C.getPlatform()==='android')document.documentElement.classList.add('cap-android')}catch(e){}   /* APK Android: nav bawah dinaikkan agar tidak menempel ke tepi/gesture bar */
   var P={};
   function setNav(k,v){try{Object.defineProperty(navigator,k,{value:v,configurable:true,writable:true})}catch(e){try{navigator[k]=v}catch(e2){}}}
   ['PushNotifications','LocalNotifications','BluetoothLe','ClassicBt'].forEach(function(n){
