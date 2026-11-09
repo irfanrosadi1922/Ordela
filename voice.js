@@ -909,6 +909,8 @@
       }
       if (k > -1) { woke = true; cand.push(t.slice(k + used).join(' ')); } else cand.push(t.join(' '));
     });
+    var inWin = !woke && Date.now() < (bg.awake || 0);            // jendela percakapan: setelah “Ordela …” perintah lanjutan tak perlu kata panggil
+    if (inWin) { woke = true; cand = alts.map(function (a) { return clean(a); }); }
     if (c.wake && !woke) {                                       // perintah yang jelas tapi tanpa kata panggil: beri tahu, jangan diam
       var pw = null; try { pw = parse(alts[0]); } catch (e) { /* abaikan */ }
       if (pw && pw.lines && pw.intent === 'add' && intentScore(pw) >= 2) toastMsg(M('wakeMiss') + ' “' + (c.wakeWord || 'ordela') + '”', true);
@@ -924,6 +926,7 @@
     var out;
     try { out = run(bestP); } catch (e) { console.error('voice', e); return; }
     if (out.noop && !woke) return;
+    if (woke && !out.noop) bg.awake = Date.now() + 20000;
     toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), !!out.warn, out);
     var un = (st.unres || []).slice();
     if (un.length && aiOn() && (woke || !c.wake)) aiResolve(un, function (res) { if (res.length) { var m = aiApply(res); toastMsg(m.join('\n'), false); } });
