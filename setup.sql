@@ -1105,6 +1105,17 @@ begin
     return pos.r(200, jsonb_build_object('ok', true, 'role', me.role));
   end if;
 
+  if u = '/api/voice/use' and m = 'POST' then   -- bantuan AI Voice Cashier (dipanggil fungsi voice-ai); tidak memakai kuota pesan asisten
+    if not pos.feat_ok(me.store_id, 'ai') then
+      return pos.r(403, '{"error":"AI belum termasuk di paket langganan toko ini."}');
+    end if;
+    if (select count(*) from pos.rl where rl.k = 'vai:' || me.id and rl.t > now() - interval '1 hour') >= 120 then
+      return pos.r(429, '{"error":"Batas bantuan AI suara per jam tercapai."}');
+    end if;
+    insert into pos.rl(k, ip) values ('vai:' || me.id, '-');
+    return pos.r(200, jsonb_build_object('ok', true));
+  end if;
+
   if u like '/api/integrations%' then
     declare v_k text; v_old jsonb; v_cfg jsonb; v_ev text[]; v_en boolean; v_row pos.t_integ; v_st text; v_rid bigint; v_hook text; v_food boolean; v_o jsonb;
     begin

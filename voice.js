@@ -342,12 +342,12 @@
   st.lang = pickLang();
 
   var LM = {
-    id: { learned: 'Diingat', wakeMiss: 'Diabaikan, awali dengan', searchMenu: 'Cari menu…', vAdd: 'Tambah', vRemove: 'Hapus', vReduce: 'Kurangi' },
-    en: { learned: 'Remembered', wakeMiss: 'Ignored, start with', searchMenu: 'Search menu…', vAdd: 'Add', vRemove: 'Remove', vReduce: 'Reduce' },
-    ms: { learned: 'Diingati', wakeMiss: 'Diabaikan, mulakan dengan', searchMenu: 'Cari menu…', vAdd: 'Tambah', vRemove: 'Padam', vReduce: 'Kurangkan' }
+    id: { learned: 'Diingat', aiAsk: 'Menanyakan AI…', wakeMiss: 'Diabaikan, awali dengan', searchMenu: 'Cari menu…', vAdd: 'Tambah', vRemove: 'Hapus', vReduce: 'Kurangi' },
+    en: { learned: 'Remembered', aiAsk: 'Asking AI…', wakeMiss: 'Ignored, start with', searchMenu: 'Search menu…', vAdd: 'Add', vRemove: 'Remove', vReduce: 'Reduce' },
+    ms: { learned: 'Diingati', aiAsk: 'Bertanya AI…', wakeMiss: 'Diabaikan, mulakan dengan', searchMenu: 'Cari menu…', vAdd: 'Tambah', vRemove: 'Padam', vReduce: 'Kurangkan' }
   };
   Object.keys(LM).forEach(function (l) { Object.keys(LM[l]).forEach(function (k) { MSG[l][k] = LM[l][k]; }); });
-  function cfg() { var c = (typeof db !== 'undefined' && db.set && db.set.vc) || {}; return { on: c.on !== 0 && c.on !== false, lang: c.lang || 'auto', speak: c.speak !== 0 && c.speak !== false, pay: c.pay !== 0 && c.pay !== false, confirm: c.confirm === 1 || c.confirm === true, al: Array.isArray(c.al) ? c.al : [], always: c.always === 1 || c.always === true, wake: c.wake !== 0 && c.wake !== false, wakeWord: String(c.wakeWord || 'ordela'), direct: c.direct !== 0 && c.direct !== false, learn: c.learn !== 0 && c.learn !== false }; }
+  function cfg() { var c = (typeof db !== 'undefined' && db.set && db.set.vc) || {}; return { on: c.on !== 0 && c.on !== false, lang: c.lang || 'auto', speak: c.speak !== 0 && c.speak !== false, pay: c.pay !== 0 && c.pay !== false, confirm: c.confirm === 1 || c.confirm === true, al: Array.isArray(c.al) ? c.al : [], always: c.always === 1 || c.always === true, wake: c.wake !== 0 && c.wake !== false, wakeWord: String(c.wakeWord || 'ordela'), direct: c.direct !== 0 && c.direct !== false, learn: c.learn !== 0 && c.learn !== false, ai: c.ai !== 0 && c.ai !== false }; }
   function M(k) { return (MSG[st.lang] || MSG.id)[k] || MSG.id[k] || ''; }
   function money2(v) { return typeof money === 'function' ? money(v) : String(v); }
   function sellable() { return (typeof db !== 'undefined' && db.items ? db.items : []).filter(function (i) { return !i.ns; }); }
@@ -478,7 +478,7 @@
   }
   function run(p) { return batched(function () { return run0(p); }); }
   function run0(p) {
-    var res = [], chips = null, show = null;
+    var res = [], chips = null, show = null; st.unres = [];
     if (p.intent === 'empty') return { msg: M('hint') };
     if (p.intent === 'unknown') return { msg: M('nomatch'), warn: true, noop: true };
     if (p.intent === 'close') { setTimeout(closePanel, 50); return { msg: '' }; }
@@ -561,6 +561,7 @@
         var vt = verbTeach(ln, p, p.lines[i + 1]);
         if (vt && vt.skip) i++;
         if (vt) { allChips = allChips.concat(vt.chips); out.push(vt.msg); warn = true; continue; }
+        if (!(r.alts && r.alts.length)) st.unres.push({ name: ln.name, qty: ln.qty, intent: ln.v || p.intent, explicit: ln.explicit });
         if (st.ctxMiss) noteMiss(ln.name);
         var am2 = ambiguous(r, ln.name, ln.qty, ln.v || p.intent, ln.explicit);
         if (am2.chips) allChips = allChips.concat(am2.chips);
@@ -779,6 +780,49 @@
   }
 
   /* terima teks (atau beberapa alternatif) → pilih interpretasi terbaik → jalankan */
+  /* ---------- bantuan AI (opsional, hanya untuk frasa yang tidak dikenal parser) ---------- */
+  var aiBad = 0;
+  function aiCands(unres) {
+    var items = sellable(), seen = {}, out = [];
+    unres.forEach(function (u) {
+      var Q = nameToks(u.name);
+      items.map(function (i) { return { i: i, s: scoreName(Q, nameToks(i.name)) }; }).sort(function (a, b) { return b.s - a.s; }).slice(0, 15).forEach(function (x) { if (!seen[x.i.id]) { seen[x.i.id] = 1; out.push(x.i); } });
+    });
+    topUsed(10).forEach(function (i) { if (!seen[i.id]) { seen[i.id] = 1; out.push(i); } });
+    return out.slice(0, 50);
+  }
+  function aiOn() {
+    var C = root.POS_SB; return !!(cfg().ai && C && C.url && typeof CL !== 'undefined' && CL.on && CL.tok && Date.now() > aiBad && root.navigator && navigator.onLine !== false);
+  }
+  /* kirim frasa yang gagal ke fungsi voice-ai; hasilnya hanya dipakai bila cocok persis dengan menu yang ada */
+  function aiResolve(unres, done) {
+    var C = root.POS_SB, cands = aiCands(unres), ctrl = root.AbortController ? new AbortController() : null, to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 9000);
+    if (!cands.length) { clearTimeout(to); return done([]); }
+    fetch(C.url + '/functions/v1/voice-ai', { method: 'POST', signal: ctrl ? ctrl.signal : undefined, headers: { 'Content-Type': 'application/json', apikey: C.key || '' },
+      body: JSON.stringify({ t: CL.tok, phrases: unres.map(function (u) { return u.name; }), menu: cands.map(function (i) { return i.name; }) }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, s: r.status, j: j }; }); })
+      .then(function (x) {
+        clearTimeout(to);
+        if (!x.ok) { if ([401, 403, 429, 501, 404].indexOf(x.s) > -1) aiBad = Date.now() + (x.s === 429 ? 120000 : 600000); return done([], x.j && x.j.error); }
+        var map = (x.j && x.j.map) || [], res = [];
+        unres.forEach(function (u, k) {
+          var m = map.filter(function (z) { return clean(z.ph || '') === clean(u.name); })[0] || map[k];
+          if (!m || !m.menu) return;
+          var it = cands.filter(function (i) { return clean(i.name) === clean(m.menu); })[0];
+          if (it) res.push({ u: u, it: it });
+        });
+        done(res);
+      }).catch(function () { clearTimeout(to); aiBad = Date.now() + 60000; done([]); });
+  }
+  function aiApply(res) {
+    var msgs = [];
+    res.forEach(function (x) {
+      var a = x.u.intent === 'add' ? actAdd(x.it, x.u.qty) : x.u.intent === 'set' ? actSet(x.it, x.u.qty) : actReduce(x.it, x.u.qty, !x.u.explicit);
+      if (a.msg) msgs.push(a.msg);
+      if (a.ok !== false) { learnAlias(x.u.name, x.it.id, false); if (x.u.intent === 'add') noteUse(x.it.id); }
+    });
+    return msgs;
+  }
   function submit(input) {
     var alts = Array.isArray(input) ? input : [input];
     alts = alts.map(function (x) { return String(x || '').trim(); }).filter(Boolean);
@@ -793,6 +837,14 @@
     var out;
     try { out = run(bestP); } catch (e) { console.error('voice', e); out = { msg: M('err'), warn: true }; }
     st.busy = false; paint(); showResult(out);
+    var un = (st.unres || []).slice(); if (un.length && aiOn()) {
+      st.busy = true; paint(); showResult({ msg: (out.msg ? out.msg + '\n' : '') + M('aiAsk') });
+      aiResolve(un, function (res) {
+        st.busy = false; paint();
+        if (!res.length) { showResult(out); return; }
+        var got = res.map(function (x) { return '“' + x.u.name + '”'; }), m = aiApply(res); showResult({ msg: ((out.msg || '').split('\n').filter(function (l) { return !got.some(function (g) { return l.indexOf(g) > -1 && l.indexOf(M('notfound')) === 0; }); }).concat(m)).join('\n'), warn: res.length < un.length });
+      });
+    }
   }
   /* seberapa yakin sebuah hasil parse (menu cocok > tidak dikenal) */
   function intentScore(p) {
@@ -873,6 +925,8 @@
     try { out = run(bestP); } catch (e) { console.error('voice', e); return; }
     if (out.noop && !woke) return;
     toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), !!out.warn, out);
+    var un = (st.unres || []).slice();
+    if (un.length && aiOn() && (woke || !c.wake)) aiResolve(un, function (res) { if (res.length) { var m = aiApply(res); toastMsg(m.join('\n'), false); } });
     if (out.msg && st.speak && c.speak && root.speechSynthesis && !st.listening) say(out.say || String(out.msg).split('\n')[0]);
   }
   var toastT = 0;

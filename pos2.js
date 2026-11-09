@@ -667,7 +667,7 @@ P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSa
 
 
 /* ================= PENGATURAN VOICE CASHIER (db.set.vc) ================= */
-P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
+P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
 P2.voiceSet=function(){
   closeAll();
   const c=P2.vcCfg(),sup=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
@@ -693,6 +693,7 @@ P2.voiceSet=function(){
   <div style="display:flex;gap:8px"><select class="fi" id="vcAlI" style="flex:1;min-width:0;margin:0">${items.map(i=>`<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</select><button class="btn sec" style="width:auto;margin:0" onclick="P2.vcAlAdd()">Tambah</button></div>
   <h5 class="invh">Pelajaran suara</h5>
   ${T('learn','Belajar dari koreksi')}
+  ${T('ai','Bantuan AI','Hanya untuk ucapan yang tidak dikenal')}
   <div id="vcLn"></div>
   <button class="btn" style="margin-top:14px" onclick="closeModal()">Selesai</button>`);
   P2.vcAlPaint();P2.vcLnPaint();
