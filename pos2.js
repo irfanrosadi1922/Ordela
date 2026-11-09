@@ -642,19 +642,17 @@ P2.invSet=function(){
   const c=invCfg();
   const T=(k,t,d)=>`<label class="tgl"><input type="checkbox" ${c[k]?'checked':''} onchange="P2.invTog('${k}',this.checked)"><span>${t}${d?`<small>${d}</small>`:''}</span></label>`;
   openModal(`<h3>Invoice &amp; pembayaran</h3>
-  <p class="hint" style="margin:0 0 6px">Pilih kolom yang tampil di layar pembayaran supaya kasir tidak perlu scroll.</p>
   <h5 class="invh">Kolom utama</h5>
-  ${T('cust','Nama pelanggan')}${T('tbl','No. meja')}${T('note','Catatan pesanan','Mis. tambah saus; juga muncul di keranjang')}
+  ${T('cust','Nama pelanggan')}${T('tbl','No. meja')}${T('note','Catatan pesanan')}
   <h5 class="invh">Opsi tambahan (dilipat)</h5>
   ${T('gift','Kartu hadiah')}${T('mem','Member &amp; poin')}${T('tip','Tip')}${T('split','Bagi rata &amp; pisah tagihan')}
-  ${T('more','Buka opsi tambahan otomatis','Kalau mati, opsi tambahan tertutup sampai diketuk')}
+  ${T('more','Buka opsi tambahan otomatis')}
   <h5 class="invh">Struk</h5>
-  ${T('noteRc','Cetak catatan di struk','Catatan selalu tercetak di tiket dapur')}
-  <label class="tgl"><input type="checkbox" ${(db.set.prn||{}).auto?'checked':''} onchange="setOpt('prn','auto',this.checked)"><span>Cetak struk otomatis setelah bayar<small>Berlaku di perangkat ini. Butuh printer Bluetooth (BLE), USB, atau RawBT. Cetak langsung tidak didukung semua peramban.</small></span></label>
+  ${T('noteRc','Cetak catatan di struk')}
+  <label class="tgl"><input type="checkbox" ${(db.set.prn||{}).auto?'checked':''} onchange="setOpt('prn','auto',this.checked)"><span>Cetak struk otomatis setelah bayar<small>Hanya di perangkat ini</small></span></label>
   <h5 class="invh">Metode bawaan</h5>
   <div class="chips" id="invPm">${PAY_M.map(m=>`<button class="chip ${m===c.pm?'on':''}" onclick="P2.invPm('${m}')">${m}</button>`).join('')}</div>
   <h5 class="invh">Catatan cepat</h5>
-  <p class="hint" style="margin:0">Ketuk saat menulis catatan. Contoh: tambah saus, tanpa sambal.</p>
   <div class="inv-qn" id="invQn"></div>
   <div style="display:flex;gap:8px"><input class="fi" id="invQnI" maxlength="30" placeholder="Tambah catatan cepat" style="flex:1;min-width:0;margin:0" onkeydown="if(event.key==='Enter'){event.preventDefault();P2.invQnAdd()}"><button class="btn sec" style="width:auto;margin:0" onclick="P2.invQnAdd()">Tambah</button></div>
   <button class="btn" style="margin-top:14px" onclick="closeModal()">Selesai</button>`);
@@ -676,27 +674,25 @@ P2.voiceSet=function(){
   const T=(k,t,d)=>`<label class="tgl"><input type="checkbox" ${c[k]?'checked':''} onchange="P2.vcTog('${k}',this.checked)"><span>${t}${d?`<small>${d}</small>`:''}</span></label>`;
   const items=(db.items||[]).filter(i=>!i.ns).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
   openModal(`<h3>Voice Cashier</h3>
-  <p class="hint" style="margin:0 0 6px">Kasir bisa memasukkan pesanan dengan suara. Tanpa AI dan tanpa biaya: pengenalan suara memakai fitur bawaan peramban. ${sup?'Perangkat ini mendukung suara.':'Perangkat ini tidak mendukung suara, kasir memakai kolom ketik.'}</p>
-  ${T('on','Aktifkan Voice Cashier','Menampilkan tombol mikrofon di kolom cari kasir')}
+  ${sup?'':'<p class="hint" style="margin:0 0 6px">Perangkat ini tidak mendukung suara, kasir memakai kolom ketik.</p>'}
+  ${T('on','Aktifkan Voice Cashier')}
   <h5 class="invh">Bahasa</h5>
   <div class="chips" id="vcLg">${[['auto','Ikuti bahasa aplikasi'],['id','Indonesia'],['en','English'],['ms','Melayu']].map(([k,n])=>`<button class="chip ${c.lang===k?'on':''}" onclick="P2.vcLang('${k}')">${n}</button>`).join('')}</div>
-  <p class="hint" style="margin:0">Kasir tetap bisa mengganti bahasa di panel suara. Perintah dalam tiga bahasa dipahami sekaligus.</p>
   <h5 class="invh">Mode suara</h5>
-  ${T('always','Selalu mendengarkan','Jalan tanpa menekan mikrofon selama halaman kasir terbuka. Audio diproses layanan suara peramban, dan peramban akan meminta izin mikrofon. Pakai perangkat kasir yang dicolok daya.')}
-  ${T('wake','Pakai kata panggil','Perintah hanya dijalankan bila diawali kata panggil, mis. “Ordela, tambah dua nasi goreng”. Sangat disarankan agar obrolan di toko tidak terbaca sebagai perintah.')}
+  ${T('always','Selalu mendengarkan','Tanpa menekan mikrofon')}
+  ${T('wake','Pakai kata panggil','Mis. “Ordela, tambah dua nasi goreng”')}
   <input class="fi" id="vcWord" maxlength="20" placeholder="Kata panggil" value="${esc(c.wakeWord||'ordela')}" onchange="P2.vcWord(this.value)" style="margin:2px 0 6px">
-  ${T('direct','Bayar langsung dengan satu kalimat','Contoh: “tambah dua nasi goreng, bayar tunai lima puluh ribu”. Layar bayar tidak dibuka, struk langsung muncul. Kalau mati, “bayar” hanya membuka layar bayar.')}
+  ${T('direct','Bayar langsung satu kalimat','Tanpa membuka layar bayar')}
   <h5 class="invh">Perilaku</h5>
-  ${T('speak','Suara balasan','Total dan hasil perintah dibacakan')}
-  ${T('pay','Boleh membayar dengan suara','Mengizinkan perintah bayar, uang diterima, dan uang pas')}
-  ${T('confirm','Boleh menyelesaikan pembayaran dengan suara','Ucapan “konfirmasi pembayaran” langsung menyimpan transaksi. Matikan bila ragu.')}
+  ${T('speak','Suara balasan')}
+  ${T('pay','Boleh membayar dengan suara')}
+  ${T('confirm','Boleh konfirmasi pembayaran dengan suara')}
   <h5 class="invh">Nama panggilan menu</h5>
-  <p class="hint" style="margin:0">Untuk sebutan khusus yang sering dipakai. Contoh: “nasgor” untuk Nasi Goreng.</p>
   <div class="inv-qn" id="vcAl"></div>
   <input class="fi" id="vcAlA" maxlength="30" placeholder="Ucapan, mis. nasgor" style="margin-bottom:8px">
   <div style="display:flex;gap:8px"><select class="fi" id="vcAlI" style="flex:1;min-width:0;margin:0">${items.map(i=>`<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</select><button class="btn sec" style="width:auto;margin:0" onclick="P2.vcAlAdd()">Tambah</button></div>
   <h5 class="invh">Pelajaran suara</h5>
-  ${T('learn','Belajar dari koreksi','Saat ucapan tidak dikenal atau membingungkan lalu kasir memilih menu yang benar, sistem mengingatnya di perangkat ini. Tidak memakai AI dan tidak dikirim ke mana pun.')}
+  ${T('learn','Belajar dari koreksi')}
   <div id="vcLn"></div>
   <button class="btn" style="margin-top:14px" onclick="closeModal()">Selesai</button>`);
   P2.vcAlPaint();P2.vcLnPaint();
