@@ -957,7 +957,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
     <section id="v-inv" hidden>
       <div class="bar"><h2><i class="ic" data-ic="box"></i>Inventori</h2>
         <button class="btn sm" id="opnBtn" onclick="go('opname')"><i class="ic" data-ic="check"></i>Stok Opname</button>
-        <button class="btn sm own-only" id="addItemBtn" onclick="itemForm(null,S.itab==='ns')">+ Tambah Item</button>
+        <button class="own-only fab-add" id="addItemBtn" aria-label="Tambah Item" title="Tambah Item" onclick="itemForm(null,S.itab==='ns')"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
         <button class="btn sm red" id="bulkDel" onclick="bulkDel()" hidden><i class="ic" data-ic="trash"></i>Hapus terpilih (0)</button>
         <button class="btn sm sec own-only" onclick="orderForm()"><i class="ic" data-ic="reorder"></i>Atur Urutan Menu</button>
         <button class="btn sm sec own-only" onclick="exportCSV()">Ekspor CSV</button>
