@@ -46,15 +46,44 @@ jobs:
           B=${{ github.run_number }}
           sed -i "s/versionCode [0-9]*/versionCode $B/; s/versionName \"[^\"]*\"/versionName \"1.0.$B\"/" android/app/build.gradle
           grep -n "versionCode\|versionName" android/app/build.gradle
-      - name: Izin kamera, lokasi, ikon
+      - name: Izin Android (mikrofon, kamera, lokasi, Bluetooth, notifikasi), ikon
         run: |
           M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.BLUETOOTH" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />#' $M
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          permissions = [
+              "android.permission.CAMERA",
+              "android.permission.RECORD_AUDIO",
+              "android.permission.MODIFY_AUDIO_SETTINGS",
+              "android.permission.ACCESS_FINE_LOCATION",
+              "android.permission.ACCESS_COARSE_LOCATION",
+              "android.permission.BLUETOOTH",
+              "android.permission.BLUETOOTH_CONNECT",
+              "android.permission.BLUETOOTH_SCAN",
+              "android.permission.POST_NOTIFICATIONS",
+          ]
+          anchor = '<uses-permission android:name="android.permission.INTERNET" />'
+          if anchor not in s:
+              raise SystemExit("INTERNET permission anchor not found; refusing to build without verifying manifest.")
+          missing = [x for x in permissions if f'android:name="{x}"' not in s]
+          if missing:
+              insert = "\\n".join(f'    <uses-permission android:name="{x}" />' for x in missing)
+              s = s.replace(anchor, anchor + "\\n" + insert, 1)
+          if 'android:name="android.hardware.camera"' not in s:
+              s = s.replace("</manifest>", '    <uses-feature android:name="android.hardware.camera" android:required="false" />\\n</manifest>')
+          p.write_text(s)
+          print("Verified permissions:")
+          for x in permissions:
+              if f'android:name="{x}"' not in s:
+                  raise SystemExit(f"Missing permission after patch: {x}")
+              print(x)
+          PY
           for d in android/app/src/main/res/mipmap-*; do
-            case $d in *anydpi*) rm -rf $d; continue;; esac
-            for n in ic_launcher ic_launcher_round ic_launcher_foreground; do cp icon-512.png $d/$n.png; done
+            case $d in *anydpi*) rm -rf "$d"; continue;; esac
+            for n in ic_launcher ic_launcher_round ic_launcher_foreground; do cp icon-512.png "$d/$n.png"; done
           done
-          grep -c CAMERA $M
       - name: Plugin Bluetooth klasik (printer thermal)
         run: |
           D=android/app/src/main/java/$(echo "$APPID" | tr . /)
@@ -272,14 +301,49 @@ jobs:
           cat > $D/MainActivity.java <<'JAVAEOF'
           package com.ordela.app;
 
+          import android.content.SharedPreferences;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
           import android.os.Bundle;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
           import com.getcapacitor.BridgeActivity;
+          import java.util.ArrayList;
 
           public class MainActivity extends BridgeActivity {
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   registerPlugin(ClassicBtPlugin.class);
                   super.onCreate(savedInstanceState);
+                  requestOrdelaPermissions();
+              }
+
+              // Minta izin mikrofon/kamera/lokasi/notifikasi/Bluetooth satu kali.
+              // Izin Bluetooth tetap dikelola plugin saat fitur printer digunakan.
+              private void requestOrdelaPermissions() {
+                  SharedPreferences prefs = getSharedPreferences("ordela", MODE_PRIVATE);
+                  if (prefs.getBoolean("runtime_permissions_requested_v2", false)) return;
+
+                  ArrayList<String> permissions = new ArrayList<>();
+                  permissions.add("android.permission.RECORD_AUDIO");
+                  permissions.add("android.permission.CAMERA");
+                  permissions.add("android.permission.ACCESS_FINE_LOCATION");
+                  if (Build.VERSION.SDK_INT >= 33) {
+                      permissions.add("android.permission.POST_NOTIFICATIONS");
+                  }
+
+                  ArrayList<String> missing = new ArrayList<>();
+                  for (String permission : permissions) {
+                      if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                          missing.add(permission);
+                      }
+                  }
+
+                  // Tandai versi baru agar APK yang pernah meminta izin versi lama tetap meminta izin mikrofon.
+                  prefs.edit().putBoolean("runtime_permissions_requested_v2", true).apply();
+                  if (!missing.isEmpty()) {
+                      ActivityCompat.requestPermissions(this, missing.toArray(new String[0]), 7002);
+                  }
               }
           }
           JAVAEOF
