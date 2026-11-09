@@ -4635,7 +4635,7 @@ function logoutAsk(){
 }
 
 /* ----- pembatasan saat sinkron: karyawan tidak mengirim perubahan di luar izinnya ----- */
-const SET_FREE_KEYS=['gv','lang','fsAuto','logoInit','logoApp','prn','prns','paper'];   // prn/prns/paper: printer per perangkat
+const SET_FREE_KEYS=['gv','lang','fsAuto','logoInit','logoApp','prn','prns','paper','vcl'];   // vcl: pelajaran Voice Cashier, dipakai semua kasir   // prn/prns/paper: printer per perangkat
 function restrictToServer(M,S){
   const me=CL.me;if(!me||me.role==='owner')return M;
   const has=k=>(me.perms||[]).includes(k),out={...M};

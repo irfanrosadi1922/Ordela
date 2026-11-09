@@ -521,7 +521,7 @@ begin
   if (cur -> 'sups') is distinct from (nxt -> 'sups') then return 'Hanya owner yang boleh mengatur pemasok'; end if;
   for k in select jsonb_object_keys(coalesce(cur -> 'set', '{}')) loop
     if (nxt -> 'set') ? k and coalesce(pos.additive(cur -> 'set' -> k, nxt -> 'set' -> k), false) then continue; end if;
-    if k in ('gv','lang','fsAuto','logoInit','logoApp','prn','prns','paper') or pm ? 'set' then continue; end if;   -- prn/prns/paper = printer per perangkat (disimpan lokal di tiap perangkat), bebas untuk semua peran
+    if k in ('gv','lang','fsAuto','logoInit','logoApp','prn','prns','paper','vcl') or pm ? 'set' then continue; end if;   -- prn/prns/paper = printer per perangkat (disimpan lokal di tiap perangkat), bebas untuk semua peran
     return 'Anda tidak punya izin mengubah pengaturan (' || k || ')';
   end loop;
   return null;

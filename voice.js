@@ -402,13 +402,25 @@
     var s = ''; try { s = (typeof CL !== 'undefined' && CL.me && (CL.me.store_id || CL.me.sid)) || (typeof storeId !== 'undefined' && storeId) || ''; } catch (e) { /* abaikan */ }
     return 'ordela_vcl_' + s;
   }
+  var LSrc = null, saveT = 0;
+  function lnorm(d) { d = d && typeof d === 'object' ? d : {}; d.al = d.al || {}; d.use = d.use || {}; d.vw = d.vw || {}; d.miss = d.miss || {}; return d; }
+  /* sumber utama: db.set.vcl (ikut tersinkron ke semua perangkat toko); cadangan: localStorage perangkat ini */
   function lload() {
-    var k = lkey(); if (LS && LSK === k) return LS;
-    LSK = k; var d = null; try { d = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { d = null; }
-    LS = d && typeof d === 'object' ? d : {}; LS.al = LS.al || {}; LS.use = LS.use || {}; LS.vw = LS.vw || {}; LS.miss = LS.miss || {};
+    var k = lkey(), dbs = (typeof db !== 'undefined' && db.set) ? db.set : null;
+    if (LS && LSK === k && (!dbs || LSrc === dbs.vcl)) return LS;
+    LSK = k;
+    if (dbs && dbs.vcl && typeof dbs.vcl === 'object') LS = lnorm(dbs.vcl);
+    else { var d = null; try { d = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { d = null; } LS = lnorm(d); }
+    LSrc = dbs ? (dbs.vcl && typeof dbs.vcl === 'object' ? dbs.vcl : null) : null;
     applyVerbs(); return LS;
   }
-  function lsave() { try { localStorage.setItem(LSK, JSON.stringify(LS)); } catch (e) { /* abaikan */ } }
+  function lsave() {
+    try { localStorage.setItem(LSK, JSON.stringify(LS)); } catch (e) { /* abaikan */ }
+    if (typeof db === 'undefined' || !db.set) return;
+    var u = Object.keys(LS.use).sort(function (a, b) { return LS.use[b] - LS.use[a]; }).slice(200); u.forEach(function (x) { delete LS.use[x]; });
+    db.set.vcl = LS; LSrc = LS;
+    clearTimeout(saveT); saveT = setTimeout(function () { try { if (typeof save === 'function') save(); } catch (e) { /* abaikan */ } }, 3000);
+  }
   function learnOn() { return !!cfg().learn; }
   function akey(ph) { return nameToks(ph).slice().sort().join(' '); }
   function applyVerbs() { Object.keys(LS.vw).forEach(function (w) { var a = LV[LS.vw[w]]; if (a && !has(a, w)) a.push(w); }); }
