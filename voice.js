@@ -101,7 +101,12 @@
 
   /* ---------- pencocokan nama menu ---------- */
   function normTok(w) { return SYN[w] || w; }
-  function nameToks(s) { return toks(s).map(normTok).filter(function (w) { return w && !FILLER[w]; }); }
+  var NT_CACHE = {}, NT_N = 0;
+  function nameToks(s) {
+    var k = String(s); if (NT_CACHE[k]) return NT_CACHE[k];
+    var v = toks(s).map(normTok).filter(function (w) { return w && !FILLER[w]; });
+    if (NT_N > 5000) { NT_CACHE = {}; NT_N = 0; } NT_CACHE[k] = v; NT_N++; return v;
+  }
   function lev(a, b) {
     if (a === b) return 0;
     var m = a.length, n = b.length; if (!m) return n; if (!n) return m;
@@ -161,6 +166,19 @@
 
   function detectMethod(n) { for (var i = 0; i < METHODS.length; i++) if (METHODS[i][0].test(n)) return METHODS[i][1]; return null; }
 
+  /* "dua nasi goreng tiga mie goreng" atau "nasi goreng 2 mie goreng 3" → beberapa segmen (tanpa kata sambung) */
+  function splitQty(w) {
+    var g = [], i = 0;
+    while (i < w.length) {
+      var r = readNum(w, i);
+      if (r) { var e = i + r.len; if (UNIT_WORDS[w[e]]) e++; g.push({ s: i, e: e }); i = e; } else i++;
+    }
+    if (g.length < 2) return [w];
+    var parts = [], k;
+    if (g[0].s === 0) { for (k = 0; k < g.length; k++) parts.push(w.slice(g[k].s, k + 1 < g.length ? g[k + 1].s : w.length)); }
+    else { var st = 0; g.forEach(function (x) { parts.push(w.slice(st, x.e)); st = x.e; }); if (st < w.length) parts.push(w.slice(st)); }
+    return parts.filter(function (x) { return x.length; });
+  }
   /* ubah satu segmen "[jumlah] nama [jumlah]" → {qty, explicit, name} */
   function parseSeg(words) {
     var t = words.filter(function (w) { return !FILLER[w] || w === 'a' && false; });
@@ -265,12 +283,14 @@
     }
     var lines = [];
     segs.forEach(function (sg) {
-      var w = sg.split(' '), v = null;
+      var w0 = sg.split(' '), v = null;
       // segmen dengan kata kerja sendiri ("tambah 2 kopi dan hapus teh")
-      if (has(V_REDUCE, w[0])) v = 'reduce'; else if (has(V_REMOVE, w[0])) v = 'remove'; else if (has(V_ADD, w[0])) v = 'add';
-      if (v) w = w.slice(1);
-      var p = parseSeg(w);
-      if (p.name) { if (v) p.v = v; lines.push(p); }
+      if (has(V_REDUCE, w0[0])) v = 'reduce'; else if (has(V_REMOVE, w0[0])) v = 'remove'; else if (has(V_ADD, w0[0])) v = 'add';
+      if (v) w0 = w0.slice(1);
+      splitQty(w0.filter(function (x) { return !FILLER[x]; })).forEach(function (w) {
+        var p = parseSeg(w);
+        if (p.name) { if (v) p.v = v; lines.push(p); }
+      });
     });
     if (!lines.length) return { intent: 'unknown', text: n };
     return { intent: verb, lines: lines };
@@ -296,11 +316,12 @@
       denied: 'Kebenaran mikrofon ditolak. Benarkan dalam tetapan pelayar.', nospeech: 'Tiada suara didengar. Cuba lagi.', neterr: 'Pengecaman suara memerlukan sambungan internet.', err: 'Pengecaman suara gagal. Cuba lagi atau taip arahan.', each: 'item', hint: 'Cuba: “tambah dua nasi goreng”, “berapa jumlah?”', speakOn: 'Suara balasan', typeHolder: 'Taip arahan…', send: 'Hantar', close: 'Tutup', mic: 'Arahan suara', heard: 'Didengar', unsold: 'Menu tidak dijual' }
   };
   var EXTRA = {
-    id: { short: 'Uang kurang', paid: 'Lunas', change: 'Kembalian', received: 'Diterima', wakeNeed: 'Sebut “Ordela” di awal kalimat untuk membayar', seqStop: 'Periksa pesanan dulu, belum dibayar', permNeed: 'Ketuk layar sekali untuk mengaktifkan mikrofon', ready: 'Ya, silakan', live: 'Selalu mendengarkan' },
-    en: { short: 'Not enough cash', paid: 'Paid', change: 'Change', received: 'Received', wakeNeed: 'Say “Ordela” first to pay', seqStop: 'Check the order first, not paid yet', permNeed: 'Tap the screen once to enable the microphone', ready: 'Yes, go ahead', live: 'Always listening' },
-    ms: { short: 'Wang tidak cukup', paid: 'Selesai', change: 'Baki', received: 'Diterima', wakeNeed: 'Sebut “Ordela” dahulu untuk membayar', seqStop: 'Semak pesanan dahulu, belum dibayar', permNeed: 'Ketik skrin sekali untuk mengaktifkan mikrofon', ready: 'Ya, sila', live: 'Sentiasa mendengar' }
+    id: { bigAsk: 'jumlah besar, ucapkan “ya” untuk menambah', short: 'Uang kurang', paid: 'Lunas', change: 'Kembalian', received: 'Diterima', wakeNeed: 'Sebut “Ordela” di awal kalimat untuk membayar', seqStop: 'Periksa pesanan dulu, belum dibayar', permNeed: 'Ketuk layar sekali untuk mengaktifkan mikrofon', ready: 'Ya, silakan', live: 'Selalu mendengarkan' },
+    en: { bigAsk: 'large quantity, say “yes” to add', short: 'Not enough cash', paid: 'Paid', change: 'Change', received: 'Received', wakeNeed: 'Say “Ordela” first to pay', seqStop: 'Check the order first, not paid yet', permNeed: 'Tap the screen once to enable the microphone', ready: 'Yes, go ahead', live: 'Always listening' },
+    ms: { bigAsk: 'kuantiti besar, sebut “ya” untuk tambah', short: 'Wang tidak cukup', paid: 'Selesai', change: 'Baki', received: 'Diterima', wakeNeed: 'Sebut “Ordela” dahulu untuk membayar', seqStop: 'Semak pesanan dahulu, belum dibayar', permNeed: 'Ketik skrin sekali untuk mengaktifkan mikrofon', ready: 'Ya, sila', live: 'Sentiasa mendengar' }
   };
   Object.keys(EXTRA).forEach(function (l) { Object.keys(EXTRA[l]).forEach(function (k) { MSG[l][k] = EXTRA[l][k]; }); });
+  var BIGQTY = 50;
   var SRLANG = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
 
   var API = { readMoney: readMoney, parse: parse, matchItem: matchItem, readNum: readNum, clean: clean, nameToks: nameToks, scoreName: scoreName, MSG: MSG, SRLANG: SRLANG };
@@ -376,7 +397,16 @@
     if (!r.item && !r.alts.length) { var any = (db.items || []).filter(function (i) { return i.ns; }); var r2 = matchItem(name, any); if (r2.item) return { unsold: r2.item }; }
     return r;
   }
-  function run(p) {
+  /* gambar ulang UI sekali saja per kalimat, bukan sekali per item (menu ribuan tetap cepat) */
+  function batched(fn) {
+    var g = root.renderGrid, iv = root.renderInvoice, hg = 0, hi = 0;
+    if (typeof g !== 'function' || typeof iv !== 'function') return fn();
+    root.renderGrid = function () { hg = 1; }; root.renderInvoice = function () { hi = 1; };
+    try { return fn(); }
+    finally { root.renderGrid = g; root.renderInvoice = iv; if (hg) g(); if (hi) iv(); }
+  }
+  function run(p) { return batched(function () { return run0(p); }); }
+  function run0(p) {
     var res = [], chips = null, show = null;
     if (p.intent === 'empty') return { msg: M('hint') };
     if (p.intent === 'unknown') return { msg: M('nomatch'), warn: true, noop: true };
@@ -386,6 +416,7 @@
       if (!pd) return { msg: M('nomatch'), warn: true };
       if (p.intent === 'no') return { msg: M('cancelled') };
       if (pd.kind === 'clear') { clearCart(); st.last = null; return { msg: M('cleared') }; }
+      if (pd.kind === 'add') { var bi = find(pd.id); if (bi) { var ba = actAdd(bi, pd.qty); return { msg: ba.msg, warn: !ba.ok || ba.warn }; } }
       return { msg: M('cancelled') };
     }
     if (p.intent === 'clear') {
@@ -448,21 +479,22 @@
       var a = actSet(it, p.qty); return { msg: a.msg, warn: !a.ok || a.warn };
     }
     // add / remove / reduce (boleh beberapa baris)
-    var out = [], warn = false, hit = 0;
+    var out = [], warn = false, hit = 0, allChips = [];
     for (var i = 0; i < p.lines.length; i++) {
       var ln = p.lines[i], r = resolve(ln.name);
       if (r.unsold) { out.push(r.unsold.name + ': ' + M('unsold')); warn = true; continue; }
       if (!r.item) {
-        if (r.alts && r.alts.length) { var amb = ambiguous(r, ln.name, ln.qty, ln.v || p.intent, ln.explicit); chips = amb.chips; out.push(amb.msg); warn = true; continue; }
+        if (r.alts && r.alts.length) { var amb = ambiguous(r, ln.name, ln.qty, ln.v || p.intent, ln.explicit); allChips = allChips.concat(amb.chips); out.push(amb.msg + ' “' + ln.name + '”'); warn = true; continue; }
         out.push(M('notfound') + ': “' + ln.name + '”'); warn = true; continue;
       }
       var res2, vb = ln.v || p.intent;
+      if (vb === 'add' && ln.qty > BIGQTY) { st.pending = { kind: 'add', id: r.item.id, qty: ln.qty }; out.push(ln.qty + '× ' + r.item.name + ' — ' + M('bigAsk')); warn = true; continue; }
       if (vb === 'add') res2 = actAdd(r.item, ln.qty);
       else if (vb === 'reduce') res2 = actReduce(r.item, ln.qty, false);
       else res2 = actReduce(r.item, ln.qty, !ln.explicit);
       out.push(res2.msg); hit++; if (!res2.ok || res2.warn) warn = true;
     }
-    return { msg: out.join('\n'), warn: warn, chips: chips, noop: hit === 0 && !chips };
+    return { msg: out.join('\n'), warn: warn, chips: allChips.length ? allChips.slice(0, 8) : null, noop: hit === 0 && !allChips.length };
   }
   /* bayar langsung: satu kalimat, tanpa menampilkan layar bayar (semua dalam satu tugas JS, tidak sempat tergambar) */
   function directPay(p) {
@@ -544,7 +576,7 @@
   function showResult(r) {
     var el = $('#vcRes'); el.textContent = r.msg || ''; el.classList.toggle('warn', !!r.warn); el.classList.toggle('big', !!r.big);
     var ch = $('#vcCh');
-    ch.innerHTML = (r.chips || []).map(function (c) { return '<button type="button" class="chip" data-i="' + esc(c.id) + '" data-q="' + (c.qty || 1) + '" data-t="' + esc(c.intent === 'add' ? 'add' : c.intent === 'set' ? 'set' : 'rm') + '" data-x="' + (c.explicit ? '1' : '0') + '">' + esc(c.name) + '</button>'; }).join('');
+    ch.innerHTML = (r.chips || []).map(function (c) { return '<button type="button" class="chip" data-i="' + esc(c.id) + '" data-q="' + (c.qty || 1) + '" data-t="' + esc(c.intent === 'add' ? 'add' : c.intent === 'set' ? 'set' : 'rm') + '" data-x="' + (c.explicit ? '1' : '0') + '">' + ((c.qty || 1) > 1 ? esc(c.qty + '× ') : '') + esc(c.name) + '</button>'; }).join('');
     if (r.msg && st.speak && cfg().speak && root.speechSynthesis && !st.listening) say(r.say || r.msg.split('\n')[0]);
   }
   function say(t) {
