@@ -695,8 +695,10 @@ P2.voiceSet=function(){
   ${T('learn','Belajar dari koreksi')}
   ${T('ai','Bantuan AI','Hanya untuk ucapan yang tidak dikenal')}
   <div id="vcLn"></div>
+  <h5 class="invh">Diagnostik mikrofon</h5>
+  <div id="vcDg"></div>
   <button class="btn" style="margin-top:14px" onclick="closeModal()">Selesai</button>`);
-  P2.vcAlPaint();P2.vcLnPaint();
+  P2.vcAlPaint();P2.vcLnPaint();P2.vcDgPaint();
 };
 P2.vcLnPaint=function(){
   const e=$('#vcLn');if(!e||!window.VC||!VC.L)return;const d=VC.L.data(),nm=id=>{const it=(db.items||[]).find(y=>y.id===id);return it?it.name:'(menu dihapus)'};
@@ -707,6 +709,12 @@ P2.vcLnPaint=function(){
   <p class="hint" style="margin:8px 0 2px"><b>Belum dikenal</b> (ucapan yang gagal, ajari di sini)</p>
   ${ms.map(k=>`<div style="display:flex;gap:6px;align-items:center;margin:4px 0"><span style="flex:0 0 auto;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">“${esc(d.miss[k].p)}”${d.miss[k].n>1?` ×${d.miss[k].n}`:''}</span><select class="fi" style="flex:1;min-width:0;margin:0" onchange="P2.vcLnAs('${esc(k)}',this.value)"><option value="">Pilih menu…</option>${opts}</select><b class="chip" onclick="P2.vcLnDel('miss','${esc(k)}')" role="button" aria-label="Abaikan" style="cursor:pointer">✕</b></div>`).join('')||'<small class="hint">Belum ada.</small>'}
   ${(al.length||ms.length||vw.length)?`<button class="btn sec" style="margin-top:10px" onclick="P2.vcLnClear()">Hapus semua pelajaran</button>`:''}`;
+};
+P2.vcDgPaint=function(){
+  const e=$('#vcDg');if(!e||!window.VC||!VC.D)return;const b=VC.D.bg(),l=VC.D.log().slice().reverse().slice(0,10),now=Date.now();
+  e.innerHTML=`<p class="hint" style="margin:4px 0">${b.live?'● Mikrofon latar menyala':b.blocked?'○ Izin mikrofon ditolak, ketuk layar sekali':b.wanted?'○ Menyambung ulang…':'○ Tidak aktif (buka halaman Kasir dan nyalakan Selalu mendengarkan)'}${b.fail?` · galat beruntun ${b.fail}`:''}</p>
+  <div style="font-size:12.5px;line-height:1.7">${l.map(x=>`<div><span style="color:var(--mu)">${Math.max(0,Math.round((now-x.t)/1000))} dtk lalu</span> · <b>${esc(x.k)}</b>${x.x?' · '+esc(x.x):''}</div>`).join('')||'<small class="hint">Belum ada aktivitas.</small>'}</div>
+  <button class="btn sec" style="margin-top:8px" onclick="P2.vcDgPaint()">Segarkan</button>`;
 };
 P2.vcLnDel=function(t,k){const f={al:'delAlias',vw:'delVerb',miss:'delMiss'}[t];if(f)VC.L[f](k);P2.vcLnPaint()};
 P2.vcLnAs=function(k,id){if(id){VC.L.assign(k,id);toast('Diingat');P2.vcLnPaint()}};

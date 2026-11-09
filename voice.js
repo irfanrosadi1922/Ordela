@@ -865,27 +865,41 @@
     var c = cfg();
     return !!(SR && c.on && c.always && !document.hidden && !st.listening && !st.speaking && !bg.blocked && Date.now() >= bg.pausedUntil && typeof S !== 'undefined' && S.view === 'pos');
   }
+  /* catatan diagnostik mode latar (untuk Pengaturan > Voice Cashier > Diagnostik) */
+  var DG = [];
+  function dg(type, txt) { DG.push({ t: Date.now(), k: type, x: String(txt || '').slice(0, 90) }); if (DG.length > 14) DG.shift(); bg.last = Date.now(); }
   function bgStart() {
     var rec;
-    try { rec = new SR(); } catch (e) { bg.fail++; return; }
-    rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = true; rec.interimResults = false; rec.maxAlternatives = 3;
-    rec.onstart = function () { bg.run = true; bg.t0 = Date.now(); setLive(true); };
+    try { rec = new SR(); } catch (e) { bg.fail++; dg('gagal', 'tidak bisa membuat sesi'); return; }
+    rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 3;
+    var done = {}, pend = null, tm = 0;
+    var take = function (i, alts, how) {                       // proses satu ucapan sekali saja (interim yang sudah tenang atau hasil final)
+      if (done[i]) return; done[i] = 1; clearTimeout(tm); pend = null;
+      dg(how, alts[0]); try { heardBg(alts); } catch (e) { console.error('voice-bg', e); }
+    };
+    rec.onstart = function () { bg.run = true; bg.t0 = Date.now(); setLive(true); dg('mulai', rec.lang); };
+    rec.onaudiostart = function () { dg('audio', ''); };
     rec.onresult = function (ev) {
-      bg.fail = 0;
+      bg.fail = 0; bg.last = Date.now();
       for (var i = ev.resultIndex; i < ev.results.length; i++) {
-        var r = ev.results[i]; if (!r.isFinal) continue;
-        var alts = []; for (var j = 0; j < r.length; j++) alts.push(r[j].transcript);
-        try { heardBg(alts); } catch (e) { console.error('voice-bg', e); }
+        var r = ev.results[i], alts = []; for (var j = 0; j < r.length; j++) alts.push(r[j].transcript);
+        if (r.isFinal) take(i, alts, 'final');
+        else if (!done[i]) {                                  // iOS/Android sering menunda hasil final: anggap selesai bila teks tidak berubah 1,2 dtk
+          var key = alts[0]; if (!pend || pend.i !== i || pend.key !== key) {
+            pend = { i: i, key: key }; clearTimeout(tm);
+            (function (ii, aa, kk) { tm = setTimeout(function () { if (pend && pend.i === ii && pend.key === kk && bg.rec === rec) take(ii, aa, 'tenang'); }, 1200); })(i, alts, key);
+          }
+        }
       }
     };
     rec.onerror = function (ev) {
-      var e = ev && ev.error;
+      var e = ev && ev.error; dg('galat', e);
       if (e === 'not-allowed' || e === 'service-not-allowed') { bg.blocked = true; setLive(false); toastMsg(M('permNeed'), true); waitGesture(); }
       else if (e !== 'no-speech' && e !== 'aborted') bg.fail++;
     };
-    rec.onend = function () { if (bg.rec !== rec) return; if (bg.t0 && Date.now() - bg.t0 > 3000) bg.fail = 0; bg.run = false; bg.rec = null; setLive(false); bg.next = Math.min(bg.next, Date.now() + 150); };
+    rec.onend = function () { clearTimeout(tm); if (bg.rec !== rec) return; dg('selesai', Math.round((Date.now() - (bg.t0 || Date.now())) / 1000) + ' dtk'); if (bg.t0 && Date.now() - bg.t0 > 3000) bg.fail = 0; bg.run = false; bg.rec = null; setLive(false); bg.next = Math.min(bg.next, Date.now() + 150); };
     bg.rec = rec;
-    try { rec.start(); } catch (e) { bg.rec = null; bg.fail++; }
+    try { rec.start(); } catch (e) { bg.rec = null; bg.fail++; dg('gagal', e && e.message); }
   }
   function bgStop() { var r = bg.rec; bg.rec = null; if (r) { try { r.onend = null; r.abort(); } catch (e) { /* abaikan */ } } bg.run = false; setLive(false); }
   function waitGesture() {
@@ -896,6 +910,7 @@
     var want = bgWanted();
     if (want && !bg.rec && Date.now() >= bg.next) { bg.next = Date.now() + Math.min(6000, 300 + 400 * bg.fail); bgStart(); }
     else if (!want && bg.rec) bgStop();
+    else if (want && bg.rec && bg.run && Date.now() - (bg.last || bg.t0 || Date.now()) > 50000) { dg('segarkan', 'tanpa aktivitas 50 dtk'); bgStop(); bg.next = Date.now() + 200; }   // sesi macet diam-diam
   }
   /* ucapan latar: wajib kata panggil (bila diaktifkan); tanpa kata panggil hanya perintah yang dikenali yang dijalankan */
   function heardBg(alts) {
@@ -944,7 +959,7 @@
     ensureUI(); injectMic(); setInterval(supervise, 300);
     var n = 0, t = setInterval(function () { injectMic(); if ($('#vcMic') || ++n > 40) clearInterval(t); }, 500);
   }
-  root.VC = { refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, L: {
+  root.VC = { refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, D: { log: function () { return DG.slice(); }, bg: function () { return { live: !!bg.run, blocked: !!bg.blocked, fail: bg.fail, wanted: bgWanted() }; } }, L: {
     data: function () { var L = lload(); return JSON.parse(JSON.stringify(L)); },
     delAlias: function (k) { var L = lload(); delete L.al[k]; lsave(); },
     delMiss: function (k) { var L = lload(); delete L.miss[k]; lsave(); },
