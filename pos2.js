@@ -669,7 +669,7 @@ P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSa
 
 
 /* ================= PENGATURAN VOICE CASHIER (db.set.vc) ================= */
-P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
+P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
 P2.voiceSet=function(){
   closeAll();
   const c=P2.vcCfg(),sup=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
@@ -681,9 +681,14 @@ P2.voiceSet=function(){
   <h5 class="invh">Bahasa</h5>
   <div class="chips" id="vcLg">${[['auto','Ikuti bahasa aplikasi'],['id','Indonesia'],['en','English'],['ms','Melayu']].map(([k,n])=>`<button class="chip ${c.lang===k?'on':''}" onclick="P2.vcLang('${k}')">${n}</button>`).join('')}</div>
   <p class="hint" style="margin:0">Kasir tetap bisa mengganti bahasa di panel suara. Perintah dalam tiga bahasa dipahami sekaligus.</p>
+  <h5 class="invh">Mode suara</h5>
+  ${T('always','Selalu mendengarkan','Jalan tanpa menekan mikrofon selama halaman kasir terbuka. Audio diproses layanan suara peramban, dan peramban akan meminta izin mikrofon. Pakai perangkat kasir yang dicolok daya.')}
+  ${T('wake','Pakai kata panggil','Perintah hanya dijalankan bila diawali kata panggil, mis. “Ordela, tambah dua nasi goreng”. Sangat disarankan agar obrolan di toko tidak terbaca sebagai perintah.')}
+  <input class="fi" id="vcWord" maxlength="20" placeholder="Kata panggil" value="${esc(c.wakeWord||'ordela')}" onchange="P2.vcWord(this.value)" style="margin:2px 0 6px">
+  ${T('direct','Bayar langsung dengan satu kalimat','Contoh: “tambah dua nasi goreng, bayar tunai lima puluh ribu”. Layar bayar tidak dibuka, struk langsung muncul. Kalau mati, “bayar” hanya membuka layar bayar.')}
   <h5 class="invh">Perilaku</h5>
   ${T('speak','Suara balasan','Total dan hasil perintah dibacakan')}
-  ${T('pay','Boleh membuka pembayaran dengan suara','Ucapan “bayar tunai” membuka layar bayar')}
+  ${T('pay','Boleh membayar dengan suara','Mengizinkan perintah bayar, uang diterima, dan uang pas')}
   ${T('confirm','Boleh menyelesaikan pembayaran dengan suara','Ucapan “konfirmasi pembayaran” langsung menyimpan transaksi. Matikan bila ragu.')}
   <h5 class="invh">Nama panggilan menu</h5>
   <p class="hint" style="margin:0">Untuk sebutan khusus yang sering dipakai. Contoh: “nasgor” untuk Nasi Goreng.</p>
@@ -695,6 +700,7 @@ P2.voiceSet=function(){
 };
 P2.vcSave=function(c){db.set.vc=c;save();if(window.VC&&VC.refresh)VC.refresh()};
 P2.vcTog=function(k,v){const c=P2.vcCfg();c[k]=v?1:0;P2.vcSave(c)};
+P2.vcWord=function(v){const w=String(v||'').trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').slice(0,20)||'ordela';const c=P2.vcCfg();c.wakeWord=w;P2.vcSave(c);const e=$('#vcWord');if(e)e.value=w};
 P2.vcLang=function(l){const c=P2.vcCfg();c.lang=l;P2.vcSave(c);document.querySelectorAll('#vcLg .chip').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick')==="P2.vcLang('"+l+"')"))};
 P2.vcAlPaint=function(){const e=$('#vcAl');if(!e)return;e.innerHTML=P2.vcCfg().al.map((x,i)=>{const it=(db.items||[]).find(y=>y.id===x.id);return `<span class="chip">“${esc(x.a)}” → ${esc(it?it.name:'(menu dihapus)')}<b onclick="P2.vcAlDel(${i})" role="button" aria-label="Hapus">✕</b></span>`}).join('')||'<small class="hint">Belum ada.</small>'};
 P2.vcAlAdd=function(){

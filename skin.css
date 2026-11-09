@@ -588,3 +588,11 @@ html[data-skin] .grid:not(.list) .p .stk{margin-bottom:0}
 @media (orientation:landscape) and (max-height:520px){#vcP{top:calc(env(safe-area-inset-top,0px) + 62px);max-width:min(560px,60vw);left:auto;right:12px;margin:0;padding:10px 14px}.vc-tx{font-size:15px;margin-top:6px}.vc-sw{margin-top:6px}}
 @media (prefers-reduced-motion:reduce){.vc-mic.rec,#vcP.on .vc-ind i{animation:none}}
 .vc-mic[hidden]{display:none}
+.vc-mic.live{color:#16a34a}
+.vc-mic.live::after{content:"";position:absolute;right:3px;top:3px;width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.5);animation:vcLive 1.8s ease-out infinite}
+@keyframes vcLive{0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}100%{box-shadow:0 0 0 9px rgba(22,163,74,0)}}
+#vcT{position:fixed;z-index:165;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 76px);max-width:min(92vw,520px);padding:10px 16px;border-radius:20px;font-size:14px;font-weight:600;line-height:1.35;white-space:pre-line;text-align:center;
+  color:var(--tx,#111);background:color-mix(in srgb,var(--card,#fff) 84%,transparent);-webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6);border:1px solid rgba(255,255,255,.55);box-shadow:0 12px 34px rgba(15,23,42,.22);pointer-events:none}
+#vcT[hidden]{display:none}#vcT.warn{color:#b45309}
+@media (orientation:landscape) and (max-height:520px){#vcT{top:calc(env(safe-area-inset-top,0px) + 60px)}}
+@media (prefers-reduced-motion:reduce){.vc-mic.live::after{animation:none}}

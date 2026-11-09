@@ -24,6 +24,37 @@
 
   function has(list, w) { return list.indexOf(w) > -1; }
 
+  /* ---------- nominal uang: "lima puluh ribu", "50k", "seratus ribu", "sepuluh ringgit lima puluh sen" ---------- */
+  var MONEYW = { ribu: 1e3, rb: 1e3, k: 1e3, thousand: 1e3, juta: 1e6, jt: 1e6, million: 1e6 };
+  var CUR_W = { ringgit: 1, rm: 1, rupiah: 1, rp: 1, dollar: 1, dollars: 1, bucks: 1, idr: 1, myr: 1, usd: 1 };
+  function readMoney(t, i) {
+    var total = 0, j = i, got = false, m;
+    while (j < t.length) {
+      var w = t[j];
+      if (w === 'seribu') { total += 1000; j++; got = true; continue; }
+      if (w === 'sejuta') { total += 1e6; j++; got = true; continue; }
+      if ((m = /^(?:rm|rp)(\d+)$/.exec(w))) { total += +m[1]; j++; got = true; continue; }
+      if ((m = /^(\d+)(k|rb|jt)$/.exec(w))) { total += +m[1] * (m[2] === 'jt' ? 1e6 : 1e3); j++; got = true; continue; }
+      var r = readNum(t, j);
+      if (!r) { if (got && CUR_W[w]) { j++; continue; } break; }
+      var nx = t[j + r.len];
+      if (nx in MONEYW) { total += r.n * MONEYW[nx]; j += r.len + 1; got = true; continue; }
+      if (nx === 'sen' || nx === 'cent' || nx === 'cents') { total += r.n / 100; j += r.len + 1; got = true; continue; }
+      total += r.n; j += r.len; got = true;
+      if (CUR_W[t[j]]) j++;
+    }
+    return got ? { v: Math.round(total * 100) / 100, len: j - i } : null;
+  }
+  var PAYV = { bayar: 1, bayarkan: 1, membayar: 1, checkout: 1, pay: 1, lunas: 1, lunaskan: 1, settle: 1 };
+  function parsePayClause(tk) {
+    var s = tk.join(' '), amount = null;
+    for (var i = 0; i < tk.length; i++) { var r = readMoney(tk, i); if (r) { amount = r.v; break; } }
+    var method = detectMethod(s);
+    if (!method && amount !== null) method = 'Tunai';
+    return { method: method, amount: amount, exact: /\b(pas|exact|lunas|pass)\b/.test(s) };
+  }
+  function leftOk(w) { return w.length && (has(V_ADD, w[0]) || has(V_REMOVE, w[0]) || has(V_REDUCE, w[0]) || isNumTok(w[0])); }
+
   /* ---------- normalisasi ---------- */
   function deaccent(s) { try { return String(s).normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (e) { return String(s); } }
   function clean(s) {
@@ -56,7 +87,7 @@
         var v = UNITS[w];
         if (u) break;
         if (acc > 0 && acc % 10 === 0 && acc % 100 !== 0 && !(j > i && t[j - 1] in MULT && t[j - 1] !== 'puluh')) { acc += v; used = true; continue; }
-        if (acc > 0 && acc % 100 === 0) { acc += v; used = true; continue; }
+        if (acc > 0 && acc % 100 === 0) { u = v; used = true; continue; }
         u = v; used = true; continue;
       }
       if (w === 'belas') { if (!u && !acc) break; acc += 10 + u; u = 0; used = true; continue; }
@@ -125,6 +156,7 @@
   }
 
   /* ---------- parser perintah ---------- */
+  var SEPW = { dan: 1, lalu: 1, kemudian: 1, terus: 1, then: 1, and: 1, sama: 1, plus: 1, serta: 1, n: 1, also: 1, dengan: 1 };
   var SEP = /\s+(?:dan|sama|serta|lalu|kemudian|terus|plus|and|then|also|dengan|n)\s+|\s*,\s*/;
 
   function detectMethod(n) { for (var i = 0; i < METHODS.length; i++) if (METHODS[i][0].test(n)) return METHODS[i][1]; return null; }
@@ -176,10 +208,28 @@
     var mn = /^(?:tambah(?:kan)?\s+)?(?:catatan|catat|note|notes|nota)\s+(.+)$/.exec(n);
     if (mn) return { intent: 'note', text: mn[1] };
 
-    // bayar
-    if (/^(?:tolong\s+|please\s+)?(bayar|bayarkan|pembayaran|checkout|check out|pay|payment|bayaran|proses bayar|lanjut bayar|lanjutkan pembayaran|selesai|selesaikan)\b/.test(n)) return { intent: 'pay', method: detectMethod(n) };
-    if (/^(uang pas|pas|exact|exact amount|bayar pas|wang pas)$/.test(n)) return { intent: 'exact' };
+    // konfirmasi / uang pas (saat layar bayar sudah terbuka)
+    if (/^(uang pas|pas|exact|exact amount|wang pas)$/.test(n)) return { intent: 'exact' };
     if (/^(konfirmasi pembayaran|konfirmasi bayar|proses|process|bayar sekarang|confirm payment|selesaikan pembayaran|sudah dibayar|done)$/.test(n)) return { intent: 'confirmpay' };
+    // buka layar bayar saja
+    if (/^(?:buka|open|tampilkan|show|ke)\s+(?:layar|halaman|menu)?\s*(?:pembayaran|bayar|payment|bayaran)\b/.test(n) || /^(pembayaran|payment|selesai|selesaikan|proses bayar|lanjut bayar|lanjutkan pembayaran)$/.test(n)) {
+      var oc = parsePayClause(T); return { intent: 'pay', method: oc.method, amount: oc.amount, exact: oc.exact, direct: false };
+    }
+    // bayar: "bayar tunai lima puluh ribu", "tambah 2 nasi goreng bayar qris"
+    var pv = -1;
+    for (var pi = 0; pi < T.length; pi++) { if (PAYV[T[pi]]) { pv = pi; break; } }
+    if (pv >= 0) {
+      var pc = parsePayClause(T.slice(pv + 1)), left = T.slice(0, pv);
+      while (left.length && (SEPW[left[left.length - 1]] || FILLER[left[left.length - 1]])) left.pop();
+      var payI = { intent: 'pay', method: pc.method, amount: pc.amount, exact: pc.exact, direct: true };
+      if (leftOk(left)) { var lp = parse(left.join(' ')); if (lp.intent === 'add' || lp.intent === 'remove' || lp.intent === 'reduce') return { intent: 'seq', parts: [lp, payI] }; }
+      return payI;
+    }
+    // uang diterima: "uang diterima lima puluh ribu", "customer paid fifty"
+    if (/\b(diterima|terima|menerima|received|tendered|paid|dibayar|dikasih|dikasi|kasih|memberi|gave|given|wang diterima)\b/.test(n)) {
+      var tc = parsePayClause(T);
+      if (tc.amount !== null) return { intent: 'tender', amount: tc.amount, method: tc.method || 'Tunai' };
+    }
 
     // verba utama
     var verb = null, vi = 0;
@@ -245,9 +295,15 @@
       clearAsk: 'Kosongkan bakul? Sebut “ya”.', payOff: 'Pembayaran melalui suara dimatikan dalam tetapan', confirmOff: 'Selesaikan pembayaran dengan butang Bayar. Suara dimatikan dalam tetapan.', cleared: 'Bakul dikosongkan', cancelled: 'Dibatalkan', pay: 'Pembayaran dibuka', payNeed: 'Bakul masih kosong', confirmNo: 'Buka skrin pembayaran dahulu', exact: 'Wang pas diisi', noted: 'Catatan disimpan',
       denied: 'Kebenaran mikrofon ditolak. Benarkan dalam tetapan pelayar.', nospeech: 'Tiada suara didengar. Cuba lagi.', neterr: 'Pengecaman suara memerlukan sambungan internet.', err: 'Pengecaman suara gagal. Cuba lagi atau taip arahan.', each: 'item', hint: 'Cuba: “tambah dua nasi goreng”, “berapa jumlah?”', speakOn: 'Suara balasan', typeHolder: 'Taip arahan…', send: 'Hantar', close: 'Tutup', mic: 'Arahan suara', heard: 'Didengar', unsold: 'Menu tidak dijual' }
   };
+  var EXTRA = {
+    id: { short: 'Uang kurang', paid: 'Lunas', change: 'Kembalian', received: 'Diterima', wakeNeed: 'Sebut “Ordela” di awal kalimat untuk membayar', seqStop: 'Periksa pesanan dulu, belum dibayar', permNeed: 'Ketuk layar sekali untuk mengaktifkan mikrofon', ready: 'Ya, silakan', live: 'Selalu mendengarkan' },
+    en: { short: 'Not enough cash', paid: 'Paid', change: 'Change', received: 'Received', wakeNeed: 'Say “Ordela” first to pay', seqStop: 'Check the order first, not paid yet', permNeed: 'Tap the screen once to enable the microphone', ready: 'Yes, go ahead', live: 'Always listening' },
+    ms: { short: 'Wang tidak cukup', paid: 'Selesai', change: 'Baki', received: 'Diterima', wakeNeed: 'Sebut “Ordela” dahulu untuk membayar', seqStop: 'Semak pesanan dahulu, belum dibayar', permNeed: 'Ketik skrin sekali untuk mengaktifkan mikrofon', ready: 'Ya, sila', live: 'Sentiasa mendengar' }
+  };
+  Object.keys(EXTRA).forEach(function (l) { Object.keys(EXTRA[l]).forEach(function (k) { MSG[l][k] = EXTRA[l][k]; }); });
   var SRLANG = { id: 'id-ID', en: 'en-US', ms: 'ms-MY' };
 
-  var API = { parse: parse, matchItem: matchItem, readNum: readNum, clean: clean, nameToks: nameToks, scoreName: scoreName, MSG: MSG, SRLANG: SRLANG };
+  var API = { readMoney: readMoney, parse: parse, matchItem: matchItem, readNum: readNum, clean: clean, nameToks: nameToks, scoreName: scoreName, MSG: MSG, SRLANG: SRLANG };
   if (typeof module !== 'undefined' && module.exports) { module.exports = API; }
   if (typeof window === 'undefined') return;
 
@@ -263,7 +319,7 @@
   function pickLang() { var l = null; try { l = localStorage.getItem('ordela_vc_lang'); } catch (e) { /* abaikan */ } if (l && MSG[l]) return l; var cl = cfg().lang; if (MSG[cl]) return cl; try { if (typeof lang === 'function' && MSG[lang()]) return lang(); } catch (e) { /* abaikan */ } return 'id'; }
   st.lang = pickLang();
 
-  function cfg() { var c = (typeof db !== 'undefined' && db.set && db.set.vc) || {}; return { on: c.on !== 0 && c.on !== false, lang: c.lang || 'auto', speak: c.speak !== 0 && c.speak !== false, pay: c.pay !== 0 && c.pay !== false, confirm: c.confirm === 1 || c.confirm === true, al: Array.isArray(c.al) ? c.al : [] }; }
+  function cfg() { var c = (typeof db !== 'undefined' && db.set && db.set.vc) || {}; return { on: c.on !== 0 && c.on !== false, lang: c.lang || 'auto', speak: c.speak !== 0 && c.speak !== false, pay: c.pay !== 0 && c.pay !== false, confirm: c.confirm === 1 || c.confirm === true, al: Array.isArray(c.al) ? c.al : [], always: c.always === 1 || c.always === true, wake: c.wake !== 0 && c.wake !== false, wakeWord: String(c.wakeWord || 'ordela'), direct: c.direct !== 0 && c.direct !== false }; }
   function M(k) { return (MSG[st.lang] || MSG.id)[k] || MSG.id[k] || ''; }
   function money2(v) { return typeof money === 'function' ? money(v) : String(v); }
   function sellable() { return (typeof db !== 'undefined' && db.items ? db.items : []).filter(function (i) { return !i.ns; }); }
@@ -323,7 +379,7 @@
   function run(p) {
     var res = [], chips = null, show = null;
     if (p.intent === 'empty') return { msg: M('hint') };
-    if (p.intent === 'unknown') return { msg: M('nomatch'), warn: true };
+    if (p.intent === 'unknown') return { msg: M('nomatch'), warn: true, noop: true };
     if (p.intent === 'close') { setTimeout(closePanel, 50); return { msg: '' }; }
     if (p.intent === 'yes' || p.intent === 'no') {
       var pd = st.pending; st.pending = null;
@@ -348,13 +404,29 @@
       var ni = $('#pNote'); if (ni) ni.value = S.note;
       return { msg: M('noted') + ': ' + S.note };
     }
-    if ((p.intent === 'pay' || p.intent === 'exact') && !cfg().pay) return { msg: M('payOff'), warn: true };
+    if (p.intent === 'seq') {
+      var r1 = run(p.parts[0]);
+      if (r1.warn || r1.chips) { r1.msg = (r1.msg ? r1.msg + '\n' : '') + M('seqStop'); r1.warn = true; return r1; }
+      var r2 = run(p.parts[1]); r2.msg = (r1.msg ? r1.msg + '\n' : '') + (r2.msg || ''); return r2;
+    }
+    if ((p.intent === 'pay' || p.intent === 'exact' || p.intent === 'tender') && !cfg().pay) return { msg: M('payOff'), warn: true };
     if (p.intent === 'confirmpay' && !cfg().confirm) return { msg: M('confirmOff'), warn: true };
     if (p.intent === 'pay') {
       if (!Object.keys(S.cart).length) return { msg: M('payNeed'), warn: true };
+      if (p.direct && cfg().direct) return directPay(p);
       if (!$('#payOk')) { if (typeof closeModal === 'function' && $('#mw.on')) closeModal(); payForm(); }
       if (p.method && typeof setM === 'function' && $('#pM')) setM(p.method);
+      if (p.amount != null && $('#pPaid')) { setM('Tunai'); quick(p.amount); }
       return { msg: M('pay') + (p.method ? ' · ' + p.method : '') + ' · ' + money2(calc().total) };
+    }
+    if (p.intent === 'tender') {
+      if (!Object.keys(S.cart).length) return { msg: M('payNeed'), warn: true };
+      if (!$('#payOk')) { if (typeof closeModal === 'function' && $('#mw.on')) closeModal(); payForm(); }
+      setM(p.method || 'Tunai');
+      var tt = payTotals(), chg = Math.round((p.amount - tt.payable) * 100) / 100;
+      quick(p.amount);
+      return chg >= 0 ? { msg: M('received') + ' ' + money2(p.amount) + ' · ' + M('change') + ' ' + money2(chg), say: M('received') + ' ' + spokenMoney(p.amount) + '. ' + M('change') + ' ' + spokenMoney(chg), big: true }
+                      : { msg: M('short') + ': ' + money2(-chg), warn: true };
     }
     if (p.intent === 'exact') {
       if (!$('#payOk')) return { msg: M('confirmNo'), warn: true };
@@ -376,7 +448,7 @@
       var a = actSet(it, p.qty); return { msg: a.msg, warn: !a.ok || a.warn };
     }
     // add / remove / reduce (boleh beberapa baris)
-    var out = [], warn = false;
+    var out = [], warn = false, hit = 0;
     for (var i = 0; i < p.lines.length; i++) {
       var ln = p.lines[i], r = resolve(ln.name);
       if (r.unsold) { out.push(r.unsold.name + ': ' + M('unsold')); warn = true; continue; }
@@ -388,9 +460,33 @@
       if (vb === 'add') res2 = actAdd(r.item, ln.qty);
       else if (vb === 'reduce') res2 = actReduce(r.item, ln.qty, false);
       else res2 = actReduce(r.item, ln.qty, !ln.explicit);
-      out.push(res2.msg); if (!res2.ok || res2.warn) warn = true;
+      out.push(res2.msg); hit++; if (!res2.ok || res2.warn) warn = true;
     }
-    return { msg: out.join('\n'), warn: warn, chips: chips };
+    return { msg: out.join('\n'), warn: warn, chips: chips, noop: hit === 0 && !chips };
+  }
+  /* bayar langsung: satu kalimat, tanpa menampilkan layar bayar (semua dalam satu tugas JS, tidak sempat tergambar) */
+  function directPay(p) {
+    if (st.paying) return { msg: '', noop: true };
+    var m = p.method || 'Tunai', opened = !!$('#payOk');
+    if (!opened) { if (typeof closeModal === 'function' && $('#mw.on')) closeModal(); payForm(); }
+    if (!$('#payOk')) return { msg: M('err'), warn: true };
+    setM(m);
+    var t = payTotals(), paid = t.payable;
+    if (m === 'Tunai' && !p.exact && p.amount != null) paid = p.amount;
+    if (paid + 1e-9 < t.payable) { if (!opened) closeModal(); return { msg: M('short') + ': ' + money2(t.payable - paid), warn: true }; }
+    var pi = $('#pPaid'); if (pi) pi.value = paid;
+    payRefresh();
+    var ok = $('#payOk');
+    if (!ok || ok.disabled) { if (!opened) closeModal(); return { msg: M('err'), warn: true }; }
+    st.paying = true; setTimeout(function () { st.paying = false; }, 1500);
+    var n0 = db.orders.length;
+    checkout();
+    if (db.orders.length <= n0) { return { msg: M('err'), warn: true }; }
+    var ch = Math.max(0, Math.round((paid - t.payable) * 100) / 100);
+    st.last = null;
+    setTimeout(function () { if (!st.listening) closePanel(); }, 2600);
+    return { msg: M('paid') + ' · ' + m + ' · ' + money2(t.payable) + (m === 'Tunai' ? ' · ' + M('change') + ' ' + money2(ch) : ''),
+      say: M('paid') + (m === 'Tunai' && ch > 0 ? '. ' + M('change') + ' ' + spokenMoney(ch) : ''), big: true, paid: true };
   }
   function ambiguous(r, name, qty, intent, explicit) {
     var alts = (r.alts || []).slice(0, 4);
@@ -412,6 +508,7 @@
       '<form class="vc-f" id="vcF" autocomplete="off"><input class="fi" id="vcIn" enterkeyhint="send" autocapitalize="none" spellcheck="false"><button type="button" class="vc-go" id="vcMic2" aria-label="Mikrofon">' + ICON_MIC + '</button><button class="vc-send" type="submit" id="vcSend"></button></form>' +
       '<label class="vc-sw"><input type="checkbox" id="vcSpk"><span id="vcSpkL"></span></label>';
     document.body.appendChild(p);
+    var tt = document.createElement('div'); tt.id = 'vcT'; tt.hidden = true; tt.setAttribute('role', 'status'); tt.setAttribute('aria-live', 'polite'); document.body.appendChild(tt);
     $('#vcX').onclick = closePanel;
     $('#vcF').onsubmit = function (e) { e.preventDefault(); var v = $('#vcIn').value; $('#vcIn').value = ''; submit(v); };
     $('#vcMic2').onclick = toggleListen;
@@ -453,8 +550,11 @@
   function say(t) {
     try {
       var u = new SpeechSynthesisUtterance(String(t).replace(/[×·]/g, ' ')); u.lang = SRLANG[st.lang] || 'id-ID'; u.rate = 1.05;
+      bgStop(); st.speaking = true;
+      var done = function () { st.speaking = false; bg.pausedUntil = Date.now() + 500; };
+      u.onend = done; u.onerror = done; setTimeout(function () { if (st.speaking) done(); }, Math.min(9000, 1500 + String(t).length * 90));
       root.speechSynthesis.cancel(); root.speechSynthesis.speak(u);
-    } catch (e) { /* abaikan */ }
+    } catch (e) { st.speaking = false; }
   }
   function applyCfg() {
     var on = cfg().on, m = $('#vcMic'); if (m) m.hidden = !on;
@@ -482,6 +582,7 @@
   function startListen() {
     if (!SR) { showResult({ msg: M('nosr') }); return; }
     if (st.listening) return;
+    bgStop(); bg.pausedUntil = Date.now() + 1200;
     if (root.speechSynthesis) try { root.speechSynthesis.cancel(); } catch (e) { /* abaikan */ }
     var rec;
     try { rec = new SR(); } catch (e) { showResult({ msg: M('err'), warn: true }); return; }
@@ -546,12 +647,80 @@
     return 2;
   }
 
+  /* ---------- mode selalu mendengarkan (tanpa menekan mikrofon) ---------- */
+  var bg = { rec: null, run: false, fail: 0, blocked: false, pausedUntil: 0, next: 0 };
+  function setLive(on) { var m = $('#vcMic'); if (m) { m.classList.toggle('live', !!on); m.title = on ? M('live') : M('mic'); } }
+  function bgWanted() {
+    var c = cfg();
+    return !!(SR && c.on && c.always && !document.hidden && !st.listening && !st.speaking && !bg.blocked && Date.now() >= bg.pausedUntil && typeof S !== 'undefined' && S.view === 'pos');
+  }
+  function bgStart() {
+    var rec;
+    try { rec = new SR(); } catch (e) { bg.fail++; return; }
+    rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = true; rec.interimResults = false; rec.maxAlternatives = 3;
+    rec.onstart = function () { bg.run = true; setLive(true); };
+    rec.onresult = function (ev) {
+      for (var i = ev.resultIndex; i < ev.results.length; i++) {
+        var r = ev.results[i]; if (!r.isFinal) continue;
+        var alts = []; for (var j = 0; j < r.length; j++) alts.push(r[j].transcript);
+        try { heardBg(alts); } catch (e) { console.error('voice-bg', e); }
+      }
+    };
+    rec.onerror = function (ev) {
+      var e = ev && ev.error;
+      if (e === 'not-allowed' || e === 'service-not-allowed') { bg.blocked = true; setLive(false); toastMsg(M('permNeed'), true); waitGesture(); }
+      else if (e !== 'no-speech' && e !== 'aborted') bg.fail++;
+    };
+    rec.onend = function () { bg.run = false; bg.rec = null; setLive(false); };
+    bg.rec = rec;
+    try { rec.start(); } catch (e) { bg.rec = null; bg.fail++; }
+  }
+  function bgStop() { var r = bg.rec; bg.rec = null; if (r) { try { r.onend = null; r.abort(); } catch (e) { /* abaikan */ } } bg.run = false; setLive(false); }
+  function waitGesture() {
+    var h = function () { document.removeEventListener('pointerdown', h, true); bg.blocked = false; bg.fail = 0; bg.next = 0; };
+    document.addEventListener('pointerdown', h, true);
+  }
+  function supervise() {
+    var want = bgWanted();
+    if (want && !bg.rec && Date.now() >= bg.next) { bg.next = Date.now() + Math.min(10000, 500 * (1 + bg.fail * 2)); bgStart(); }
+    else if (!want && bg.rec) bgStop();
+  }
+  /* ucapan latar: wajib kata panggil (bila diaktifkan); tanpa kata panggil hanya perintah yang dikenali yang dijalankan */
+  function heardBg(alts) {
+    var c = cfg(), ww = clean(c.wakeWord || 'ordela'), woke = false, cand = [];
+    alts.forEach(function (a) {
+      var t = clean(a).split(' ').filter(Boolean), k = -1, used = 1;
+      for (var i = 0; i < Math.min(3, t.length); i++) {
+        if (tokSim(t[i], ww) >= 0.75) { k = i; used = 1; break; }
+        if (t[i + 1] && tokSim(t[i] + t[i + 1], ww) >= 0.75) { k = i; used = 2; break; }
+      }
+      if (k > -1) { woke = true; cand.push(t.slice(k + used).join(' ')); } else cand.push(t.join(' '));
+    });
+    if (c.wake && !woke) return;
+    cand = cand.filter(Boolean);
+    if (!cand.length) { if (woke) toastMsg(M('ready')); return; }
+    var bestP = null, bestS = -1;
+    cand.forEach(function (a, idx) { var p = parse(a), sc = intentScore(p) - idx * 0.01; if (sc > bestS) { bestS = sc; bestP = p; } });
+    var risky = bestP.intent === 'confirmpay' || (bestP.intent === 'pay' && bestP.direct) || (bestP.intent === 'seq' && bestP.parts[1].direct);
+    if (risky && !woke && !c.wake) { toastMsg(M('wakeNeed'), true); return; }
+    var out;
+    try { out = run(bestP); } catch (e) { console.error('voice', e); return; }
+    if (out.noop && !woke) return;
+    toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), !!out.warn, out);
+    if (out.msg && st.speak && c.speak && root.speechSynthesis && !st.listening) say(out.say || String(out.msg).split('\n')[0]);
+  }
+  var toastT = 0;
+  function toastMsg(text, warn, out) {
+    ensureUI(); var t = $('#vcT'); if (!t) return;
+    t.textContent = text; t.classList.toggle('warn', !!warn); t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, warn ? 6000 : 4200);
+  }
   function localStorageLang() { try { return localStorage.getItem('ordela_vc_lang'); } catch (e) { return null; } }
   /* ---------- pasang ---------- */
   function init() {
-    ensureUI(); injectMic();
+    ensureUI(); injectMic(); setInterval(supervise, 800);
     var n = 0, t = setInterval(function () { injectMic(); if ($('#vcMic') || ++n > 40) clearInterval(t); }, 500);
   }
-  root.VC = { refresh: function () { applyCfg(); if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, supported: !!SR };
+  root.VC = { refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, supported: !!SR };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })(typeof window !== 'undefined' ? window : globalThis);
