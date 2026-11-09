@@ -669,7 +669,7 @@ P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSa
 
 
 /* ================= PENGATURAN VOICE CASHIER (db.set.vc) ================= */
-P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
+P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
 P2.voiceSet=function(){
   closeAll();
   const c=P2.vcCfg(),sup=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
@@ -695,9 +695,25 @@ P2.voiceSet=function(){
   <div class="inv-qn" id="vcAl"></div>
   <input class="fi" id="vcAlA" maxlength="30" placeholder="Ucapan, mis. nasgor" style="margin-bottom:8px">
   <div style="display:flex;gap:8px"><select class="fi" id="vcAlI" style="flex:1;min-width:0;margin:0">${items.map(i=>`<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</select><button class="btn sec" style="width:auto;margin:0" onclick="P2.vcAlAdd()">Tambah</button></div>
+  <h5 class="invh">Pelajaran suara</h5>
+  ${T('learn','Belajar dari koreksi','Saat ucapan tidak dikenal atau membingungkan lalu kasir memilih menu yang benar, sistem mengingatnya di perangkat ini. Tidak memakai AI dan tidak dikirim ke mana pun.')}
+  <div id="vcLn"></div>
   <button class="btn" style="margin-top:14px" onclick="closeModal()">Selesai</button>`);
-  P2.vcAlPaint();
+  P2.vcAlPaint();P2.vcLnPaint();
 };
+P2.vcLnPaint=function(){
+  const e=$('#vcLn');if(!e||!window.VC||!VC.L)return;const d=VC.L.data(),nm=id=>{const it=(db.items||[]).find(y=>y.id===id);return it?it.name:'(menu dihapus)'};
+  const al=Object.keys(d.al),ms=Object.keys(d.miss).sort((a,b)=>d.miss[b].n-d.miss[a].n),vw=Object.keys(d.vw),L={add:'tambah',remove:'hapus',reduce:'kurangi'};
+  const opts=(db.items||[]).filter(i=>!i.ns).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(i=>`<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('');
+  e.innerHTML=`<p class="hint" style="margin:6px 0 2px"><b>Sudah dipelajari</b></p><div class="inv-qn">${al.map(k=>`<span class="chip">“${esc(d.al[k].p)}” → ${esc(nm(d.al[k].id))}<b onclick="P2.vcLnDel('al','${esc(k)}')" role="button" aria-label="Hapus">✕</b></span>`).join('')||'<small class="hint">Belum ada.</small>'}</div>
+  ${vw.length?`<p class="hint" style="margin:8px 0 2px"><b>Kata perintah baru</b></p><div class="inv-qn">${vw.map(w=>`<span class="chip">“${esc(w)}” = ${L[d.vw[w]]}<b onclick="P2.vcLnDel('vw','${esc(w)}')" role="button" aria-label="Hapus">✕</b></span>`).join('')}</div>`:''}
+  <p class="hint" style="margin:8px 0 2px"><b>Belum dikenal</b> (ucapan yang gagal, ajari di sini)</p>
+  ${ms.map(k=>`<div style="display:flex;gap:6px;align-items:center;margin:4px 0"><span style="flex:0 0 auto;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">“${esc(d.miss[k].p)}”${d.miss[k].n>1?` ×${d.miss[k].n}`:''}</span><select class="fi" style="flex:1;min-width:0;margin:0" onchange="P2.vcLnAs('${esc(k)}',this.value)"><option value="">Pilih menu…</option>${opts}</select><b class="chip" onclick="P2.vcLnDel('miss','${esc(k)}')" role="button" aria-label="Abaikan" style="cursor:pointer">✕</b></div>`).join('')||'<small class="hint">Belum ada.</small>'}
+  ${(al.length||ms.length||vw.length)?`<button class="btn sec" style="margin-top:10px" onclick="P2.vcLnClear()">Hapus semua pelajaran</button>`:''}`;
+};
+P2.vcLnDel=function(t,k){const f={al:'delAlias',vw:'delVerb',miss:'delMiss'}[t];if(f)VC.L[f](k);P2.vcLnPaint()};
+P2.vcLnAs=function(k,id){if(id){VC.L.assign(k,id);toast('Diingat');P2.vcLnPaint()}};
+P2.vcLnClear=function(){if(!confirm('Hapus semua pelajaran suara di perangkat ini?'))return;VC.L.clear();P2.vcLnPaint()};
 P2.vcSave=function(c){db.set.vc=c;save();if(window.VC&&VC.refresh)VC.refresh()};
 P2.vcTog=function(k,v){const c=P2.vcCfg();c[k]=v?1:0;P2.vcSave(c)};
 P2.vcWord=function(v){const w=String(v||'').trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').slice(0,20)||'ordela';const c=P2.vcCfg();c.wakeWord=w;P2.vcSave(c);const e=$('#vcWord');if(e)e.value=w};
