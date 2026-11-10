@@ -675,7 +675,7 @@
   /* tombol suara melayang: tahan = bicara (lepas untuk selesai), ketuk = buka panel */
   function injectFab() {
     var host = $('#v-pos'); if (!host || $('#vcFab')) return;
-    var b = document.createElement('button'); b.type = 'button'; b.id = 'vcFab'; b.className = 'vc-fab'; b.innerHTML = ICON_MIC;
+    var b = document.createElement('button'); b.type = 'button'; b.id = 'vcFab'; b.className = 'vc-fab'; b.innerHTML = ICON_MIC + '<i class="vcw"></i>';
     b.setAttribute('aria-label', 'Perintah suara (tahan untuk bicara)'); b.title = M('pttHint');
     var timer = 0, down = false, held = false;
     b.oncontextmenu = function (e) { e.preventDefault(); };
@@ -684,12 +684,12 @@
       timer = setTimeout(function () {
         if (!down) return; held = true; if (!SR) { openPanel(false); return; }
         try { if (navigator.vibrate) navigator.vibrate(15); } catch (x) { /* abaikan */ }
-        st.ptt = true; b.classList.add('hold'); toastMsg('🎙 ' + M('pttHint'), false); startListen();
+        st.ptt = true; st.pttHeld = true; st.pttAcc = []; b.classList.add('hold'); toastMsg('🎙 ' + M('pttHint'), false); startListen();
       }, 300);
     };
     var end = function () {
       if (!down) return; down = false; clearTimeout(timer); b.classList.remove('hold');
-      if (held) { held = false; if (st.ptt) stopListen(false); } else if (st.open) closePanel(); else openPanel(true);
+      if (held) { held = false; st.pttHeld = false; if (st.ptt) stopListen(false); } else if (st.open) closePanel(); else openPanel(true);
     };
     b.onpointerup = end; b.onpointercancel = end;
     host.appendChild(b); applyCfg();
@@ -771,7 +771,7 @@
     var rec;
     try { rec = new SR(); } catch (e) { showResult({ msg: M('err'), warn: true }); return; }
     rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = !!st.ptt; rec.interimResults = true; rec.maxAlternatives = 3;
-    var finalAlts = null, gotErr = false, acc = [];
+    var finalAlts = null, gotErr = false, acc = st.ptt ? (st.pttAcc = st.pttAcc || []) : [];
     rec.onstart = function () { st.listening = true; st.heard = ''; $('#vcTx').textContent = ''; paint(); };
     rec.onresult = function (ev) {
       var interim = '', fin = null;
@@ -786,6 +786,7 @@
     };
     rec.onerror = function (ev) {
       gotErr = true; var e = ev && ev.error;
+      if (st.ptt && st.pttHeld && (e === 'no-speech' || e === 'aborted')) { gotErr = false; return; }   // ditahan: jeda sunyi bukan galat
       st.listening = false; paint();
       if (e === 'not-allowed' || e === 'service-not-allowed') showResult({ msg: M('denied'), warn: true });
       else if (e === 'no-speech') showResult({ msg: M('nospeech'), warn: true });
@@ -793,8 +794,13 @@
       else if (e !== 'aborted') showResult({ msg: M('err'), warn: true });
     };
     rec.onend = function () {
-      var wasPtt = st.ptt; st.ptt = false; if (wasPtt) bg.pausedUntil = Date.now() + 600;
+      if (st.ptt && st.pttHeld && !gotErr) {                         // peramban menghentikan sesi sendiri (jeda/batas waktu) padahal tombol masih ditahan: sambung lagi
+        st.listening = false; st.rec = null; var keep = finalAlts; finalAlts = null; setTimeout(function () { if (st.ptt && st.pttHeld) startListen(); }, 60); return;
+      }
+      var wasPtt = st.ptt; st.ptt = false; st.pttHeld = false; if (wasPtt) bg.pausedUntil = Date.now() + 600;
+      var ptAcc = st.pttAcc; st.pttAcc = null;
       st.listening = false; st.rec = null; paint();
+      if (wasPtt && ptAcc && ptAcc.length) finalAlts = [ptAcc.join(' ')];
       if (finalAlts) { var alts = finalAlts; finalAlts = null; submit(alts); }
       else if (!gotErr && st.open && !$('#vcTx').textContent) showResult({ msg: M('nospeech'), warn: true });
     };

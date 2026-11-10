@@ -4304,7 +4304,7 @@ function accSetItems(){
    {g:'Akun',ic:'shield',t:'Keamanan Akun',d:'Ubah kata sandi untuk menjaga akun tetap aman.',to:"go('pw')",kw:'password sandi kunci',key:1},
    {g:'Akun',ic:'mail',t:'Verifikasi Email',d:sub,to:"go('accver')",kw:'email surel verifikasi',key:1,ok},
    {g:'Aplikasi',ic:'bell',t:'Notifikasi',d:'Atur notifikasi, bunyi, dan getar pesanan masuk.',to:"go('accnt')",kw:'suara bunyi getar pesanan'},
-   {g:'Aplikasi',ic:'info',t:'Tentang Ordela',d:'Versi aplikasi '+APP_VER+' dan muat ulang versi terbaru.',to:"go('accabout')",kw:'versi update perbarui'},
+   {g:'Aplikasi',ic:'info',t:'Tentang Ordela',d:'Versi aplikasi, pembaruan, dan muat ulang versi terbaru.',to:"go('accabout')",kw:'versi update perbarui'},
    {g:'Sesi & Privasi',ic:'logout',t:'Keluar',d:'Akhiri sesi di perangkat ini.',to:'logoutAsk()',kw:'logout sign out',bad:1},
    {g:'Sesi & Privasi',ic:'trash',t:'Hapus Akun',d:'Hapus akun Anda secara permanen.',to:"go('accdel')",kw:'delete hapus akun privasi',bad:1}
   ];
@@ -4443,11 +4443,24 @@ function renderAccAbout(){
   box.innerHTML=`${pfSub('Tentang Ordela',"go('accset')")}<div class="pfw">
     <div class="pfhero"><img src="icon-192.png" alt="" width="84" height="84" style="border-radius:22px;box-shadow:0 8px 20px rgba(0,0,0,.12)"><b class="pfn">Ordela</b><small class="pfr">Aplikasi kasir dan pesanan untuk toko Anda</small></div>
     <div class="pfcard">
-      ${row('info','Versi aplikasi',esc(APP_VER))}${row('globe','Situs','ordela.my.id')}
+      ${row('info','Versi aplikasi',`<span id="abVer">${esc(APP_VER)}</span>`)}${row('globe','Versi web','<span id="abWeb">…</span>')}
+      ${window.OrdelaUpdate?row('refresh','Pembaruan','<span id="abUpd">Memeriksa…</span>'):''}${row('globe','Situs','ordela.my.id')}
       ${st.name?row('store','Toko',esc(st.name)):''}${own&&st.code?row('id','Kode toko',`<code>${esc(st.code)}</code>`):''}
       ${row('cloud','Koneksi',(CL.on&&CL.tok)?(navigator.onLine===false?'Tidak ada internet':'Terhubung ke server'):'Mode offline')}
     </div>
+    ${window.OrdelaUpdate?`<button class="pfbtn" type="button" id="abUpdBtn" style="justify-content:center" onclick="OrdelaUpdate.open()">${pfi('refresh',18)}Periksa pembaruan aplikasi</button>`:''}
     <button class="pfbtn out" type="button" style="justify-content:center" onclick="accRefreshApp()">${pfi('refresh',18)}Muat ulang versi terbaru</button></div>`;
+  accAboutVer();
+}
+/* versi APK terpasang (nomor build), versi web (dari sw.js), dan status pembaruan; ikut berubah tiap build */
+async function accAboutVer(){
+  const set=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t};
+  try{const r=await fetch('sw.js',{cache:'no-store'});const m=(await r.text()).match(/ordela-v(\d+)/);set('abWeb',m?'v'+m[1]:'-')}catch(e){set('abWeb','-')}
+  const U=window.OrdelaUpdate;if(!U)return;
+  const paint=()=>{const s=U.state(),i=s.info;if(i)set('abVer',i.version+(i.build?' (build '+i.build+')':''));
+    const b=document.getElementById('abUpdBtn');
+    if(!s.done)set('abUpd','Memeriksa…');else if(s.avail){set('abUpd','Tersedia: '+(s.meta&&s.meta.version||''));if(b)b.lastChild.textContent='Unduh pembaruan'}else set('abUpd','Sudah versi terbaru')};
+  await U.info();paint();if(window.__abPaint)window.removeEventListener('ordela-update',window.__abPaint);window.__abPaint=paint;window.addEventListener('ordela-update',paint);U.check(false).then(paint);
 }
 /* ----- Hapus Akun ----- */
 async function accDelLoad(){

@@ -59,12 +59,14 @@
     var note=function(t,b,fn,label){try{if(window.OrdelaSkin)OrdelaSkin.island({kind:'new',title:t,body:b,ms:12000,action:fn?{label:label||'Perbarui',fn:fn}:null})}catch(e){}};
     var urlFor=function(){return meta&&info?(/\.admin$/.test(info.id)?meta.admin:meta.kasir):''};
     var download=function(){var u=urlFor();if(u)window.open(u,'_blank')};
+    var avail=false,done=false;
+    var fire=function(){try{window.dispatchEvent(new Event('ordela-update'))}catch(e){}};
     var check=async function(manual){
       try{
         if(!info)info=await P.ClassicBt.appInfo();
         var r=await fetch('https://api.github.com/repos/'+REPO+'/releases/tags/apk-latest',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
         if(!r.ok){if(manual)note('Gagal memeriksa','Periksa sambungan internet.');return}
-        var rel=await r.json();meta=JSON.parse(rel.body||'{}');lastChk=Date.now();
+        var rel=await r.json();meta=JSON.parse(rel.body||'{}');lastChk=Date.now();avail=+meta.build>+info.build;done=true;fire();
         if(+meta.build>+info.build){
           var k='pos_upd_n',seen='';try{seen=localStorage.getItem(k)||''}catch(e){}
           note('Pembaruan tersedia','Ordela '+meta.version+' siap diunduh. Versi Anda '+info.version+'.',download);
@@ -73,7 +75,7 @@
         }else if(manual)note('Sudah terbaru','Ordela '+info.version+' adalah versi terakhir.');
       }catch(e){if(manual)note('Gagal memeriksa','Coba lagi nanti.')}
     };
-    window.OrdelaUpdate={check:check,open:function(){
+    window.OrdelaUpdate={check:check,info:async function(){if(!info)try{info=await P.ClassicBt.appInfo()}catch(e){}return info},state:function(){return{info:info,meta:meta,avail:avail,done:done}},open:function(){
       if(meta&&info&&+meta.build>+info.build)download();else check(true);
     }};
     setTimeout(function(){check(false)},6000);
