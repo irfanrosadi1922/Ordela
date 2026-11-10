@@ -1174,27 +1174,37 @@
       }
       if (k > -1) { woke = true; cand.push(t.slice(k + used).join(' ')); } else cand.push(t.join(' '));
     });
-    var inWin = !woke && Date.now() < (bg.awake || 0);            // jendela percakapan: setelah “Ordela …” perintah lanjutan tak perlu kata panggil
+    var inWin = !woke && Date.now() < (bg.awake || 0);            // lanjutan percakapan aktif tidak perlu kata panggil
     if (inWin) { woke = true; cand = alts.map(function (a) { return clean(a); }); }
-    if (c.wake && !woke) {                                       // perintah yang jelas tapi tanpa kata panggil: beri tahu, jangan diam
-      var pw = null; try { pw = parse(alts[0]); } catch (e) { /* abaikan */ }
-      if (pw && pw.lines && pw.intent === 'add' && intentScore(pw) >= 2) toastMsg(M('wakeMiss') + ' “' + (c.wakeWord || 'ordela') + '”', true);
-      return;
-    }
     cand = cand.filter(Boolean);
     if (!cand.length) { if (woke) toastMsg(M('ready')); return; }
+
+    // Voice Checkout Natural dipakai juga oleh Listening latar, bukan hanya kolom ketik/tap-tahan.
+    // Kasir boleh berbicara alami tanpa menyebut "Ordela"; pembayaran tetap wajib konfirmasi Ya/Tidak.
+    var natural = null, naturalText = '';
+    for (var ni = 0; ni < cand.length; ni++) {
+      try { natural = parseNatural(cand[ni]); } catch (e) { console.error('voice natural parse', e); natural = null; }
+      if (natural) { naturalText = cand[ni]; break; }
+    }
+    if (natural) {
+      st.ctxMiss = true;
+      var naturalOut;
+      try { naturalOut = runNatural(natural); } catch (e) { console.error('voice natural checkout', e); naturalOut = { msg: M('err'), warn: true }; }
+      toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut);
+      if (naturalOut.msg && st.speak && c.speak && root.speechSynthesis && !st.listening) say(naturalOut.say || String(naturalOut.msg).split('\n')[0]);
+      return;
+    }
+
     var bestP = null, bestS = -1;
     cand.forEach(function (a, idx) { var p = parse(a), sc = intentScore(p) - idx * 0.01; if (sc > bestS) { bestS = sc; bestP = p; } });
-    st.ctxMiss = woke;
-    var risky = bestP.intent === 'confirmpay' || (bestP.intent === 'pay' && bestP.direct) || (bestP.intent === 'seq' && bestP.parts[1].direct);
-    if (risky && !woke && !c.wake) { toastMsg(M('wakeNeed'), true); return; }
+    st.ctxMiss = true;
     var out;
     try { out = run(bestP); } catch (e) { console.error('voice', e); return; }
-    if (out.noop && !woke) return;
-    if (woke && !out.noop) bg.awake = Date.now() + 20000;
+    if (out.noop) return;
+    bg.awake = Date.now() + 20000;
     toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), !!out.warn, out);
     var un = (st.unres || []).slice();
-    if (un.length && aiOn() && (woke || !c.wake)) aiResolve(un, function (res) { if (res.length) { var m = aiApply(res); toastMsg(m.join('\n'), false); } });
+    if (un.length && aiOn()) aiResolve(un, function (res) { if (res.length) { var m = aiApply(res); toastMsg(m.join('\n'), false); } });
     if (out.msg && st.speak && c.speak && root.speechSynthesis && !st.listening) say(out.say || String(out.msg).split('\n')[0]);
   }
   var toastT = 0;
