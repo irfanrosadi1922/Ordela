@@ -677,38 +677,26 @@
     var host = $('#v-pos'); if (!host || $('#vcFab')) return;
     var b = document.createElement('button'); b.type = 'button'; b.id = 'vcFab'; b.className = 'vc-fab'; b.innerHTML = ICON_MIC + '<i class="vcw"></i>';
     b.setAttribute('aria-label', 'Perintah suara (tahan untuk bicara)'); b.title = M('pttHint');
-    var timer = 0, down = false, held = false, drag = false, sx = 0, sy = 0, ox = 0, oy = 0, PK = 'ordela_vc_fab';
-    var place = function (x, y, save) {                         // x,y = pusat tombol; dijaga tetap di dalam layar
-      var w = innerWidth, h = innerHeight, r = 32; x = Math.max(r + 6, Math.min(w - r - 6, x)); y = Math.max(r + 70, Math.min(h - r - 6, y));
-      b.style.left = (x - r) + 'px'; b.style.top = (y - r) + 'px'; b.style.right = 'auto'; b.style.bottom = 'auto';
-      if (save) try { localStorage.setItem(PK, JSON.stringify({ x: x / w, y: y / h })); } catch (e) { /* abaikan */ }
-    };
-    var restore = function () { try { var v = JSON.parse(localStorage.getItem(PK) || 'null'); if (v && v.x > 0 && v.y > 0) place(v.x * innerWidth, v.y * innerHeight, false); } catch (e) { /* abaikan */ } };
-    restore(); addEventListener('resize', function () { if (b.style.left) restore(); });
+    try { localStorage.removeItem('ordela_vc_fab'); } catch (e) { /* abaikan */ }   // posisi tetap (fitur geser dihapus)
+    var timer = 0, down = false, held = false;
     b.oncontextmenu = function (e) { e.preventDefault(); };
     b.ondragstart = function (e) { e.preventDefault(); };
     b.onpointerdown = function (e) {
-      if (!cfg().on) return; down = true; held = false; drag = false; sx = e.clientX; sy = e.clientY;
-      var r0 = b.getBoundingClientRect(); ox = r0.left + r0.width / 2; oy = r0.top + r0.height / 2;
+      if (!cfg().on) return; down = true; held = false;
       try { b.setPointerCapture(e.pointerId); } catch (x) { /* abaikan */ }
+      b.classList.add('press');
       timer = setTimeout(function () {
-        if (!down || drag) return; held = true; if (!SR) { openPanel(false); return; }
+        if (!down) return; held = true; if (!SR) { openPanel(false); return; }
         try { if (navigator.vibrate) navigator.vibrate(15); } catch (x) { /* abaikan */ }
         st.ptt = true; st.pttHeld = true; st.pttAcc = []; b.classList.add('hold'); toastMsg('🎙 ' + M('pttHint'), false); startListen();
       }, 300);
     };
-    b.onpointermove = function (e) {                             // geser sebelum 0,3 dtk = pindahkan tombol (posisi diingat)
-      if (!down || held) return; var dx = e.clientX - sx, dy = e.clientY - sy;
-      if (!drag && Math.hypot(dx, dy) > 10) { drag = true; clearTimeout(timer); b.classList.add('drag'); }
-      if (drag) place(ox + dx, oy + dy, false);
-    };
-    var end = function (e) {
-      if (!down) return; down = false; clearTimeout(timer); b.classList.remove('hold'); b.classList.remove('drag');
-      if (drag) { drag = false; var r1 = b.getBoundingClientRect(); place(r1.left + r1.width / 2, r1.top + r1.height / 2, true); return; }
+    var end = function () {
+      if (!down) return; down = false; clearTimeout(timer); b.classList.remove('hold'); b.classList.remove('press');
       if (held) { held = false; st.pttHeld = false; if (st.ptt) stopListen(false); } else if (st.open) closePanel(); else openPanel(true);
     };
-    b.onpointerup = end; b.onpointercancel = function () { if (!down) return; if (held && st.ptt) { down = false; held = false; st.pttHeld = false; b.classList.remove('hold'); stopListen(false); } else end(); };
-    b.ondblclick = function () { try { localStorage.removeItem(PK); } catch (e) { /* abaikan */ } b.style.left = b.style.top = b.style.right = b.style.bottom = ''; };   // klik ganda = kembalikan posisi awal
+    b.onpointerup = end;
+    b.onpointercancel = function () { if (!down) return; if (held && st.ptt) { down = false; held = false; st.pttHeld = false; b.classList.remove('hold'); b.classList.remove('press'); stopListen(false); } else end(); };
     host.appendChild(b); applyCfg();
   }
   function paint() {
@@ -917,12 +905,30 @@
   }
   /* Android Chrome (mode continuous) sering mengirim hasil KUMULATIF ("5", "5 sate", "5 sate ayam" masing-masing final):
      gabungkan dengan menimpa bila hasil baru memperpanjang yang lama, bukan menambahkan, supaya tidak terduplikasi. */
+  function nk(w) { return /^\d+$/.test(w) ? w : (w in UNITS ? String(UNITS[w]) : w); }   // “lima” = “5”
+  function sameW(p, q) { p = nk(p); q = nk(q); return p === q || tokSim(p, q) >= 0.8; }
+  function wl(s) { return clean(s).split(' ').filter(Boolean); }
+  function lead(aw, xw) { var k = 0; while (k < aw.length && k < xw.length && sameW(aw[k], xw[k])) k++; return k; }
   function mergeT(acc, t) {
     var a = String(acc || '').trim(), x = String(t || '').trim(); if (!a) return x; if (!x) return a;
-    var la = a.toLowerCase(), lx = x.toLowerCase();
-    if (lx.indexOf(la) === 0) return x;
-    if (la.indexOf(lx) > -1) return a;
+    var aw = wl(a), xw = wl(x); if (!aw.length) return x; if (!xw.length) return a;
+    var k = lead(aw, xw);
+    if (k === aw.length) return x;                              // hasil baru memperpanjang/merevisi yang lama
+    if (k === xw.length) return a;                              // hasil lama sudah memuat yang baru
+    for (var s0 = 1; s0 + xw.length <= aw.length; s0++) { if (lead(aw.slice(s0), xw) === xw.length) return a; }   // termuat di tengah
+    for (var o = Math.min(aw.length, xw.length) - 1; o >= 1; o--) {                // tumpang tindih ujung-awal
+      var ok = true; for (var i = 0; i < o; i++) if (!sameW(aw[aw.length - o + i], xw[i])) { ok = false; break; }
+      if (ok) return a + ' ' + xw.slice(o).join(' ');
+    }
     return a + ' ' + x;
+  }
+  /* sisa ucapan yang belum diproses setelah `done` (hasil kumulatif yang datang terlambat tidak diproses ulang) */
+  function restAfter(done, t) {
+    var dw = wl(done), xw = wl(t); if (!dw.length || !xw.length) return t;
+    var k = lead(dw, xw);
+    if (k === xw.length) return '';                             // sudah pernah diproses
+    if (k === dw.length) return xw.slice(k).join(' ');          // lanjutan dari yang sudah diproses
+    return t;
   }
   /* catatan diagnostik mode latar (untuk Pengaturan > Voice Cashier > Diagnostik) */
   var DG = [];
@@ -931,9 +937,15 @@
     var rec;
     try { rec = new SR(); } catch (e) { bg.fail++; dg('gagal', 'tidak bisa membuat sesi'); return; }
     rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 3;
-    var buf = '', alt = [], tm = 0;
+    var buf = '', alt = [], tm = 0, done = '', doneAt = 0;
     var flush = function (how) {                               // proses satu ucapan utuh sekali saja
       clearTimeout(tm); if (!buf) return; var t = buf, a = [t].concat(alt.slice(1)); buf = ''; alt = [];
+      if (done && Date.now() - doneAt < 3500) {                // hasil kumulatif terlambat: jangan proses ulang yang sama
+        var rest = restAfter(done, t);
+        if (!rest) { dg('abaikan', t); doneAt = Date.now(); return; }
+        if (rest !== t) { dg('sisa', rest); done = mergeT(done, t); a = [rest]; t = rest; } else done = t;
+      } else done = t;
+      doneAt = Date.now();
       dg(how, t); try { heardBg(a); } catch (e) { console.error('voice-bg', e); }
     };
     rec.onstart = function () { bg.run = true; bg.t0 = Date.now(); setLive(true); dg('mulai', rec.lang); };
@@ -944,7 +956,7 @@
         var r = ev.results[i], alts = []; for (var j = 0; j < r.length; j++) alts.push(r[j].transcript);
         buf = mergeT(buf, alts[0]); alt = alts; if (r.isFinal) anyFinal = true;
       }
-      clearTimeout(tm); tm = setTimeout(function () { if (bg.rec === rec) flush(anyFinal ? 'final' : 'tenang'); }, anyFinal ? 450 : 1200);   // jeda singkat agar hasil kumulatif tergabung
+      clearTimeout(tm); tm = setTimeout(function () { if (bg.rec === rec) flush(anyFinal ? 'final' : 'tenang'); }, anyFinal ? 700 : 1800);   // jeda singkat agar hasil kumulatif tergabung
     };
     rec.onerror = function (ev) {
       var e = ev && ev.error; dg('galat', e);
@@ -1009,6 +1021,14 @@
   }
   function localStorageLang() { try { return localStorage.getItem('ordela_vc_lang'); } catch (e) { return null; } }
   /* ---------- pasang ---------- */
+  /* tombol headset / mic eksternal (dikirim APK sebagai event 'ordela-headset'): tekan sekali = mulai bicara, tekan lagi = berhenti */
+  var hsAt = 0;
+  addEventListener('ordela-headset', function () {
+    if (!cfg().on || Date.now() - hsAt < 500) return; hsAt = Date.now();
+    try { if (navigator.vibrate) navigator.vibrate(20); } catch (e) { /* abaikan */ }
+    if (st.listening) { stopListen(false); return; }
+    st.ptt = false; st.pttHeld = false; startListen();
+  });
   function init() {
     ensureUI(); injectMic(); injectFab(); setInterval(supervise, 300);
     var n = 0, t = setInterval(function () { injectMic(); injectFab(); if (($('#vcMic') && $('#vcFab')) || ++n > 40) clearInterval(t); }, 500);

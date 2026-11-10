@@ -318,17 +318,86 @@ jobs:
           import android.content.pm.PackageManager;
           import android.os.Build;
           import android.os.Bundle;
+          import android.media.session.MediaSession;
+          import android.media.session.PlaybackState;
+          import android.content.Intent;
+          import android.view.KeyEvent;
+
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
           import com.getcapacitor.BridgeActivity;
           import java.util.ArrayList;
 
           public class MainActivity extends BridgeActivity {
+              private MediaSession headset;
+              private long headsetAt = 0;
+
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   registerPlugin(ClassicBtPlugin.class);
                   super.onCreate(savedInstanceState);
                   requestOrdelaPermissions();
+              }
+
+
+              // Tombol headset / mic eksternal (kabel & Bluetooth) -> event JS 'ordela-headset' (mulai/berhenti bicara)
+              private void fireHeadset() {
+                  long now = System.currentTimeMillis();
+                  if (now - headsetAt < 400) return;
+                  headsetAt = now;
+                  runOnUiThread(new Runnable() {
+                      public void run() {
+                          try {
+                              getBridge().getWebView().evaluateJavascript("window.dispatchEvent(new Event('ordela-headset'))", null);
+                          } catch (Exception e) { }
+                      }
+                  });
+              }
+
+              private static boolean isHeadsetKey(int code) {
+                  return code == KeyEvent.KEYCODE_HEADSETHOOK || code == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+                      || code == KeyEvent.KEYCODE_MEDIA_PLAY || code == KeyEvent.KEYCODE_MEDIA_PAUSE;
+              }
+
+              @Override
+              public boolean dispatchKeyEvent(KeyEvent event) {
+                  if (isHeadsetKey(event.getKeyCode())) {
+                      if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) fireHeadset();
+                      return true;
+                  }
+                  return super.dispatchKeyEvent(event);
+              }
+
+              @Override
+              public void onResume() {
+                  super.onResume();
+                  try {
+                      if (headset == null) {
+                          headset = new MediaSession(this, "OrdelaHeadset");
+                          headset.setCallback(new MediaSession.Callback() {
+                              @Override
+                              public boolean onMediaButtonEvent(Intent intent) {
+                                  KeyEvent k = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                                  if (k != null && isHeadsetKey(k.getKeyCode())) {
+                                      if (k.getAction() == KeyEvent.ACTION_DOWN && k.getRepeatCount() == 0) fireHeadset();
+                                      return true;
+                                  }
+                                  return super.onMediaButtonEvent(intent);
+                              }
+                          });
+                          PlaybackState ps = new PlaybackState.Builder()
+                              .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE)
+                              .setState(PlaybackState.STATE_PLAYING, 0, 1f).build();
+                          headset.setPlaybackState(ps);
+                      }
+                      headset.setActive(true);
+                  } catch (Exception e) { }
+              }
+
+              @Override
+              public void onPause() {
+                  super.onPause();
+                  try { if (headset != null) headset.setActive(false); } catch (Exception e) { }
               }
 
               // Minta izin mikrofon/kamera/lokasi/notifikasi/Bluetooth satu kali.
