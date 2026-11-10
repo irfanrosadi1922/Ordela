@@ -1,12 +1,6 @@
 name: Buat APK
 on:
   workflow_dispatch:
-    inputs:
-      mode:
-        description: 'Isi aplikasi: bundle = dibundel di APK (update = pasang APK baru), live = membuka situs live (update otomatis)'
-        type: choice
-        default: bundle
-        options: [bundle, live]
   push:
     tags: ['v*']
 jobs:
@@ -39,7 +33,7 @@ jobs:
           cp -r "dist/$APP/." www/
           rm -f www/CNAME www/.nojekyll
           # mode langsung (default): membuka situs live https://<app>.<domain>/ agar selalu terbaru. Isi variabel APP_LIVE=0 untuk mode luring (isi dibundel di APK).
-          LIVE="${{ inputs.mode == 'live' && '1' || (inputs.mode == 'bundle' && '0' || vars.APP_LIVE) }}"
+          LIVE="${{ vars.APP_LIVE }}"
           NAME="$NAME" APPID="$APPID" LIVE="$LIVE" URL="https://$APP.$POS_DOMAIN/" node -e "
             const c={appId:process.env.APPID,appName:process.env.NAME,webDir:'www',backgroundColor:'#ffffff'};
             if(process.env.LIVE!=='0')c.server={url:process.env.URL,cleartext:false};
@@ -55,7 +49,7 @@ jobs:
       - name: Izin kamera, lokasi, ikon
         run: |
           M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.BLUETOOTH" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />#' $M
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.BLUETOOTH" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />#' $M
           for d in android/app/src/main/res/mipmap-*; do
             case $d in *anydpi*) rm -rf $d; continue;; esac
             for n in ic_launcher ic_launcher_round ic_launcher_foreground; do cp icon-512.png $d/$n.png; done
@@ -278,38 +272,14 @@ jobs:
           cat > $D/MainActivity.java <<'JAVAEOF'
           package com.ordela.app;
 
-          import android.content.SharedPreferences;
-          import android.content.pm.PackageManager;
-          import android.os.Build;
           import android.os.Bundle;
-          import androidx.core.app.ActivityCompat;
-          import androidx.core.content.ContextCompat;
           import com.getcapacitor.BridgeActivity;
-          import java.util.ArrayList;
 
           public class MainActivity extends BridgeActivity {
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   registerPlugin(ClassicBtPlugin.class);
                   super.onCreate(savedInstanceState);
-                  askAllOnce();
-              }
-
-              // Pertama kali dibuka: minta semua izin fitur Ordela sekaligus (kamera/scan, mikrofon/suara, notifikasi, Bluetooth/printer, lokasi)
-              // supaya tidak muncul satu-satu saat fitur dipakai. Hanya sekali; setelah itu Android yang mengatur.
-              private void askAllOnce() {
-                  SharedPreferences sp = getSharedPreferences("ordela", MODE_PRIVATE);
-                  if (sp.getBoolean("perm_asked", false)) return;
-                  ArrayList<String> all = new ArrayList<>();
-                  all.add("android.permission.CAMERA");
-                  all.add("android.permission.RECORD_AUDIO");
-                  all.add("android.permission.ACCESS_FINE_LOCATION");
-                  if (Build.VERSION.SDK_INT >= 33) all.add("android.permission.POST_NOTIFICATIONS");
-                  if (Build.VERSION.SDK_INT >= 31) { all.add("android.permission.BLUETOOTH_CONNECT"); all.add("android.permission.BLUETOOTH_SCAN"); }
-                  ArrayList<String> need = new ArrayList<>();
-                  for (String p : all) if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) need.add(p);
-                  sp.edit().putBoolean("perm_asked", true).apply();
-                  if (!need.isEmpty()) ActivityCompat.requestPermissions(this, need.toArray(new String[0]), 7001);
               }
           }
           JAVAEOF
