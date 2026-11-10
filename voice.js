@@ -203,40 +203,40 @@
     var raw = ' ' + n + ' ', meta = {}, found = false, m;
     // Tipe pesanan yang memang tersedia pada pilihan kasir Ordela.
     var types = [
-      [/\\b(take away|takeaway|bungkus|dibungkus)\\b/g, 'Takeaway'],
-      [/\\b(dine in|makan di tempat|makan sini)\\b/g, 'Dine In'],
-      [/\\b(delivery|diantar|antar ke rumah)\\b/g, 'Delivery'],
-      [/\\b(go food|gofood)\\b/g, 'GoFood'],
-      [/\\b(grab food|grabfood)\\b/g, 'GrabFood'],
-      [/\\b(shopee food|shopeefood)\\b/g, 'ShopeeFood']
+      [/\b(take away|takeaway|bungkus|dibungkus)\b/g, 'Takeaway'],
+      [/\b(dine in|makan di tempat|makan sini)\b/g, 'Dine In'],
+      [/\b(delivery|diantar|antar ke rumah)\b/g, 'Delivery'],
+      [/\b(go food|gofood)\b/g, 'GoFood'],
+      [/\b(grab food|grabfood)\b/g, 'GrabFood'],
+      [/\b(shopee food|shopeefood)\b/g, 'ShopeeFood']
     ];
     types.some(function (x) {
       if (x[0].test(raw)) { meta.type = x[1]; raw = raw.replace(x[0], ' '); found = true; return true; }
       return false;
     });
     // Nomor meja harus disebut eksplisit. "nomor 7" saja tidak boleh ditebak.
-    m = /\\b(?:nomor\\s+meja|meja)\\s+(\\d+[a-z]?)\\b/i.exec(raw);
+    m = /\b(?:nomor\s+meja|meja)\s+(\d+[a-z]?)\b/i.exec(raw);
     if (m) { meta.tbl = m[1]; raw = raw.replace(m[0], ' '); found = true; }
-    else if (/\\bnomor\\s+\\d+\\b/i.test(raw) && !/\\b(nomor\\s+(pesanan|order)|order\\s+nomor)\\b/i.test(raw)) {
+    else if (/\bnomor\s+\d+\b/i.test(raw) && !/\b(nomor\s+(pesanan|order)|order\s+nomor)\b/i.test(raw)) {
       return { intent: 'number-clarify', text: n };
     }
     // Catatan eksplisit atau modifikasi pesanan yang lazim diucapkan natural.
     var notes = [];
-    var explicit = /\\b(?:catatan|catat|note|notes)\\s+(.+?)(?=\\b(?:bayar|bayarkan|checkout|takeaway|take away|dine in|delivery|gofood|grabfood|shopeefood)\\b|$)/i.exec(raw);
+    var explicit = /\b(?:catatan|catat|note|notes)\s+(.+?)(?=\b(?:bayar|bayarkan|checkout|takeaway|take away|dine in|delivery|gofood|grabfood|shopeefood)\b|$)/i.exec(raw);
     if (explicit) { notes.push(explicit[1].trim()); raw = raw.replace(explicit[0], ' '); found = true; }
     var mods = [
-      /\\b(kuah\\s+(?:lebih|banyak|sedikit|dipisah|terpisah))\\b/gi,
-      /\\b(bawang\\s+(?:lebih|banyak|sedikit|tanpa))\\b/gi,
-      /\\b(tanpa\\s+[a-z0-9 ]{1,30}?)(?=\\s*(?:,|$|bayar)) /gi,
-      /\\b(extra\\s+[a-z0-9 ]{1,30}?)(?=\\s*(?:,|$|bayar))/gi,
-      /\\b(jangan\\s+[a-z0-9 ]{1,30}?)(?=\\s*(?:,|$|bayar))/gi
+      /\b(kuah\s+(?:lebih|banyak|sedikit|dipisah|terpisah))\b/gi,
+      /\b(bawang\s+(?:lebih|banyak|sedikit|tanpa))\b/gi,
+      /\b(tanpa\s+[a-z0-9 ]{1,30}?)(?=\s*(?:,|$|bayar))/gi,
+      /\b(extra\s+[a-z0-9 ]{1,30}?)(?=\s*(?:,|$|bayar))/gi,
+      /\b(jangan\s+[a-z0-9 ]{1,30}?)(?=\s*(?:,|$|bayar))/gi
     ];
     mods.forEach(function (re) {
       raw = raw.replace(re, function (v) { notes.push(v.trim()); found = true; return ' '; });
     });
     if (notes.length) meta.note = notes.join(', ').slice(0, 120);
     // Pembayaran hanya disiapkan; tidak pernah menyelesaikan transaksi tanpa konfirmasi "ya".
-    var payAt = raw.search(/\\b(bayar|bayarkan|checkout|pay)\\b/);
+    var payAt = raw.search(/\b(bayar|bayarkan|checkout|pay)\b/);
     if (payAt >= 0) {
       var clause = raw.slice(payAt), pc = parsePayClause(toks(clause));
       if (pc.amount !== null || pc.method) {
@@ -534,7 +534,7 @@
     var res = [], chips = null, show = null; st.unres = [];
     if (p.intent === 'empty') return { msg: M('hint') };
     if (p.intent === 'unknown') return { msg: M('nomatch'), warn: true, noop: true };
-    if (p.intent === 'number-clarify') return { msg: 'Nomor ' + ((p.text.match(/\\bnomor\\s+(\\d+)\\b/i)||[])[1]||'') + ' maksudnya nomor meja atau nomor pesanan? Sebutkan "nomor meja 7" agar tidak salah isi.', warn: true };
+    if (p.intent === 'number-clarify') return { msg: 'Nomor ' + ((p.text.match(/\bnomor\s+(\d+)\b/i)||[])[1]||'') + ' maksudnya nomor meja atau nomor pesanan? Sebutkan "nomor meja 7" agar tidak salah isi.', warn: true };
     if (p.intent === 'natural') {
       var ir = p.items && p.items.intent !== 'empty' ? run(p.items) : { msg: '' };
       if (ir.warn || ir.noop || ir.chips) return ir;
