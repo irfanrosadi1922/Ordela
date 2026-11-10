@@ -10,15 +10,7 @@ on:
   push:
     tags: ['v*']
     branches: [main]
-    # hanya bila isi aplikasi berubah (bukan dokumen, SQL, atau fungsi server)
-    paths:
-      - 'index.html'
-      - '*.js'
-      - '*.css'
-      - '*.webmanifest'
-      - 'icon-*.png'
-      - 'scripts/build-apps.mjs'
-      - '.github/workflows/apk.yaml'
+    # push ke main hanya membangun APK bila pesan commit memuat [apk]
 # build baru membatalkan build lama yang belum selesai
 concurrency:
   group: apk-${{ github.ref }}
@@ -26,6 +18,7 @@ concurrency:
 jobs:
   apk:
     name: APK ${{ matrix.app }}
+    if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, '[apk]')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
