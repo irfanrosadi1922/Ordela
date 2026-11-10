@@ -402,7 +402,7 @@ jobs:
                           if (!Settings.canDrawOverlays(MainActivity.this)) {
                               new AlertDialog.Builder(MainActivity.this)
                                   .setTitle("Gelembung Ordela")
-                                  .setMessage("Izinkan Ordela tampil di atas aplikasi lain agar muncul gelembung saat aplikasi diminimalkan.")
+                                  .setMessage("Izinkan Ordela tampil di atas aplikasi lain agar muncul gelembung saat aplikasi diminimalkan. Jika muncul \"App was denied access\", buka Info aplikasi > menu titik tiga > Izinkan setelan terbatas, lalu coba lagi.")
                                   .setPositiveButton("Izinkan", new DialogInterface.OnClickListener() {
                                       public void onClick(DialogInterface d, int w) {
                                           try {
@@ -618,13 +618,17 @@ jobs:
                           b = new Notification.Builder(this);
                           b.setPriority(Notification.PRIORITY_LOW);
                       }
-                      int small = getResources().getIdentifier("ic_stat_ordela", "drawable", getPackageName());
-                      b.setSmallIcon(small != 0 ? small : android.R.drawable.ic_dialog_info);
-                      Bitmap big = logo(192);
-                      if (big != null) b.setLargeIcon(big);
-                      b.setContentTitle("Ordela app is running");
-                      b.setContentText("Ketuk untuk membuka Ordela");
-                      b.setOngoing(true);
+                                Bitmap big = logo(128);
+                      if (Build.VERSION.SDK_INT >= 23 && big != null) {
+                          b.setSmallIcon(android.graphics.drawable.Icon.createWithBitmap(big));   // logo berwarna di kiri, seperti Grab
+                      } else {
+                          int small = getResources().getIdentifier("ic_stat_ordela", "drawable", getPackageName());
+                          b.setSmallIcon(small != 0 ? small : android.R.drawable.ic_dialog_info);
+                      }
+                      CharSequence label = getApplicationInfo().loadLabel(getPackageManager());
+                      b.setContentTitle(label);
+                      b.setContentText("App is running");
+            b.setOngoing(true);
                       b.setShowWhen(false);
                       int pf = Build.VERSION.SDK_INT >= 23 ? (PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT) : PendingIntent.FLAG_UPDATE_CURRENT;
                       b.setContentIntent(PendingIntent.getActivity(this, 0, launchIntent(), pf));
@@ -760,6 +764,16 @@ jobs:
               public void requestOverlay(PluginCall call) {
                   try {
                       Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getContext().getPackageName()));
+                      i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                      getContext().startActivity(i);
+                  } catch (Exception e) { }
+                  call.resolve(info());
+              }
+
+              @PluginMethod
+              public void openAppInfo(PluginCall call) {
+                  try {
+                      Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
                       i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                       getContext().startActivity(i);
                   } catch (Exception e) { }

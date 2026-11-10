@@ -28,7 +28,7 @@
     };
   }
   /* notifikasi native (FCM) — aktif bila APK dibuat dengan google-services.json (window.POS_FCM) */
-  if(P.OrdelaBg)window.OrdelaBg={status:function(){return P.OrdelaBg.status()},set:function(on){return P.OrdelaBg.setEnabled({on:!!on})},overlay:function(){return P.OrdelaBg.requestOverlay()},battery:function(){return P.OrdelaBg.requestBattery()}};   /* layanan latar belakang + gelembung (APK) */
+  if(P.OrdelaBg)window.OrdelaBg={status:function(){return P.OrdelaBg.status()},set:function(on){return P.OrdelaBg.setEnabled({on:!!on})},overlay:function(){return P.OrdelaBg.requestOverlay()},battery:function(){return P.OrdelaBg.requestBattery()},info:function(){return P.OrdelaBg.openAppInfo()}};   /* layanan latar belakang + gelembung (APK) */
   var fcmReady=(P.ClassicBt&&P.ClassicBt.hasFcm)?P.ClassicBt.hasFcm().then(function(r){return !!(r&&r.fcm)}).catch(function(){return !!window.POS_FCM}):Promise.resolve(!!window.POS_FCM);
   if(P.PushNotifications){
     var PN=P.PushNotifications,cur='',hooked=false;
