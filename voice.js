@@ -677,21 +677,38 @@
     var host = $('#v-pos'); if (!host || $('#vcFab')) return;
     var b = document.createElement('button'); b.type = 'button'; b.id = 'vcFab'; b.className = 'vc-fab'; b.innerHTML = ICON_MIC + '<i class="vcw"></i>';
     b.setAttribute('aria-label', 'Perintah suara (tahan untuk bicara)'); b.title = M('pttHint');
-    var timer = 0, down = false, held = false;
+    var timer = 0, down = false, held = false, drag = false, sx = 0, sy = 0, ox = 0, oy = 0, PK = 'ordela_vc_fab';
+    var place = function (x, y, save) {                         // x,y = pusat tombol; dijaga tetap di dalam layar
+      var w = innerWidth, h = innerHeight, r = 32; x = Math.max(r + 6, Math.min(w - r - 6, x)); y = Math.max(r + 70, Math.min(h - r - 6, y));
+      b.style.left = (x - r) + 'px'; b.style.top = (y - r) + 'px'; b.style.right = 'auto'; b.style.bottom = 'auto';
+      if (save) try { localStorage.setItem(PK, JSON.stringify({ x: x / w, y: y / h })); } catch (e) { /* abaikan */ }
+    };
+    var restore = function () { try { var v = JSON.parse(localStorage.getItem(PK) || 'null'); if (v && v.x > 0 && v.y > 0) place(v.x * innerWidth, v.y * innerHeight, false); } catch (e) { /* abaikan */ } };
+    restore(); addEventListener('resize', function () { if (b.style.left) restore(); });
     b.oncontextmenu = function (e) { e.preventDefault(); };
+    b.ondragstart = function (e) { e.preventDefault(); };
     b.onpointerdown = function (e) {
-      if (!cfg().on) return; down = true; held = false; try { b.setPointerCapture(e.pointerId); } catch (x) { /* abaikan */ }
+      if (!cfg().on) return; down = true; held = false; drag = false; sx = e.clientX; sy = e.clientY;
+      var r0 = b.getBoundingClientRect(); ox = r0.left + r0.width / 2; oy = r0.top + r0.height / 2;
+      try { b.setPointerCapture(e.pointerId); } catch (x) { /* abaikan */ }
       timer = setTimeout(function () {
-        if (!down) return; held = true; if (!SR) { openPanel(false); return; }
+        if (!down || drag) return; held = true; if (!SR) { openPanel(false); return; }
         try { if (navigator.vibrate) navigator.vibrate(15); } catch (x) { /* abaikan */ }
         st.ptt = true; st.pttHeld = true; st.pttAcc = []; b.classList.add('hold'); toastMsg('🎙 ' + M('pttHint'), false); startListen();
       }, 300);
     };
-    var end = function () {
-      if (!down) return; down = false; clearTimeout(timer); b.classList.remove('hold');
+    b.onpointermove = function (e) {                             // geser sebelum 0,3 dtk = pindahkan tombol (posisi diingat)
+      if (!down || held) return; var dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!drag && Math.hypot(dx, dy) > 10) { drag = true; clearTimeout(timer); b.classList.add('drag'); }
+      if (drag) place(ox + dx, oy + dy, false);
+    };
+    var end = function (e) {
+      if (!down) return; down = false; clearTimeout(timer); b.classList.remove('hold'); b.classList.remove('drag');
+      if (drag) { drag = false; var r1 = b.getBoundingClientRect(); place(r1.left + r1.width / 2, r1.top + r1.height / 2, true); return; }
       if (held) { held = false; st.pttHeld = false; if (st.ptt) stopListen(false); } else if (st.open) closePanel(); else openPanel(true);
     };
-    b.onpointerup = end; b.onpointercancel = end;
+    b.onpointerup = end; b.onpointercancel = function () { if (!down) return; if (held && st.ptt) { down = false; held = false; st.pttHeld = false; b.classList.remove('hold'); stopListen(false); } else end(); };
+    b.ondblclick = function () { try { localStorage.removeItem(PK); } catch (e) { /* abaikan */ } b.style.left = b.style.top = b.style.right = b.style.bottom = ''; };   // klik ganda = kembalikan posisi awal
     host.appendChild(b); applyCfg();
   }
   function paint() {

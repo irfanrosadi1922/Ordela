@@ -621,8 +621,9 @@ html.kb .fab-add{display:none!important}
 }
 
 /* ---------- Tombol suara melayang (tahan untuk bicara) ---------- */
-.vc-fab{position:fixed;right:16px;bottom:calc(max(var(--sab),12px) + 150px);z-index:40;width:56px;height:56px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--ac);color:var(--acx);box-shadow:0 10px 24px rgba(15,23,42,.28),0 2px 6px rgba(15,23,42,.16);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .15s,background .15s}
-.vc-fab svg{width:26px;height:26px;pointer-events:none}
+.vc-fab{position:fixed;right:16px;bottom:calc(max(var(--sab),12px) + 150px);z-index:40;width:64px;height:64px;-webkit-tap-highlight-color:transparent;border-radius:50%;border:0;display:grid;place-items:center;background:var(--ac);color:var(--acx);box-shadow:0 10px 24px rgba(15,23,42,.28),0 2px 6px rgba(15,23,42,.16);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .15s,background .15s}
+.vc-fab svg{width:28px;height:28px;pointer-events:none}
+.vc-fab.drag{opacity:.85;transform:scale(1.1);transition:none}
 .vc-fab[hidden]{display:none!important}
 .vc-fab.hold{transform:scale(1.18);background:var(--ad,#e11d48);color:#fff}
 .vc-fab.rec{background:var(--ad,#e11d48);color:#fff;animation:vcPulse 1.2s ease-out infinite}
