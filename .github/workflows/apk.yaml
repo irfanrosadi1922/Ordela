@@ -9,6 +9,20 @@ on:
         options: [bundle, live]
   push:
     tags: ['v*']
+    branches: [main]
+    # hanya bila isi aplikasi berubah (bukan dokumen, SQL, atau fungsi server)
+    paths:
+      - 'index.html'
+      - '*.js'
+      - '*.css'
+      - '*.webmanifest'
+      - 'icon-*.png'
+      - 'scripts/build-apps.mjs'
+      - '.github/workflows/apk.yaml'
+# build baru membatalkan build lama yang belum selesai
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   apk:
     name: APK ${{ matrix.app }}
@@ -39,7 +53,7 @@ jobs:
           cp -r "dist/$APP/." www/
           rm -f www/CNAME www/.nojekyll
           # mode langsung (default): membuka situs live https://<app>.<domain>/ agar selalu terbaru. Isi variabel APP_LIVE=0 untuk mode luring (isi dibundel di APK).
-          LIVE="${{ inputs.mode == 'live' && '1' || (inputs.mode == 'bundle' && '0' || vars.APP_LIVE) }}"
+          LIVE="${{ inputs.mode == 'live' && '1' || (inputs.mode == 'bundle' && '0' || (vars.APP_LIVE || '0')) }}"
           NAME="$NAME" APPID="$APPID" LIVE="$LIVE" URL="https://$APP.$POS_DOMAIN/" node -e "
             const c={appId:process.env.APPID,appName:process.env.NAME,webDir:'www',backgroundColor:'#ffffff'};
             if(process.env.LIVE!=='0')c.server={url:process.env.URL,cleartext:false};
