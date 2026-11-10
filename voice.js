@@ -12,7 +12,7 @@
   var TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
   var MULT = { belas: 1, puluh: 1, ratus: 1, hundred: 1 };
   var UNIT_WORDS = { porsi: 1, piring: 1, gelas: 1, cangkir: 1, mangkok: 1, bungkus: 1, buah: 1, biji: 1, pcs: 1, pc: 1, pieces: 1, piece: 1, portion: 1, portions: 1, plate: 1, plates: 1, glass: 1, glasses: 1, cup: 1, cups: 1, bowl: 1, bowls: 1, orang: 1, keping: 1, potong: 1, ekor: 1, botol: 1, bottle: 1, bottles: 1, pinggan: 1, cawan: 1, mangkuk: 1, unit: 1, units: 1, tusuk: 1, stick: 1, sticks: 1 };
-  var FILLER = { tolong: 1, please: 1, dong: 1, ya: 1, yah: 1, yuk: 1, aja: 1, saja: 1, lah: 1, kak: 1, mas: 1, mbak: 1, bang: 1, kakak: 1, ke: 1, to: 1, the: 1, my: 1, saya: 1, aku: 1, i: 1, want: 1, would: 1, like: 1, can: 1, you: 1, could: 1, nak: 1, mahu: 1, tambahan: 1, lagi: 1, juga: 1, a: 1, an: 1, of: 1, some: 1, sebuah: 1, seporsi: 1, segelas: 1, sebiji: 1, keranjang: 1, cart: 1, troli: 1, bakul: 1, basket: 1, pesanan: 1, order: 1, dalam: 1, into: 1, in: 1, pada: 1, di: 1, buat: 1, untuk: 1, for: 1, yang: 1, itu: 1, ini: 1, this: 1, that: 1, satunya: 1, kan: 1, deh: 1, sih: 1, nih: 1, sama: 0 };
+  var FILLER = { tolong: 1, please: 1, dong: 1, ya: 1, yah: 1, yuk: 1, aja: 1, saja: 1, lah: 1, kak: 1, mas: 1, mbak: 1, bang: 1, kakak: 1, ke: 1, to: 1, the: 1, my: 1, saya: 1, aku: 1, i: 1, want: 1, would: 1, like: 1, can: 1, you: 1, could: 1, nak: 1, mahu: 1, tambahan: 1, lagi: 1, juga: 1, a: 1, an: 1, of: 1, some: 1, sebuah: 1, seporsi: 1, segelas: 1, sebiji: 1, keranjang: 1, cart: 1, troli: 1, bakul: 1, basket: 1, pesanan: 1, order: 1, dalam: 1, into: 1, in: 1, pada: 1, di: 1, buat: 1, untuk: 1, for: 1, yang: 1, itu: 1, ini: 1, this: 1, that: 1, satunya: 1, kan: 1, deh: 1, sih: 1, nih: 1, sama: 0, ada: 1, kayak: 1, seperti: 1, misalnya: 1, atau: 1 };
   /* sinonim token nama menu → bentuk baku (supaya "teh ais", "es teh", "iced tea" sama) */
   var SYN = { ais: 'es', ice: 'es', iced: 'es', cold: 'es', dingin: 'es', sejuk: 'es', tea: 'teh', tehh: 'teh', coffee: 'kopi', milk: 'susu', fried: 'goreng', rice: 'nasi', chicken: 'ayam', satay: 'sate', satey: 'sate', saté: 'sate', noodle: 'mie', noodles: 'mie', mee: 'mie', mi: 'mie', orange: 'jeruk', oren: 'jeruk', water: 'air', mineral: 'mineral', beef: 'sapi', lembu: 'sapi', daging: 'daging', egg: 'telur', telor: 'telur', fish: 'ikan', soup: 'sup', sop: 'sup', juice: 'jus', jush: 'jus', burger: 'burger', fries: 'kentang', potato: 'kentang', hot: 'panas', lemon: 'lemon', sweet: 'manis', black: 'hitam', green: 'hijau', pedas: 'pedas', spicy: 'pedas' };
 
@@ -538,7 +538,7 @@
       if (!Object.keys(S.cart).length) return { msg: M('payNeed'), warn: true };
       if (!$('#payOk')) { if (typeof closeModal === 'function' && $('#mw.on')) closeModal(); payForm(); }
       if (p.method && typeof setM === 'function' && $('#pM')) setM(p.method);
-      if (p.amount != null && $('#pPaid')) { setM('Tunai'); quick(p.amount); }
+      if (p.amount != null && $('#pPaid')) { if (p.method && p.method !== 'Tunai') return { msg: 'Jumlah uang diterima hanya bisa diisi untuk pembayaran Tunai.', warn: true }; setM('Tunai'); quick(p.amount); }
       if ($('#payOk') && !$('#payOk').disabled) {
         st.pending = { kind: 'naturalPay' };
         var paySum = payTotals().payable;
@@ -947,8 +947,8 @@
       { words: ['bawa','pulang'], value: 'Takeaway' },
       { words: ['dine','in'], value: 'Dine In' }, { words: ['makan','sini'], value: 'Dine In' },
       { words: ['makan','di','sini'], value: 'Dine In' },
-      { words: ['delivery'], value: 'Delivery' }, { words: ['gofood'], value: 'GoFood' },
-      { words: ['grabfood'], value: 'GrabFood' }, { words: ['shopeefood'], value: 'ShopeeFood' }
+      { words: ['delivery'], value: 'Delivery' }, { words: ['gofood'], value: 'GoFood' }, { words: ['go','food'], value: 'GoFood' },
+      { words: ['grabfood'], value: 'GrabFood' }, { words: ['grab','food'], value: 'GrabFood' }, { words: ['shopeefood'], value: 'ShopeeFood' }, { words: ['shopee','food'], value: 'ShopeeFood' }
     ];
     var types = [];
     for (i = 0; i < words.length; i++) {
