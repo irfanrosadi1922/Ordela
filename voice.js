@@ -198,12 +198,65 @@
     return { qty: qty === null ? 1 : qty, explicit: qty !== null, name: rest.join(' ') };
   }
 
+  /* ---------- Voice Checkout Natural: metadata transaksi dari ucapan bebas ---------- */
+  function parseNatural(n) {
+    var raw = ' ' + n + ' ', meta = {}, found = false, m;
+    // Tipe pesanan yang memang tersedia pada pilihan kasir Ordela.
+    var types = [
+      [/\b(take away|takeaway|bungkus|dibungkus)\b/g, 'Takeaway'],
+      [/\b(dine in|makan di tempat|makan sini)\b/g, 'Dine In'],
+      [/\b(delivery|diantar|antar ke rumah)\b/g, 'Delivery'],
+      [/\b(go food|gofood)\b/g, 'GoFood'],
+      [/\b(grab food|grabfood)\b/g, 'GrabFood'],
+      [/\b(shopee food|shopeefood)\b/g, 'ShopeeFood']
+    ];
+    types.some(function (x) {
+      if (x[0].test(raw)) { meta.type = x[1]; raw = raw.replace(x[0], ' '); found = true; return true; }
+      return false;
+    });
+    // Nomor meja harus disebut eksplisit. "nomor 7" saja tidak boleh ditebak.
+    m = /\b(?:nomor\s+meja|meja)\s+(\d+[a-z]?)\b/i.exec(raw);
+    if (m) { meta.tbl = m[1]; raw = raw.replace(m[0], ' '); found = true; }
+    else if (/\bnomor\s+\d+\b/i.test(raw) && !/\b(nomor\s+(pesanan|order)|order\s+nomor)\b/i.test(raw)) {
+      return { intent: 'number-clarify', text: n };
+    }
+    // Catatan eksplisit atau modifikasi pesanan yang lazim diucapkan natural.
+    var notes = [];
+    var explicit = /\b(?:catatan|catat|note|notes)\s+(.+?)(?=\b(?:bayar|bayarkan|checkout|takeaway|take away|dine in|delivery|gofood|grabfood|shopeefood)\b|$)/i.exec(raw);
+    if (explicit) { notes.push(explicit[1].trim()); raw = raw.replace(explicit[0], ' '); found = true; }
+    var mods = [
+      /\b(kuah\s+(?:lebih|banyak|sedikit|dipisah|terpisah))\b/gi,
+      /\b(bawang\s+(?:lebih|banyak|sedikit|tanpa))\b/gi,
+      /\b(tanpa\s+[a-z0-9 ]{1,30}?)(?=\s*(?:,|$|bayar))/gi,
+      /\b(extra\s+[a-z0-9 ]{1,30}?)(?=\s*(?:,|$|bayar))/gi,
+      /\b(jangan\s+[a-z0-9 ]{1,30}?)(?=\s*(?:,|$|bayar))/gi
+    ];
+    mods.forEach(function (re) {
+      raw = raw.replace(re, function (v) { notes.push(v.trim()); found = true; return ' '; });
+    });
+    if (notes.length) meta.note = notes.join(', ').slice(0, 120);
+    // Pembayaran hanya disiapkan; tidak pernah menyelesaikan transaksi tanpa konfirmasi "ya".
+    var payAt = raw.search(/\b(bayar|bayarkan|checkout|pay)\b/);
+    if (payAt >= 0) {
+      var clause = raw.slice(payAt), pc = parsePayClause(toks(clause));
+      if (pc.amount !== null || pc.method) {
+        meta.payment = pc; raw = raw.slice(0, payAt) + ' '; found = true;
+      }
+    }
+    if (!found) return null;
+    var itemText = clean(raw);
+    var items = itemText ? parse(itemText) : { intent: 'empty' };
+    if (items.intent !== 'add' && items.intent !== 'seq' && items.intent !== 'empty') return { intent: 'unknown', text: n };
+    return { intent: 'natural', items: items, meta: meta };
+  }
+
   /* parse satu ucapan → {intent, ...} */
   function parse(text) {
     lload();
     var n = clean(text);
     if (!n) return { intent: 'empty' };
     var T = n.split(' ');
+    var natural = parseNatural(n); if (natural) return natural;
 
     // jawaban konfirmasi
     if (/^(ya|iya|yes|yup|ok|oke|okay|betul|benar|boleh|setuju|confirm|konfirmasi|sure|ya betul|baik)$/.test(n)) return { intent: 'yes' };
@@ -481,11 +534,40 @@
     var res = [], chips = null, show = null; st.unres = [];
     if (p.intent === 'empty') return { msg: M('hint') };
     if (p.intent === 'unknown') return { msg: M('nomatch'), warn: true, noop: true };
+    if (p.intent === 'number-clarify') return { msg: 'Nomor ' + ((p.text.match(/\bnomor\s+(\d+)\b/i)||[])[1]||'') + ' maksudnya nomor meja atau nomor pesanan? Sebutkan "nomor meja 7" agar tidak salah isi.', warn: true };
+    if (p.intent === 'natural') {
+      var ir = p.items && p.items.intent !== 'empty' ? run(p.items) : { msg: '' };
+      if (ir.warn || ir.noop || ir.chips) return ir;
+      var md = p.meta || {};
+      if (md.type) { S.type = md.type; var ot = $('#otype'); if (ot) ot.value = md.type; }
+      if (md.note) { S.note = ((S.note ? S.note + ', ' : '') + md.note).slice(0, 120); if (typeof noteUI === 'function') noteUI(); var ne = $('#pNote'); if (ne) ne.value = S.note; }
+      if (md.tbl) { S.holdMeta = Object.assign({}, S.holdMeta || {}, { tbl: md.tbl }); }
+      if (!md.payment) { if (typeof renderInvoice === 'function') renderInvoice(); return { msg: (ir.msg ? ir.msg + '\\n' : '') + 'Detail pesanan diperbarui' + (md.type ? ' · ' + md.type : '') + (md.tbl ? ' · Meja ' + md.tbl : '') + (md.note ? ' · Catatan: ' + md.note : '') }; }
+      if (!Object.keys(S.cart).length) return { msg: M('payNeed'), warn: true };
+      if (typeof closeModal === 'function' && $('#mw.on')) closeModal();
+      payForm();
+      if (!$('#payOk')) return { msg: M('err'), warn: true };
+      if (md.tbl) { var te = $('#pTbl'); if (te) te.value = md.tbl; }
+      if (md.note) { var pn = $('#pNote'); if (pn) pn.value = S.note; }
+      var pm = md.payment;
+      if (pm.method && typeof setM === 'function') setM(pm.method);
+      if (pm.amount != null && $('#pPaid')) { setM('Tunai'); quick(pm.amount); }
+      var pt = payTotals(), paid = pm.amount == null ? null : pm.amount;
+      st.pending = { kind: 'natural-checkout' };
+      var msg = (ir.msg ? ir.msg + '\\n' : '') + 'Ringkasan siap. Total ' + money2(pt.payable) + (paid != null ? ' · Uang diterima ' + money2(paid) + (paid >= pt.payable ? ' · Kembalian ' + money2(paid-pt.payable) : ' · Uang belum cukup') : '') + '. Ucapkan "ya" untuk konfirmasi pembayaran dan cetak struk, atau "tidak" untuk membatalkan pembayaran.';
+      return { msg: msg, warn: paid != null && paid < pt.payable, say: msg, big: true };
+    }
     if (p.intent === 'close') { setTimeout(closePanel, 50); return { msg: '' }; }
     if (p.intent === 'yes' || p.intent === 'no') {
       var pd = st.pending; st.pending = null;
       if (!pd) return { msg: M('nomatch'), warn: true };
-      if (p.intent === 'no') return { msg: M('cancelled') };
+      if (p.intent === 'no') { if (pd.kind === 'natural-checkout' && typeof closeModal === 'function') closeModal(); return { msg: M('cancelled') }; }
+      if (pd.kind === 'natural-checkout') {
+        var cok = $('#payOk');
+        if (!cok || cok.disabled) return { msg: 'Pembayaran belum valid. Periksa jumlah uang diterima.', warn: true };
+        closePanel(); cok.click();
+        return { msg: '' };
+      }
       if (pd.kind === 'clear') { clearCart(); st.last = null; return { msg: M('cleared') }; }
       if (pd.kind === 'add') { var bi = find(pd.id); if (bi) { var ba = actAdd(bi, pd.qty); return { msg: ba.msg, warn: !ba.ok || ba.warn }; } }
       return { msg: M('cancelled') };
