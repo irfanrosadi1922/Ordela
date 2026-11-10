@@ -897,7 +897,7 @@
   }
 
   /* ---------- mode selalu mendengarkan (tanpa menekan mikrofon) ---------- */
-  var bg = { rec: null, run: false, fail: 0, blocked: false, pausedUntil: 0, next: 0 };
+  var bg = { rec: null, run: false, fail: 0, blocked: false, pausedUntil: 0, next: 0, lastDone: '', lastDoneAt: 0 };
   function setLive(on) { var fb = $('#vcFab'); if (fb) fb.classList.toggle('live', !!on); var m = $('#vcMic'); if (m) { m.classList.toggle('live', !!on); m.title = on ? M('live') : M('mic'); } }
   function bgWanted() {
     var c = cfg();
@@ -923,7 +923,7 @@
     return a + ' ' + x;
   }
   /* sisa ucapan yang belum diproses setelah `done` (hasil kumulatif yang datang terlambat tidak diproses ulang) */
-  function restAfter(done, t) {
+  function restAfter(bg.lastDone, t) {
     var dw = wl(done), xw = wl(t); if (!dw.length || !xw.length) return t;
     var k = lead(dw, xw);
     if (k === xw.length) return '';                             // sudah pernah diproses
@@ -937,15 +937,15 @@
     var rec;
     try { rec = new SR(); } catch (e) { bg.fail++; dg('gagal', 'tidak bisa membuat sesi'); return; }
     rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 3;
-    var buf = '', alt = [], tm = 0, done = '', doneAt = 0;
+    var buf = '', alt = [], tm = 0;
     var flush = function (how) {                               // proses satu ucapan utuh sekali saja
       clearTimeout(tm); if (!buf) return; var t = buf, a = [t].concat(alt.slice(1)); buf = ''; alt = [];
-      if (done && Date.now() - doneAt < 3500) {                // hasil kumulatif terlambat: jangan proses ulang yang sama
+      if (bg.lastDone && Date.now() - bg.lastDoneAt < 3500) {                // hasil kumulatif terlambat: jangan proses ulang yang sama
         var rest = restAfter(done, t);
-        if (!rest) { dg('abaikan', t); doneAt = Date.now(); return; }
-        if (rest !== t) { dg('sisa', rest); done = mergeT(done, t); a = [rest]; t = rest; } else done = t;
+        if (!rest) { dg('abaikan', t); bg.lastDoneAt = Date.now(); return; }
+        if (rest !== t) { dg('sisa', rest); bg.lastDone = mergeT(bg.lastDone, t); a = [rest]; t = rest; } else bg.lastDone = t;
       } else done = t;
-      doneAt = Date.now();
+      bg.lastDoneAt = Date.now();
       dg(how, t); try { heardBg(a); } catch (e) { console.error('voice-bg', e); }
     };
     rec.onstart = function () { bg.run = true; bg.t0 = Date.now(); setLive(true); dg('mulai', rec.lang); };
