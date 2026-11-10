@@ -778,11 +778,11 @@
       for (var i = ev.resultIndex; i < ev.results.length; i++) {
         var r = ev.results[i];
         if (r.isFinal) { fin = []; for (var j = 0; j < r.length; j++) fin.push(r[j].transcript); }
-        else interim += r[0].transcript;
+        else interim = r[0].transcript;
       }
-      if (fin) { if (st.ptt) { acc.push(fin[0]); finalAlts = [acc.join(' ')]; } else finalAlts = fin; $('#vcTx').textContent = '“' + (st.ptt ? acc.join(' ') : fin[0]) + '”'; }
-      else $('#vcTx').textContent = '“' + interim + '”';
-      if (st.ptt && !st.open) toastMsg('🎙 ' + (acc.join(' ') + ' ' + interim).trim(), false);
+      if (fin) { if (st.ptt) { acc[0] = mergeT(acc[0], fin[0]); finalAlts = [acc[0]]; } else finalAlts = fin; $('#vcTx').textContent = '“' + (st.ptt ? acc[0] : fin[0]) + '”'; }
+      else $('#vcTx').textContent = '“' + (st.ptt ? mergeT(acc[0], interim) : interim) + '”';
+      if (st.ptt && !st.open) toastMsg('🎙 ' + mergeT(acc[0], interim), false);
     };
     rec.onerror = function (ev) {
       gotErr = true; var e = ev && ev.error;
@@ -800,7 +800,7 @@
       var wasPtt = st.ptt; st.ptt = false; st.pttHeld = false; if (wasPtt) bg.pausedUntil = Date.now() + 600;
       var ptAcc = st.pttAcc; st.pttAcc = null;
       st.listening = false; st.rec = null; paint();
-      if (wasPtt && ptAcc && ptAcc.length) finalAlts = [ptAcc.join(' ')];
+      if (wasPtt && ptAcc && ptAcc[0]) finalAlts = [ptAcc[0]];
       if (finalAlts) { var alts = finalAlts; finalAlts = null; submit(alts); }
       else if (!gotErr && st.open && !$('#vcTx').textContent) showResult({ msg: M('nospeech'), warn: true });
     };
@@ -898,6 +898,15 @@
     var c = cfg();
     return !!(SR && c.on && c.always && !document.hidden && !st.listening && !st.speaking && !bg.blocked && Date.now() >= bg.pausedUntil && typeof S !== 'undefined' && S.view === 'pos');
   }
+  /* Android Chrome (mode continuous) sering mengirim hasil KUMULATIF ("5", "5 sate", "5 sate ayam" masing-masing final):
+     gabungkan dengan menimpa bila hasil baru memperpanjang yang lama, bukan menambahkan, supaya tidak terduplikasi. */
+  function mergeT(acc, t) {
+    var a = String(acc || '').trim(), x = String(t || '').trim(); if (!a) return x; if (!x) return a;
+    var la = a.toLowerCase(), lx = x.toLowerCase();
+    if (lx.indexOf(la) === 0) return x;
+    if (la.indexOf(lx) > -1) return a;
+    return a + ' ' + x;
+  }
   /* catatan diagnostik mode latar (untuk Pengaturan > Voice Cashier > Diagnostik) */
   var DG = [];
   function dg(type, txt) { DG.push({ t: Date.now(), k: type, x: String(txt || '').slice(0, 90) }); if (DG.length > 14) DG.shift(); bg.last = Date.now(); }
@@ -905,32 +914,27 @@
     var rec;
     try { rec = new SR(); } catch (e) { bg.fail++; dg('gagal', 'tidak bisa membuat sesi'); return; }
     rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 3;
-    var done = {}, pend = null, tm = 0;
-    var take = function (i, alts, how) {                       // proses satu ucapan sekali saja (interim yang sudah tenang atau hasil final)
-      if (done[i]) return; done[i] = 1; clearTimeout(tm); pend = null;
-      dg(how, alts[0]); try { heardBg(alts); } catch (e) { console.error('voice-bg', e); }
+    var buf = '', alt = [], tm = 0;
+    var flush = function (how) {                               // proses satu ucapan utuh sekali saja
+      clearTimeout(tm); if (!buf) return; var t = buf, a = [t].concat(alt.slice(1)); buf = ''; alt = [];
+      dg(how, t); try { heardBg(a); } catch (e) { console.error('voice-bg', e); }
     };
     rec.onstart = function () { bg.run = true; bg.t0 = Date.now(); setLive(true); dg('mulai', rec.lang); };
     rec.onaudiostart = function () { dg('audio', ''); };
     rec.onresult = function (ev) {
-      bg.fail = 0; bg.last = Date.now();
+      bg.fail = 0; bg.last = Date.now(); var anyFinal = false;
       for (var i = ev.resultIndex; i < ev.results.length; i++) {
         var r = ev.results[i], alts = []; for (var j = 0; j < r.length; j++) alts.push(r[j].transcript);
-        if (r.isFinal) take(i, alts, 'final');
-        else if (!done[i]) {                                  // iOS/Android sering menunda hasil final: anggap selesai bila teks tidak berubah 1,2 dtk
-          var key = alts[0]; if (!pend || pend.i !== i || pend.key !== key) {
-            pend = { i: i, key: key }; clearTimeout(tm);
-            (function (ii, aa, kk) { tm = setTimeout(function () { if (pend && pend.i === ii && pend.key === kk && bg.rec === rec) take(ii, aa, 'tenang'); }, 1200); })(i, alts, key);
-          }
-        }
+        buf = mergeT(buf, alts[0]); alt = alts; if (r.isFinal) anyFinal = true;
       }
+      clearTimeout(tm); tm = setTimeout(function () { if (bg.rec === rec) flush(anyFinal ? 'final' : 'tenang'); }, anyFinal ? 450 : 1200);   // jeda singkat agar hasil kumulatif tergabung
     };
     rec.onerror = function (ev) {
       var e = ev && ev.error; dg('galat', e);
       if (e === 'not-allowed' || e === 'service-not-allowed') { bg.blocked = true; setLive(false); toastMsg(M('permNeed'), true); waitGesture(); }
       else if (e !== 'no-speech' && e !== 'aborted') bg.fail++;
     };
-    rec.onend = function () { clearTimeout(tm); if (bg.rec !== rec) return; dg('selesai', Math.round((Date.now() - (bg.t0 || Date.now())) / 1000) + ' dtk'); if (bg.t0 && Date.now() - bg.t0 > 3000) bg.fail = 0; bg.run = false; bg.rec = null; setLive(false); bg.next = Math.min(bg.next, Date.now() + 150); };
+    rec.onend = function () { var mine = bg.rec === rec; if (mine) flush('selesai'); clearTimeout(tm); if (!mine) return; dg('selesai', Math.round((Date.now() - (bg.t0 || Date.now())) / 1000) + ' dtk'); if (bg.t0 && Date.now() - bg.t0 > 3000) bg.fail = 0; bg.run = false; bg.rec = null; setLive(false); bg.next = Math.min(bg.next, Date.now() + 150); };
     bg.rec = rec;
     try { rec.start(); } catch (e) { bg.rec = null; bg.fail++; dg('gagal', e && e.message); }
   }
