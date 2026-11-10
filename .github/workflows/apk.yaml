@@ -645,16 +645,18 @@ jobs:
                       if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(this)) return;
                       wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
                       final float d = getResources().getDisplayMetrics().density;
-                      final int size = (int) (58 * d);
+                      final int size = (int) (40 * d);   // ukuran setara gelembung Grab
                       ImageView v = new ImageView(this);
                       Bitmap lg = logo(256);
                       if (lg != null) v.setImageBitmap(lg);
                       v.setScaleType(ImageView.ScaleType.CENTER_CROP);
                       GradientDrawable bg = new GradientDrawable();
                       bg.setShape(GradientDrawable.OVAL);
-                      bg.setColor(Color.WHITE);
+                      int dark = Color.parseColor("#111111");
+                if (lg != null) { try { dark = lg.getPixel(lg.getWidth() / 2, Math.max(2, lg.getHeight() / 14)); } catch (Exception ex) { } if (Color.alpha(dark) < 200) dark = Color.parseColor("#111111"); }
+                bg.setColor(dark);
                       v.setBackground(bg);
-                      int pad = (int) (3 * d);
+                      int pad = 0;
                       v.setPadding(pad, pad, pad, pad);
                       v.setOutlineProvider(new ViewOutlineProvider() {
                           @Override
