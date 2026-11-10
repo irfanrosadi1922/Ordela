@@ -93,6 +93,29 @@ jobs:
                   raise SystemExit(f"Missing permission after patch: {x}")
               print(x)
           PY
+          python3 - <<'PY2'
+          from pathlib import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          perms = ["android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_SPECIAL_USE", "android.permission.SYSTEM_ALERT_WINDOW", "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS", "android.permission.WAKE_LOCK"]
+          anchor = '<uses-permission android:name="android.permission.INTERNET" />'
+          add = "".join('\n    <uses-permission android:name="%s" />' % x for x in perms if 'android:name="%s"' % x not in s)
+          s = s.replace(anchor, anchor + add, 1)
+          if ".OrdelaService" not in s:
+              svc = '    <service android:name=".OrdelaService" android:exported="false" android:foregroundServiceType="specialUse">\n        <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="pos_background_running" />\n    </service>\n'
+              if "</application>" not in s: raise SystemExit("application tag not found")
+              s = s.replace("</application>", svc + "</application>", 1)
+          p.write_text(s)
+          for x in perms + [".OrdelaService"]:
+              if x not in s: raise SystemExit("manifest patch failed: " + x)
+          print("Manifest layanan latar OK")
+          PY2
+          mkdir -p android/app/src/main/res/drawable
+          cat > android/app/src/main/res/drawable/ic_stat_ordela.xml <<'XMLEOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:strokeColor="#FFFFFF" android:strokeWidth="3.6" android:fillColor="#00000000" android:pathData="M12,4.2a7.8,7.8 0 1,0 0.001,0z" />
+          </vector>
+          XMLEOF
           for d in android/app/src/main/res/mipmap-*; do
             case $d in *anydpi*) rm -rf "$d"; continue;; esac
             for n in ic_launcher ic_launcher_round ic_launcher_foreground; do cp icon-512.png "$d/$n.png"; done
@@ -322,6 +345,12 @@ jobs:
           import android.media.session.PlaybackState;
           import android.content.Intent;
           import android.view.KeyEvent;
+          import android.app.AlertDialog;
+          import android.content.Context;
+          import android.content.DialogInterface;
+          import android.net.Uri;
+          import android.os.PowerManager;
+          import android.provider.Settings;
 
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
@@ -335,10 +364,69 @@ jobs:
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   registerPlugin(ClassicBtPlugin.class);
+                  registerPlugin(OrdelaBgPlugin.class);
                   super.onCreate(savedInstanceState);
                   requestOrdelaPermissions();
               }
 
+
+
+          // Latar belakang: layanan + gelembung saat aplikasi diminimalkan
+          private boolean bgOn() { return getSharedPreferences("ordela", MODE_PRIVATE).getBoolean("bg_on", true); }
+
+          @Override
+          public void onStart() {
+              super.onStart();
+              if (bgOn()) OrdelaService.start(this);
+              OrdelaService s = OrdelaService.instance;
+              if (s != null) s.hideBubble();
+          }
+
+          @Override
+          public void onStop() {
+              super.onStop();
+              OrdelaService s = OrdelaService.instance;
+              if (s != null && bgOn() && !isChangingConfigurations()) s.showBubble();
+          }
+
+          // Izin awal: tampil di atas aplikasi lain (gelembung), lalu abaikan penghemat baterai. Masing-masing ditanya sekali.
+          private void askBgPermissions() {
+              final SharedPreferences prefs = getSharedPreferences("ordela", MODE_PRIVATE);
+              if (!prefs.getBoolean("runtime_permissions_requested_v2", false)) return;
+              getWindow().getDecorView().postDelayed(new Runnable() {
+                  public void run() {
+                      if (isFinishing() || !hasWindowFocus()) return;
+                      if (Build.VERSION.SDK_INT < 23) return;
+                      if (!prefs.getBoolean("bg_overlay_asked_v1", false)) {
+                          prefs.edit().putBoolean("bg_overlay_asked_v1", true).apply();
+                          if (!Settings.canDrawOverlays(MainActivity.this)) {
+                              new AlertDialog.Builder(MainActivity.this)
+                                  .setTitle("Gelembung Ordela")
+                                  .setMessage("Izinkan Ordela tampil di atas aplikasi lain agar muncul gelembung saat aplikasi diminimalkan.")
+                                  .setPositiveButton("Izinkan", new DialogInterface.OnClickListener() {
+                                      public void onClick(DialogInterface d, int w) {
+                                          try {
+                                              startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
+                                          } catch (Exception e) { }
+                                      }
+                                  })
+                                  .setNegativeButton("Nanti", null)
+                                  .show();
+                              return;
+                          }
+                      }
+                      if (!prefs.getBoolean("bg_batt_asked_v1", false)) {
+                          prefs.edit().putBoolean("bg_batt_asked_v1", true).apply();
+                          PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                          if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                              try {
+                                  startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
+                              } catch (Exception e) { }
+                          }
+                      }
+                  }
+              }, 1500);
+          }
 
               // Tombol headset / mic eksternal (kabel & Bluetooth) -> event JS 'ordela-headset' (mulai/berhenti bicara)
               private void fireHeadset() {
@@ -392,6 +480,7 @@ jobs:
                       }
                       headset.setActive(true);
                   } catch (Exception e) { }
+                  askBgPermissions();
               }
 
               @Override
@@ -426,6 +515,265 @@ jobs:
                   if (!missing.isEmpty()) {
                       ActivityCompat.requestPermissions(this, missing.toArray(new String[0]), 7002);
                   }
+              }
+          }
+          JAVAEOF
+          cat > $D/OrdelaService.java <<'JAVAEOF'
+          package com.ordela.app;
+
+          import android.app.Notification;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.app.PendingIntent;
+          import android.app.Service;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.graphics.Bitmap;
+          import android.graphics.BitmapFactory;
+          import android.graphics.Color;
+          import android.graphics.Outline;
+          import android.graphics.PixelFormat;
+          import android.graphics.drawable.GradientDrawable;
+          import android.os.Build;
+          import android.os.IBinder;
+          import android.provider.Settings;
+          import android.util.DisplayMetrics;
+          import android.view.Gravity;
+          import android.view.MotionEvent;
+          import android.view.View;
+          import android.view.ViewOutlineProvider;
+          import android.view.WindowManager;
+          import android.widget.ImageView;
+
+          // Layanan latar belakang: notifikasi "Ordela app is running" + gelembung melayang saat aplikasi diminimalkan.
+          public class OrdelaService extends Service {
+              public static volatile OrdelaService instance;
+              private static final String CH = "ordela_running";
+              private static final int NID = 1001;
+              private WindowManager wm;
+              private View bubble;
+              private WindowManager.LayoutParams lp;
+
+              public static void start(Context c) {
+                  try {
+                      Intent i = new Intent(c, OrdelaService.class);
+                      if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i); else c.startService(i);
+                  } catch (Exception e) { }
+              }
+
+              @Override
+              public void onCreate() {
+                  super.onCreate();
+                  instance = this;
+              }
+
+              @Override
+              public int onStartCommand(Intent intent, int flags, int startId) {
+                  startFg();
+                  return START_STICKY;
+              }
+
+              @Override
+              public IBinder onBind(Intent intent) { return null; }
+
+              @Override
+              public void onDestroy() {
+                  hideBubble();
+                  instance = null;
+                  super.onDestroy();
+              }
+
+              private Intent launchIntent() {
+                  Intent i = getPackageManager().getLaunchIntentForPackage(getPackageName());
+                  if (i == null) i = new Intent();
+                  i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                  return i;
+              }
+
+              private Bitmap logo(int px) {
+                  try {
+                      int id = getResources().getIdentifier("ic_launcher", "mipmap", getPackageName());
+                      if (id == 0) return null;
+                      BitmapFactory.Options o = new BitmapFactory.Options();
+                      o.inJustDecodeBounds = true;
+                      BitmapFactory.decodeResource(getResources(), id, o);
+                      int s = 1;
+                      while (o.outWidth / (s * 2) >= px) s *= 2;
+                      BitmapFactory.Options o2 = new BitmapFactory.Options();
+                      o2.inSampleSize = s;
+                      return BitmapFactory.decodeResource(getResources(), id, o2);
+                  } catch (Exception e) { return null; }
+              }
+
+              private void startFg() {
+                  try {
+                      NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                      Notification.Builder b;
+                      if (Build.VERSION.SDK_INT >= 26) {
+                          NotificationChannel ch = new NotificationChannel(CH, "Ordela berjalan", NotificationManager.IMPORTANCE_LOW);
+                          ch.setShowBadge(false);
+                          nm.createNotificationChannel(ch);
+                          b = new Notification.Builder(this, CH);
+                      } else {
+                          b = new Notification.Builder(this);
+                          b.setPriority(Notification.PRIORITY_LOW);
+                      }
+                      int small = getResources().getIdentifier("ic_stat_ordela", "drawable", getPackageName());
+                      b.setSmallIcon(small != 0 ? small : android.R.drawable.ic_dialog_info);
+                      Bitmap big = logo(192);
+                      if (big != null) b.setLargeIcon(big);
+                      b.setContentTitle("Ordela app is running");
+                      b.setContentText("Ketuk untuk membuka Ordela");
+                      b.setOngoing(true);
+                      b.setShowWhen(false);
+                      int pf = Build.VERSION.SDK_INT >= 23 ? (PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT) : PendingIntent.FLAG_UPDATE_CURRENT;
+                      b.setContentIntent(PendingIntent.getActivity(this, 0, launchIntent(), pf));
+                      Notification n = b.build();
+                      if (Build.VERSION.SDK_INT >= 34) startForeground(NID, n, 0x40000000);   // FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                      else startForeground(NID, n);
+                  } catch (Exception e) { }
+              }
+
+              // ---- gelembung melayang ----
+              public void showBubble() {
+                  try {
+                      if (bubble != null) return;
+                      if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(this)) return;
+                      wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+                      final float d = getResources().getDisplayMetrics().density;
+                      final int size = (int) (58 * d);
+                      ImageView v = new ImageView(this);
+                      Bitmap lg = logo(256);
+                      if (lg != null) v.setImageBitmap(lg);
+                      v.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                      GradientDrawable bg = new GradientDrawable();
+                      bg.setShape(GradientDrawable.OVAL);
+                      bg.setColor(Color.WHITE);
+                      v.setBackground(bg);
+                      int pad = (int) (3 * d);
+                      v.setPadding(pad, pad, pad, pad);
+                      v.setOutlineProvider(new ViewOutlineProvider() {
+                          @Override
+                          public void getOutline(View view, Outline outline) { outline.setOval(0, 0, view.getWidth(), view.getHeight()); }
+                      });
+                      v.setClipToOutline(true);
+                      DisplayMetrics dm = getResources().getDisplayMetrics();
+                      final int sw = dm.widthPixels, sh = dm.heightPixels;
+                      int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
+                      lp = new WindowManager.LayoutParams(size, size, type,
+                          WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
+                      lp.gravity = Gravity.TOP | Gravity.START;
+                      lp.x = sw - size - (int) (6 * d);
+                      lp.y = sh / 3;
+                      final int slop = (int) (10 * d);
+                      v.setOnTouchListener(new View.OnTouchListener() {
+                          private float dx, dy;
+                          private int sx, sy;
+                          private boolean moved;
+                          @Override
+                          public boolean onTouch(View view, MotionEvent e) {
+                              switch (e.getAction()) {
+                                  case MotionEvent.ACTION_DOWN:
+                                      dx = e.getRawX(); dy = e.getRawY(); sx = lp.x; sy = lp.y; moved = false;
+                                      return true;
+                                  case MotionEvent.ACTION_MOVE:
+                                      float mx = e.getRawX() - dx, my = e.getRawY() - dy;
+                                      if (!moved && Math.hypot(mx, my) > slop) moved = true;
+                                      if (moved) {
+                                          lp.x = Math.max(0, Math.min(sw - size, (int) (sx + mx)));
+                                          lp.y = Math.max(0, Math.min(sh - size, (int) (sy + my)));
+                                          try { wm.updateViewLayout(bubble, lp); } catch (Exception ex) { }
+                                      }
+                                      return true;
+                                  case MotionEvent.ACTION_UP:
+                                      if (!moved) {
+                                          try { startActivity(launchIntent()); } catch (Exception ex) { }
+                                      } else {
+                                          lp.x = (lp.x + size / 2 < sw / 2) ? (int) (6 * d) : sw - size - (int) (6 * d);   // menempel ke tepi
+                                          try { wm.updateViewLayout(bubble, lp); } catch (Exception ex) { }
+                                      }
+                                      return true;
+                              }
+                              return false;
+                          }
+                      });
+                      bubble = v;
+                      wm.addView(bubble, lp);
+                  } catch (Exception e) { bubble = null; }
+              }
+
+              public void hideBubble() {
+                  try { if (bubble != null && wm != null) wm.removeView(bubble); } catch (Exception e) { }
+                  bubble = null;
+              }
+          }
+          JAVAEOF
+          cat > $D/OrdelaBgPlugin.java <<'JAVAEOF'
+          package com.ordela.app;
+
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.SharedPreferences;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.PowerManager;
+          import android.provider.Settings;
+
+          import com.getcapacitor.JSObject;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+
+          @CapacitorPlugin(name = "OrdelaBg")
+          public class OrdelaBgPlugin extends Plugin {
+              private SharedPreferences prefs() { return getContext().getSharedPreferences("ordela", Context.MODE_PRIVATE); }
+
+              private JSObject info() {
+                  JSObject o = new JSObject();
+                  Context c = getContext();
+                  o.put("on", prefs().getBoolean("bg_on", true));
+                  o.put("running", OrdelaService.instance != null);
+                  o.put("overlay", Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c));
+                  boolean batt = true;
+                  if (Build.VERSION.SDK_INT >= 23) {
+                      PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
+                      batt = pm != null && pm.isIgnoringBatteryOptimizations(c.getPackageName());
+                  }
+                  o.put("battery", batt);
+                  return o;
+              }
+
+              @PluginMethod
+              public void status(PluginCall call) { call.resolve(info()); }
+
+              @PluginMethod
+              public void setEnabled(PluginCall call) {
+                  boolean on = call.getBoolean("on", true);
+                  prefs().edit().putBoolean("bg_on", on).apply();
+                  Context c = getContext();
+                  if (on) OrdelaService.start(c); else c.stopService(new Intent(c, OrdelaService.class));
+                  call.resolve(info());
+              }
+
+              @PluginMethod
+              public void requestOverlay(PluginCall call) {
+                  try {
+                      Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getContext().getPackageName()));
+                      i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                      getContext().startActivity(i);
+                  } catch (Exception e) { }
+                  call.resolve(info());
+              }
+
+              @PluginMethod
+              public void requestBattery(PluginCall call) {
+                  try {
+                      Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getContext().getPackageName()));
+                      i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                      getContext().startActivity(i);
+                  } catch (Exception e) { }
+                  call.resolve(info());
               }
           }
           JAVAEOF

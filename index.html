@@ -4448,10 +4448,21 @@ function renderAccAbout(){
       ${st.name?row('store','Toko',esc(st.name)):''}${own&&st.code?row('id','Kode toko',`<code>${esc(st.code)}</code>`):''}
       ${row('cloud','Koneksi',(CL.on&&CL.tok)?(navigator.onLine===false?'Tidak ada internet':'Terhubung ke server'):'Mode offline')}
     </div>
+    ${window.OrdelaBg?`<div class="pfcard" id="abBg"><div class="pfrow">${pfi('refresh',20)}<div class="tx"><small>Berjalan di latar belakang</small><b id="abBgT">…</b></div><button class="pfbtn" type="button" id="abBgB" style="width:auto;padding:8px 14px" onclick="accBgToggle()">…</button></div>
+      <div class="pfrow">${pfi('globe',20)}<div class="tx"><small>Gelembung saat diminimalkan</small><b id="abOvT">…</b></div><button class="pfbtn out" type="button" id="abOvB" style="width:auto;padding:8px 14px;display:none" onclick="OrdelaBg.overlay()">Izinkan</button></div>
+      <div class="pfrow">${pfi('info',20)}<div class="tx"><small>Penghemat baterai</small><b id="abBtT">…</b></div><button class="pfbtn out" type="button" id="abBtB" style="width:auto;padding:8px 14px;display:none" onclick="OrdelaBg.battery()">Izinkan</button></div></div>`:''}
     ${window.OrdelaUpdate?`<button class="pfbtn" type="button" id="abUpdBtn" style="justify-content:center" onclick="OrdelaUpdate.open()">${pfi('refresh',18)}Periksa pembaruan aplikasi</button>`:''}
     <button class="pfbtn out" type="button" style="justify-content:center" onclick="accRefreshApp()">${pfi('refresh',18)}Muat ulang versi terbaru</button></div>`;
-  accAboutVer();
+  accAboutVer();accBgPaint();
 }
+async function accBgPaint(){
+  if(!window.OrdelaBg)return;const set=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t};
+  try{const s=await OrdelaBg.status();set('abBgT',s.on?(s.running?'Aktif':'Menyalakan…'):'Mati');set('abBgB',s.on?'Matikan':'Nyalakan');
+    set('abOvT',s.overlay?'Diizinkan':'Belum diizinkan');const o=document.getElementById('abOvB');if(o)o.style.display=s.overlay?'none':'';
+    set('abBtT',s.battery?'Tidak dibatasi':'Dibatasi sistem');const b=document.getElementById('abBtB');if(b)b.style.display=s.battery?'none':'';
+    if(!window.__abBgL){window.__abBgL=1;document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.view==='accabout')accBgPaint()})}}catch(e){}
+}
+async function accBgToggle(){try{const s=await OrdelaBg.status();await OrdelaBg.set(!s.on)}catch(e){}setTimeout(accBgPaint,600)}
 /* versi APK terpasang (nomor build), versi web (dari sw.js), dan status pembaruan; ikut berubah tiap build */
 async function accAboutVer(){
   const set=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t};

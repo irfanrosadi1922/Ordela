@@ -6,7 +6,7 @@
   try{if(C.getPlatform&&C.getPlatform()==='android')document.documentElement.classList.add('cap-android')}catch(e){}   /* APK Android: nav bawah dinaikkan agar tidak menempel ke tepi/gesture bar */
   var P={};
   function setNav(k,v){try{Object.defineProperty(navigator,k,{value:v,configurable:true,writable:true})}catch(e){try{navigator[k]=v}catch(e2){}}}
-  ['PushNotifications','LocalNotifications','BluetoothLe','ClassicBt'].forEach(function(n){
+  ['PushNotifications','LocalNotifications','BluetoothLe','ClassicBt','OrdelaBg'].forEach(function(n){
     try{P[n]=(C.Plugins&&C.Plugins[n])||(C.registerPlugin&&C.registerPlugin(n))||null}catch(e){P[n]=null}
   });
 
@@ -28,6 +28,7 @@
     };
   }
   /* notifikasi native (FCM) — aktif bila APK dibuat dengan google-services.json (window.POS_FCM) */
+  if(P.OrdelaBg)window.OrdelaBg={status:function(){return P.OrdelaBg.status()},set:function(on){return P.OrdelaBg.setEnabled({on:!!on})},overlay:function(){return P.OrdelaBg.requestOverlay()},battery:function(){return P.OrdelaBg.requestBattery()}};   /* layanan latar belakang + gelembung (APK) */
   var fcmReady=(P.ClassicBt&&P.ClassicBt.hasFcm)?P.ClassicBt.hasFcm().then(function(r){return !!(r&&r.fcm)}).catch(function(){return !!window.POS_FCM}):Promise.resolve(!!window.POS_FCM);
   if(P.PushNotifications){
     var PN=P.PushNotifications,cur='',hooked=false;
