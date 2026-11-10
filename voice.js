@@ -205,6 +205,10 @@
     if (!n) return { intent: 'empty' };
     var T = n.split(' ');
 
+    // jawapan pilihan untuk nomor yang disebut tanpa konteks
+    if (/^(meja|nomor meja|table)$/.test(n)) return { intent: 'tableMeja' };
+    if (/^(pesanan|nomor pesanan|order)$/.test(n)) return { intent: 'tableOrder' };
+
     // jawaban konfirmasi
     if (/^(ya|iya|yes|yup|ok|oke|okay|betul|benar|boleh|setuju|confirm|konfirmasi|sure|ya betul|baik)$/.test(n)) return { intent: 'yes' };
     if (/^(tidak|nggak|gak|ga|no|nope|jangan|batal|tak|tidak jadi|ga jadi|cancel)$/.test(n)) return { intent: 'no' };
@@ -485,10 +489,27 @@
     if (p.intent === 'yes' || p.intent === 'no') {
       var pd = st.pending; st.pending = null;
       if (!pd) return { msg: M('nomatch'), warn: true };
-      if (p.intent === 'no') return { msg: M('cancelled') };
+      if (p.intent === 'no') {
+        if (pd.kind === 'naturalPay') return { msg: 'Konfirmasi dibatalkan. Keranjang tetap tersimpan dan pembayaran belum diproses.' };
+        return { msg: M('cancelled') };
+      }
+      if (pd.kind === 'naturalPay') {
+        var payButton = $('#payOk');
+        if (!payButton || payButton.disabled) { st.pending = pd; return { msg: 'Pembayaran belum valid. Periksa jumlah yang diterima di layar.', warn: true }; }
+        closePanel(); payButton.click();
+        return { msg: 'Konfirmasi diterima. Ordela menjalankan checkout dan cetak struk satu kali.', big: true };
+      }
       if (pd.kind === 'clear') { clearCart(); st.last = null; return { msg: M('cleared') }; }
       if (pd.kind === 'add') { var bi = find(pd.id); if (bi) { var ba = actAdd(bi, pd.qty); return { msg: ba.msg, warn: !ba.ok || ba.warn }; } }
       return { msg: M('cancelled') };
+    }
+    if (p.intent === 'tableMeja' || p.intent === 'tableOrder') {
+      var td = st.pending;
+      if (!td || td.kind !== 'tableClarify') return { msg: M('nomatch'), warn: true };
+      st.pending = null;
+      if (p.intent === 'tableMeja') td.natural.tableAmbiguous = false;
+      else { td.natural.table = null; td.natural.tableAmbiguous = false; td.natural.orderNo = td.table; }
+      return runNatural(td.natural);
     }
     if (p.intent === 'clear') {
       if (!Object.keys(S.cart).length) return { msg: M('empty') };
@@ -515,11 +536,15 @@
     if (p.intent === 'confirmpay' && !cfg().confirm) return { msg: M('confirmOff'), warn: true };
     if (p.intent === 'pay') {
       if (!Object.keys(S.cart).length) return { msg: M('payNeed'), warn: true };
-      if (p.direct && cfg().direct) return directPay(p);
       if (!$('#payOk')) { if (typeof closeModal === 'function' && $('#mw.on')) closeModal(); payForm(); }
       if (p.method && typeof setM === 'function' && $('#pM')) setM(p.method);
       if (p.amount != null && $('#pPaid')) { setM('Tunai'); quick(p.amount); }
-      return { msg: M('pay') + (p.method ? ' · ' + p.method : '') + ' · ' + money2(calc().total) };
+      if ($('#payOk') && !$('#payOk').disabled) {
+        st.pending = { kind: 'naturalPay' };
+        var paySum = payTotals().payable;
+        return { msg: M('total') + ': ' + money2(paySum) + '. Ucapkan “Ya” untuk memproses pembayaran dan mencetak struk, atau “Tidak” untuk membatalkan.', big: true };
+      }
+      return { msg: M('pay') + (p.method ? ' · ' + p.method : '') + ' · ' + money2(calc().total) + '. Lengkapi jumlah pembayaran sebelum konfirmasi.' };
     }
     if (p.intent === 'tender') {
       if (!Object.keys(S.cart).length) return { msg: M('payNeed'), warn: true };
@@ -861,12 +886,171 @@
     });
     return msgs;
   }
+  /* ---------- Voice Checkout Natural: ekstrak field yang memang ada di invoice ---------- */
+  function parseNatural(raw) {
+    var words = clean(raw).split(' ').filter(Boolean);
+    var nat = { items: '', type: null, table: null, tableAmbiguous: false, orderNo: null, note: '', pay: null };
+    var changed = false, i, r;
+
+    // Pembayaran selalu dipisahkan dari daftar menu.
+    for (i = 0; i < words.length; i++) {
+      if (PAYV[words[i]]) {
+        var pc = parsePayClause(words.slice(i + 1));
+        if (pc.amount !== null || pc.method) {
+          nat.pay = pc; words = words.slice(0, i); changed = true;
+        }
+        break;
+      }
+    }
+
+    // Catatan eksplisit: "catatan kuah lebih, bawang lebih".
+    var ni = words.findIndex(function (w) { return w === 'catatan' || w === 'note' || w === 'notes' || w === 'permintaan'; });
+    if (ni >= 0) {
+      nat.note = words.slice(ni + 1).join(' ').slice(0, 120);
+      words = words.slice(0, ni); changed = true;
+    } else {
+      // Frasa catatan umum yang sudah dicontohkan pengguna.
+      var notePhrases = [['kuah','lebih'], ['bawang','lebih']];
+      var foundNotes = [];
+      notePhrases.forEach(function (phrase) {
+        for (var j = 0; j <= words.length - phrase.length; j++) {
+          if (phrase.every(function (w, k) { return words[j + k] === w; })) {
+            foundNotes.push(phrase.join(' ')); words.splice(j, phrase.length); changed = true; break;
+          }
+        }
+      });
+      nat.note = foundNotes.join(', ');
+    }
+
+    // Nomor meja atau nomor pesanan.
+    for (i = 0; i < words.length; i++) {
+      var start = -1, kind = '';
+      if (words[i] === 'nomor' && words[i + 1] === 'meja') { start = i + 2; kind = 'table'; }
+      else if (words[i] === 'meja' || words[i] === 'table') { start = i + 1; kind = 'table'; }
+      else if (words[i] === 'nomor' && words[i + 1] === 'pesanan') { start = i + 2; kind = 'order'; }
+      else if (words[i] === 'nomor' && words[i + 1] !== undefined) { start = i + 1; kind = 'ambiguous'; }
+      if (start < 0 || start >= words.length) continue;
+      r = readNum(words, start);
+      var val = r ? String(r.n) : (/^[a-z0-9]{1,12}$/.test(words[start]) ? words[start] : '');
+      if (!val) continue;
+      var end = start + (r ? r.len : 1);
+      if (kind === 'table') nat.table = val;
+      else if (kind === 'order') nat.orderNo = val;
+      else { nat.table = val; nat.tableAmbiguous = true; }
+      words.splice(i, end - i); changed = true; break;
+    }
+
+    // Jenis transaksi persis mengikuti pilihan #otype yang tersedia di Ordela.
+    var typeRules = [
+      { words: ['takeaway'], value: 'Takeaway' }, { words: ['take','away'], value: 'Takeaway' },
+      { words: ['bungkus'], value: 'Takeaway' }, { words: ['tapau'], value: 'Takeaway' },
+      { words: ['bawa','pulang'], value: 'Takeaway' },
+      { words: ['dine','in'], value: 'Dine In' }, { words: ['makan','sini'], value: 'Dine In' },
+      { words: ['makan','di','sini'], value: 'Dine In' },
+      { words: ['delivery'], value: 'Delivery' }, { words: ['gofood'], value: 'GoFood' },
+      { words: ['grabfood'], value: 'GrabFood' }, { words: ['shopeefood'], value: 'ShopeeFood' }
+    ];
+    var types = [];
+    for (i = 0; i < words.length; i++) {
+      for (var tr = 0; tr < typeRules.length; tr++) {
+        var rule = typeRules[tr], ok = true;
+        for (var z = 0; z < rule.words.length; z++) if (words[i + z] !== rule.words[z]) { ok = false; break; }
+        if (ok) {
+          if (types.indexOf(rule.value) < 0) types.push(rule.value);
+          words.splice(i, rule.words.length); changed = true; i--; break;
+        }
+      }
+    }
+    nat.type = types.length === 1 ? types[0] : null;
+    nat.typeConflict = types.length > 1;
+    nat.items = words.join(' ').trim();
+    return changed ? nat : null;
+  }
+
+  function runNatural(nat) {
+    if (nat.tableAmbiguous) {
+      st.pending = { kind: 'tableClarify', natural: nat, table: nat.table };
+      return { msg: 'Nomor ' + nat.table + ' maksudnya nomor meja atau nomor pesanan? Jawab “meja” atau “pesanan”.', warn: true };
+    }
+    if (nat.typeConflict) return { msg: 'Dalam satu invoice hanya bisa ada satu tipe pesanan. Sebutkan satu saja: Takeaway, Dine In, Delivery, GoFood, GrabFood, atau ShopeeFood.', warn: true };
+    if (!nat.items) return { msg: 'Sebutkan menu dan jumlahnya dulu.', warn: true };
+
+    var parsed = parse(nat.items);
+    if (!parsed || !parsed.lines || !parsed.lines.length) return { msg: M('nomatch'), warn: true };
+    var added = run(parsed);
+    if (added.warn || added.chips || added.noop) return added;
+
+    if (nat.type) {
+      var typeSelect = $('#otype');
+      if (typeSelect && Array.prototype.some.call(typeSelect.options, function (o) { return o.value === nat.type; })) {
+        S.type = nat.type; typeSelect.value = nat.type;
+      } else return { msg: 'Tipe pesanan ' + nat.type + ' tidak tersedia di invoice ini.', warn: true };
+    }
+    if (nat.table) {
+      S.holdMeta = Object.assign({}, S.holdMeta || {}, { tbl: nat.table });
+    }
+    if (nat.orderNo) {
+      added.msg += '\nNomor invoice dibuat otomatis oleh Ordela; nomor ' + nat.orderNo + ' tidak bisa ditetapkan manual.';
+    }
+    if (nat.note) {
+      S.note = ((S.note ? S.note + ', ' : '') + nat.note).slice(0, 120);
+      if (typeof noteUI === 'function') noteUI();
+      var noteInput = $('#pNote'); if (noteInput) noteInput.value = S.note;
+    }
+    if (typeof renderInvoice === 'function') renderInvoice();
+
+    if (!nat.pay) {
+      var detail = [];
+      if (nat.type) detail.push(nat.type);
+      if (nat.table) detail.push('Meja ' + nat.table);
+      if (nat.note) detail.push('Catatan: ' + nat.note);
+      return { msg: (added.msg ? added.msg + '\n' : '') + 'Invoice diperbarui' + (detail.length ? ' · ' + detail.join(' · ') : '') + '. Pembayaran belum diproses.' };
+    }
+
+    if (!cfg().pay) return { msg: M('payOff'), warn: true };
+    if (!Object.keys(S.cart).length) return { msg: M('payNeed'), warn: true };
+    if (typeof closeModal === 'function' && $('#mw.on')) closeModal();
+    payForm();
+    if (!$('#payOk')) return { msg: M('err'), warn: true };
+    if (nat.table) {
+      var tableInput = $('#pTbl');
+      if (!tableInput) return { msg: 'Nomor meja sudah dikenali, tetapi field Nomor Meja belum diaktifkan di pengaturan pembayaran. Keranjang tetap tersimpan; aktifkan field itu sebelum checkout.', warn: true };
+      tableInput.value = nat.table;
+    }
+    if (nat.pay.method) setM(nat.pay.method);
+    if (nat.pay.amount != null) {
+      if ((nat.pay.method || 'Tunai') !== 'Tunai') return { msg: 'Jumlah uang diterima hanya bisa diisi untuk pembayaran Tunai. Pilih Tunai atau selesaikan metode pembayaran di layar.', warn: true };
+      setM('Tunai'); quick(nat.pay.amount);
+    }
+    var totals = payTotals(), received = nat.pay.amount;
+    if ($('#payOk').disabled) {
+      var shortage = Math.max(0, totals.payable - (received == null ? 0 : received));
+      return { msg: shortage ? M('short') + ': ' + money2(shortage) : 'Lengkapi jumlah pembayaran di layar sebelum konfirmasi.', warn: true };
+    }
+    st.pending = { kind: 'naturalPay' };
+    var summary = 'Total ' + money2(totals.payable);
+    if (received != null) summary += ' · Diterima ' + money2(received) + ' · Kembalian ' + money2(Math.max(0, received - totals.payable));
+    if (nat.type) summary += ' · ' + nat.type;
+    if (nat.table) summary += ' · Meja ' + nat.table;
+    if (nat.note) summary += ' · Catatan ' + nat.note;
+    return { msg: (added.msg ? added.msg + '\n' : '') + summary + '. Ucapkan “Ya” untuk memproses pembayaran dan mencetak struk, atau “Tidak” untuk membatalkan.', say: summary + '. Ucapkan ya untuk konfirmasi pembayaran.', big: true };
+  }
+
   function submit(input) {
     var alts = Array.isArray(input) ? input : [input];
     alts = alts.map(function (x) { return String(x || '').trim(); }).filter(Boolean);
     if (!alts.length) return;
     lload(); st.ctxMiss = true;
     st.busy = true; paint(); $('#vcTx').textContent = '“' + alts[0] + '”';
+    if (alts.length === 1) {
+      var natural = null;
+      try { natural = parseNatural(alts[0]); } catch (e) { console.error('voice natural parse', e); }
+      if (natural) {
+        var naturalOut;
+        try { naturalOut = runNatural(natural); } catch (e) { console.error('voice natural checkout', e); naturalOut = { msg: M('err'), warn: true }; }
+        st.busy = false; paint(); showResult(naturalOut); return;
+      }
+    }
     var bestP = null, bestS = -1;
     alts.forEach(function (a, idx) {
       var p = parse(a), sc = intentScore(p) - idx * 0.01;
