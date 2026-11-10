@@ -342,12 +342,12 @@
   st.lang = pickLang();
 
   var LM = {
-    id: { learned: 'Diingat', aiAsk: 'Menanyakan AI…', wakeMiss: 'Diabaikan, awali dengan', searchMenu: 'Cari menu…', vAdd: 'Tambah', vRemove: 'Hapus', vReduce: 'Kurangi' },
-    en: { learned: 'Remembered', aiAsk: 'Asking AI…', wakeMiss: 'Ignored, start with', searchMenu: 'Search menu…', vAdd: 'Add', vRemove: 'Remove', vReduce: 'Reduce' },
-    ms: { learned: 'Diingati', aiAsk: 'Bertanya AI…', wakeMiss: 'Diabaikan, mulakan dengan', searchMenu: 'Cari menu…', vAdd: 'Tambah', vRemove: 'Padam', vReduce: 'Kurangkan' }
+    id: { learned: 'Diingat', pttHint: 'Tahan, bicara, lepas', aiAsk: 'Menanyakan AI…', wakeMiss: 'Diabaikan, awali dengan', searchMenu: 'Cari menu…', vAdd: 'Tambah', vRemove: 'Hapus', vReduce: 'Kurangi' },
+    en: { learned: 'Remembered', pttHint: 'Hold, speak, release', aiAsk: 'Asking AI…', wakeMiss: 'Ignored, start with', searchMenu: 'Search menu…', vAdd: 'Add', vRemove: 'Remove', vReduce: 'Reduce' },
+    ms: { learned: 'Diingati', pttHint: 'Tahan, cakap, lepas', aiAsk: 'Bertanya AI…', wakeMiss: 'Diabaikan, mulakan dengan', searchMenu: 'Cari menu…', vAdd: 'Tambah', vRemove: 'Padam', vReduce: 'Kurangkan' }
   };
   Object.keys(LM).forEach(function (l) { Object.keys(LM[l]).forEach(function (k) { MSG[l][k] = LM[l][k]; }); });
-  function cfg() { var c = (typeof db !== 'undefined' && db.set && db.set.vc) || {}; return { on: c.on !== 0 && c.on !== false, lang: c.lang || 'auto', speak: c.speak !== 0 && c.speak !== false, pay: c.pay !== 0 && c.pay !== false, confirm: c.confirm === 1 || c.confirm === true, al: Array.isArray(c.al) ? c.al : [], always: c.always === 1 || c.always === true, wake: c.wake !== 0 && c.wake !== false, wakeWord: String(c.wakeWord || 'ordela'), direct: c.direct !== 0 && c.direct !== false, learn: c.learn !== 0 && c.learn !== false, ai: c.ai !== 0 && c.ai !== false }; }
+  function cfg() { var c = (typeof db !== 'undefined' && db.set && db.set.vc) || {}; return { on: c.on !== 0 && c.on !== false, lang: c.lang || 'auto', speak: c.speak !== 0 && c.speak !== false, pay: c.pay !== 0 && c.pay !== false, confirm: c.confirm === 1 || c.confirm === true, al: Array.isArray(c.al) ? c.al : [], always: c.always === 1 || c.always === true, wake: c.wake !== 0 && c.wake !== false, wakeWord: String(c.wakeWord || 'ordela'), direct: c.direct !== 0 && c.direct !== false, learn: c.learn !== 0 && c.learn !== false, ai: c.ai !== 0 && c.ai !== false, fab: c.fab !== 0 && c.fab !== false }; }
   function M(k) { return (MSG[st.lang] || MSG.id)[k] || MSG.id[k] || ''; }
   function money2(v) { return typeof money === 'function' ? money(v) : String(v); }
   function sellable() { return (typeof db !== 'undefined' && db.items ? db.items : []).filter(function (i) { return !i.ns; }); }
@@ -672,8 +672,31 @@
     b.onclick = function () { openPanel(true); };
     host.appendChild(b); applyCfg();
   }
+  /* tombol suara melayang: tahan = bicara (lepas untuk selesai), ketuk = buka panel */
+  function injectFab() {
+    var host = $('#v-pos'); if (!host || $('#vcFab')) return;
+    var b = document.createElement('button'); b.type = 'button'; b.id = 'vcFab'; b.className = 'vc-fab'; b.innerHTML = ICON_MIC;
+    b.setAttribute('aria-label', 'Perintah suara (tahan untuk bicara)'); b.title = M('pttHint');
+    var timer = 0, down = false, held = false;
+    b.oncontextmenu = function (e) { e.preventDefault(); };
+    b.onpointerdown = function (e) {
+      if (!cfg().on) return; down = true; held = false; try { b.setPointerCapture(e.pointerId); } catch (x) { /* abaikan */ }
+      timer = setTimeout(function () {
+        if (!down) return; held = true; if (!SR) { openPanel(false); return; }
+        try { if (navigator.vibrate) navigator.vibrate(15); } catch (x) { /* abaikan */ }
+        st.ptt = true; b.classList.add('hold'); toastMsg('🎙 ' + M('pttHint'), false); startListen();
+      }, 300);
+    };
+    var end = function () {
+      if (!down) return; down = false; clearTimeout(timer); b.classList.remove('hold');
+      if (held) { held = false; if (st.ptt) stopListen(false); } else if (st.open) closePanel(); else openPanel(true);
+    };
+    b.onpointerup = end; b.onpointercancel = end;
+    host.appendChild(b); applyCfg();
+  }
   function paint() {
     var p = $('#vcP'); if (!p) return;
+    var fb = $('#vcFab'); if (fb) fb.classList.toggle('rec', st.listening);
     p.classList.toggle('on', st.listening);
     $('#vcSt').textContent = st.listening ? M('listen') : st.busy ? M('proc') : (SR ? M('idle') : M('nosr'));
     $('#vcIn').placeholder = M('typeHolder'); $('#vcSend').textContent = M('send');
@@ -685,6 +708,7 @@
     if (!st.heard && !$('#vcRes').textContent) $('#vcRes').textContent = '';
   }
   function showResult(r) {
+    if (!st.open && root.document && !st.listening) { if ((r.chips || []).length) openPanel(false); else if (r.msg) toastMsg(r.msg, !!r.warn); }
     var el = $('#vcRes'); el.textContent = r.msg || ''; el.classList.toggle('warn', !!r.warn); el.classList.toggle('big', !!r.big);
     var ch = $('#vcCh');
     ch.innerHTML = (r.chips || []).map(function (c) { return chipHtml(c); }).join('');
@@ -716,7 +740,8 @@
     } catch (e) { st.speaking = false; }
   }
   function applyCfg() {
-    var on = cfg().on, m = $('#vcMic'); if (m) m.hidden = !on;
+    var on = cfg().on, fab = cfg().fab, m = $('#vcMic'); if (m) m.hidden = !on || fab;
+    var f = $('#vcFab'); if (f) f.hidden = !on || !fab;
     if (!on && st.open) closePanel();
     if (!on && root.speechSynthesis) try { root.speechSynthesis.cancel(); } catch (e) { /* abaikan */ }
   }
@@ -745,8 +770,8 @@
     if (root.speechSynthesis) try { root.speechSynthesis.cancel(); } catch (e) { /* abaikan */ }
     var rec;
     try { rec = new SR(); } catch (e) { showResult({ msg: M('err'), warn: true }); return; }
-    rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 3;
-    var finalAlts = null, gotErr = false;
+    rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = !!st.ptt; rec.interimResults = true; rec.maxAlternatives = 3;
+    var finalAlts = null, gotErr = false, acc = [];
     rec.onstart = function () { st.listening = true; st.heard = ''; $('#vcTx').textContent = ''; paint(); };
     rec.onresult = function (ev) {
       var interim = '', fin = null;
@@ -755,8 +780,9 @@
         if (r.isFinal) { fin = []; for (var j = 0; j < r.length; j++) fin.push(r[j].transcript); }
         else interim += r[0].transcript;
       }
-      if (fin) { finalAlts = fin; $('#vcTx').textContent = '“' + fin[0] + '”'; }
+      if (fin) { if (st.ptt) { acc.push(fin[0]); finalAlts = [acc.join(' ')]; } else finalAlts = fin; $('#vcTx').textContent = '“' + (st.ptt ? acc.join(' ') : fin[0]) + '”'; }
       else $('#vcTx').textContent = '“' + interim + '”';
+      if (st.ptt && !st.open) toastMsg('🎙 ' + (acc.join(' ') + ' ' + interim).trim(), false);
     };
     rec.onerror = function (ev) {
       gotErr = true; var e = ev && ev.error;
@@ -767,6 +793,7 @@
       else if (e !== 'aborted') showResult({ msg: M('err'), warn: true });
     };
     rec.onend = function () {
+      var wasPtt = st.ptt; st.ptt = false; if (wasPtt) bg.pausedUntil = Date.now() + 600;
       st.listening = false; st.rec = null; paint();
       if (finalAlts) { var alts = finalAlts; finalAlts = null; submit(alts); }
       else if (!gotErr && st.open && !$('#vcTx').textContent) showResult({ msg: M('nospeech'), warn: true });
@@ -860,7 +887,7 @@
 
   /* ---------- mode selalu mendengarkan (tanpa menekan mikrofon) ---------- */
   var bg = { rec: null, run: false, fail: 0, blocked: false, pausedUntil: 0, next: 0 };
-  function setLive(on) { var m = $('#vcMic'); if (m) { m.classList.toggle('live', !!on); m.title = on ? M('live') : M('mic'); } }
+  function setLive(on) { var fb = $('#vcFab'); if (fb) fb.classList.toggle('live', !!on); var m = $('#vcMic'); if (m) { m.classList.toggle('live', !!on); m.title = on ? M('live') : M('mic'); } }
   function bgWanted() {
     var c = cfg();
     return !!(SR && c.on && c.always && !document.hidden && !st.listening && !st.speaking && !bg.blocked && Date.now() >= bg.pausedUntil && typeof S !== 'undefined' && S.view === 'pos');
@@ -956,8 +983,8 @@
   function localStorageLang() { try { return localStorage.getItem('ordela_vc_lang'); } catch (e) { return null; } }
   /* ---------- pasang ---------- */
   function init() {
-    ensureUI(); injectMic(); setInterval(supervise, 300);
-    var n = 0, t = setInterval(function () { injectMic(); if ($('#vcMic') || ++n > 40) clearInterval(t); }, 500);
+    ensureUI(); injectMic(); injectFab(); setInterval(supervise, 300);
+    var n = 0, t = setInterval(function () { injectMic(); injectFab(); if (($('#vcMic') && $('#vcFab')) || ++n > 40) clearInterval(t); }, 500);
   }
   root.VC = { refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, D: { log: function () { return DG.slice(); }, bg: function () { return { live: !!bg.run, blocked: !!bg.blocked, fail: bg.fail, wanted: bgWanted() }; } }, L: {
     data: function () { var L = lload(); return JSON.parse(JSON.stringify(L)); },

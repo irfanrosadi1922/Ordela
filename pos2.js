@@ -667,7 +667,7 @@ P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSa
 
 
 /* ================= PENGATURAN VOICE CASHIER (db.set.vc) ================= */
-P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
+P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,fab:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
 P2.voiceSet=function(){
   closeAll();
   const c=P2.vcCfg(),sup=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
@@ -679,6 +679,7 @@ P2.voiceSet=function(){
   <h5 class="invh">Bahasa</h5>
   <div class="chips" id="vcLg">${[['auto','Ikuti bahasa aplikasi'],['id','Indonesia'],['en','English'],['ms','Melayu']].map(([k,n])=>`<button class="chip ${c.lang===k?'on':''}" onclick="P2.vcLang('${k}')">${n}</button>`).join('')}</div>
   <h5 class="invh">Mode suara</h5>
+  ${T('fab','Tombol suara melayang','Tahan untuk bicara, lepas untuk selesai')}
   ${T('always','Selalu mendengarkan','Tanpa menekan mikrofon')}
   ${T('wake','Pakai kata panggil','Mis. “Ordela, tambah dua nasi goreng”')}
   <input class="fi" id="vcWord" maxlength="20" placeholder="Kata panggil" value="${esc(c.wakeWord||'ordela')}" onchange="P2.vcWord(this.value)" style="margin:2px 0 6px">
