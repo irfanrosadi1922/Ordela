@@ -923,7 +923,7 @@
     return a + ' ' + x;
   }
   /* sisa ucapan yang belum diproses setelah `done` (hasil kumulatif yang datang terlambat tidak diproses ulang) */
-  function restAfter(bg.lastDone, t) {
+  function restAfter(done, t) {
     var dw = wl(done), xw = wl(t); if (!dw.length || !xw.length) return t;
     var k = lead(dw, xw);
     if (k === xw.length) return '';                             // sudah pernah diproses
@@ -941,10 +941,10 @@
     var flush = function (how) {                               // proses satu ucapan utuh sekali saja
       clearTimeout(tm); if (!buf) return; var t = buf, a = [t].concat(alt.slice(1)); buf = ''; alt = [];
       if (bg.lastDone && Date.now() - bg.lastDoneAt < 3500) {                // hasil kumulatif terlambat: jangan proses ulang yang sama
-        var rest = restAfter(done, t);
+        var rest = restAfter(bg.lastDone, t);
         if (!rest) { dg('abaikan', t); bg.lastDoneAt = Date.now(); return; }
         if (rest !== t) { dg('sisa', rest); bg.lastDone = mergeT(bg.lastDone, t); a = [rest]; t = rest; } else bg.lastDone = t;
-      } else done = t;
+      } else bg.lastDone = t;
       bg.lastDoneAt = Date.now();
       dg(how, t); try { heardBg(a); } catch (e) { console.error('voice-bg', e); }
     };
