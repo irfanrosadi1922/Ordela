@@ -340,7 +340,7 @@
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var SR = root.SpeechRecognition || root.webkitSpeechRecognition;
-  var st = { open: false, listening: false, rec: null, lang: 'id', speak: true, last: null, pending: null, busy: false, timer: 0, heard: '' };
+  var st = { open: false, listening: false, rec: null, lang: 'id', speak: true, last: null, pending: null, busy: false, timer: 0, heard: '', hist: [] };
   try { st.speak = localStorage.getItem('ordela_vc_speak') !== '0'; } catch (e) { /* abaikan */ }
   function pickLang() { var l = null; try { l = localStorage.getItem('ordela_vc_lang'); } catch (e) { /* abaikan */ } if (l && MSG[l]) return l; var cl = cfg().lang; if (MSG[cl]) return cl; try { if (typeof lang === 'function' && MSG[lang()]) return lang(); } catch (e) { /* abaikan */ } return 'id'; }
   st.lang = pickLang();
@@ -360,6 +360,7 @@
   function qtyOf(id) { return linesOf(id).reduce(function (a, k) { return a + (S.cart[k] || 0); }, 0); }
 
   /* ---------- aksi keranjang (memakai fungsi Ordela yang ada) ---------- */
+  function pushHist(id, d) { if (!d) return; st.hist.push({ id: id, d: d }); if (st.hist.length > 40) st.hist.shift(); }
   function actAdd(it, qty) {
     var hasM = typeof hasMods === 'function' && hasMods(it);
     if (it.stock <= 0) return { ok: false, msg: it.name + ': ' + M('stock') };
@@ -372,7 +373,7 @@
     chg(it.id, qty);
     var got = qtyOf(it.id) - before;
     if (got <= 0) return { ok: false, msg: it.name + ': ' + M('stock') };
-    st.last = it.id;
+    st.last = it.id; pushHist(it.id, got);
     return { ok: true, msg: M('added') + ' ' + got + '× ' + it.name + (got < qty ? ' (' + M('stock').toLowerCase() + ')' : ''), warn: got < qty };
   }
   function actReduce(it, qty, all) {
@@ -384,7 +385,7 @@
       chg(k, -d); left -= d;
       if (!S.cart[k]) ks.pop();
     }
-    st.last = qtyOf(it.id) > 0 ? it.id : null;
+    st.last = qtyOf(it.id) > 0 ? it.id : null; pushHist(it.id, qtyOf(it.id) - have);
     return { ok: true, msg: (qtyOf(it.id) > 0 ? M('removed') + ' ' + done + '× ' : M('removedAll') + ' ') + it.name };
   }
   function actSet(it, qty) {
@@ -396,7 +397,7 @@
     var want = Math.max(0, qty - others);
     chg(k, want - cur);
     var now = qtyOf(it.id);
-    st.last = now > 0 ? it.id : null;
+    st.last = now > 0 ? it.id : null; pushHist(it.id, now - (others + cur));
     return { ok: true, msg: M('set') + ': ' + it.name + ' × ' + now, warn: now !== qty };
   }
 
@@ -485,19 +486,27 @@
     var res = [], chips = null, show = null; st.unres = [];
     if (p.intent === 'empty') return { msg: M('hint') };
     if (p.intent === 'unknown') return { msg: M('nomatch'), warn: true, noop: true };
+    if (st.pending && st.pending.kind === 'naturalPay' && ['yes', 'no', 'total', 'cart', 'tableMeja', 'tableOrder', 'close'].indexOf(p.intent) < 0) { st.pending = null; if ($('#payOk') && typeof closeModal === 'function') closeModal(); }   // pesanan berubah: konfirmasi lama batal
     if (p.intent === 'close') { setTimeout(closePanel, 50); return { msg: '' }; }
     if (p.intent === 'yes' || p.intent === 'no') {
       var pd = st.pending; st.pending = null;
-      if (!pd) return { msg: M('nomatch'), warn: true };
+      if (!pd) return { msg: M('nomatch'), warn: true, noop: true };
       if (p.intent === 'no') {
-        if (pd.kind === 'naturalPay') return { msg: 'Konfirmasi dibatalkan. Keranjang tetap tersimpan dan pembayaran belum diproses.' };
+        if (pd.kind === 'naturalPay') { if ($('#payOk') && typeof closeModal === 'function') closeModal(); return { msg: 'Konfirmasi dibatalkan. Keranjang tetap tersimpan dan pembayaran belum diproses.' }; }
         return { msg: M('cancelled') };
       }
       if (pd.kind === 'naturalPay') {
         var payButton = $('#payOk');
+        if (Date.now() - (pd.at || 0) > 120000) { if (payButton && typeof closeModal === 'function') closeModal(); return { msg: 'Konfirmasi kedaluwarsa. Ucapkan perintah bayar lagi.', warn: true }; }
         if (!payButton || payButton.disabled) { st.pending = pd; return { msg: 'Pembayaran belum valid. Periksa jumlah yang diterima di layar.', warn: true }; }
-        closePanel(); payButton.click();
-        return { msg: 'Konfirmasi diterima. Ordela menjalankan checkout dan cetak struk satu kali.', big: true };
+        if (st.paying) return { msg: '', noop: true };                                 // satu transaksi hanya diproses sekali
+        st.paying = true; setTimeout(function () { st.paying = false; }, 3000);
+        var n1 = db.orders.length, tt = payTotals();
+        closePanel(); checkout();
+        if (db.orders.length <= n1) { st.paying = false; return { msg: 'Transaksi gagal diproses. Periksa layar pembayaran.', warn: true }; }
+        st.last = null; st.hist = [];
+        var no1 = db.orders[0] && db.orders[0].no;
+        return { msg: 'Transaksi berhasil' + (no1 ? ' · ' + no1 : '') + ' · ' + money2(tt.payable) + '. Struk dicetak sekali.', say: 'Transaksi berhasil', big: true, paid: true };
       }
       if (pd.kind === 'clear') { clearCart(); st.last = null; return { msg: M('cleared') }; }
       if (pd.kind === 'add') { var bi = find(pd.id); if (bi) { var ba = actAdd(bi, pd.qty); return { msg: ba.msg, warn: !ba.ok || ba.warn }; } }
@@ -540,7 +549,7 @@
       if (p.method && typeof setM === 'function' && $('#pM')) setM(p.method);
       if (p.amount != null && $('#pPaid')) { if (p.method && p.method !== 'Tunai') return { msg: 'Jumlah uang diterima hanya bisa diisi untuk pembayaran Tunai.', warn: true }; setM('Tunai'); quick(p.amount); }
       if ($('#payOk') && !$('#payOk').disabled) {
-        st.pending = { kind: 'naturalPay' };
+        st.pending = { kind: 'naturalPay', at: Date.now() };
         var paySum = payTotals().payable;
         return { msg: M('total') + ': ' + money2(paySum) + '. Ucapkan “Ya” untuk memproses pembayaran dan mencetak struk, atau “Tidak” untuk membatalkan.', big: true };
       }
@@ -657,7 +666,7 @@
     return { skip: skip, msg: '“' + word + '” = ?  ' + r3.item.name, chips: [mk(M('vAdd'), 'add', 0), mk(M('vRemove'), 'rm', 0), mk(M('vReduce'), 'rm', 1)] };
   }
   function cartCount() { return Object.keys(S.cart).reduce(function (a, k) { return a + (S.cart[k] || 0); }, 0); }
-  function spokenMoney(v) { try { return new Intl.NumberFormat(SRLANG[st.lang] || 'id-ID', { maximumFractionDigits: 2 }).format(v); } catch (e) { return String(v); } }
+  function spokenMoney(v) { try { return new Intl.NumberFormat(SRLANG[st.lang] || 'id-ID', { maximumFractionDigits: 2 }).format(v) + (typeof curWord === 'function' && curWord() ? ' ' + curWord() : ''); } catch (e) { return String(v); } }
 
   /* ---------- UI ---------- */
   var ICON_MIC = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
@@ -886,154 +895,272 @@
     });
     return msgs;
   }
-  /* ---------- Voice Checkout Natural: ekstrak field yang memang ada di invoice ---------- */
-  function parseNatural(raw) {
-    var words = clean(raw).split(' ').filter(Boolean);
-    var nat = { items: '', type: null, table: null, tableAmbiguous: false, orderNo: null, note: '', pay: null };
-    var changed = false, i, r;
-
-    // Pembayaran selalu dipisahkan dari daftar menu.
+  /* ---------- Voice Checkout Natural v2: ucapan bebas -> field invoice Ordela ---------- */
+  var N_NEG = { jangan: 1, jgn: 1, tanpa: 1, tidak: 1, tak: 1, ga: 1, gak: 1, nggak: 1, enggak: 1, no: 1, without: 1, dont: 1 };
+  var N_SKIP = { pakai: 1, pake: 1, pakek: 1, usah: 1, perlu: 1, mau: 1, ada: 1, use: 1, add: 1, ditambah: 1 };
+  var N_AFTER = { lebih: 1, extra: 1, banyak: 1, sedikit: 1, dikit: 1, kurang: 1, secukupnya: 1, more: 1, less: 1 };
+  var N_SEP = { dipisah: 1, terpisah: 1, dipisahkan: 1, separate: 1, separately: 1 };
+  var N_SEP_PRE = { pisah: 1, pisahkan: 1 };
+  var N_ADJ2 = { goreng: 1, putih: 1, merah: 1, hijau: 1, kacang: 1, kecap: 1, manis: 1, asin: 1, bombay: 1, mentah: 1, rawit: 1, cabai: 1, cabe: 1, mayo: 1, tomat: 1 };
+  var N_PEDAS = { sedang: 1, banget: 1, sekali: 1, biasa: 1, medium: 1, hot: 1, mild: 1, level: 1 };
+  var N_EDGE = { terus: 1, lalu: 1, kemudian: 1, dan: 1, sama: 1, juga: 1, serta: 1, then: 1, and: 1, dengan: 1, plus: 1, ya: 1, yah: 1, dong: 1, deh: 1, aja: 1, saja: 1, lah: 1, kak: 1, mas: 1, mbak: 1, bang: 1, tolong: 1, please: 1, nih: 1, untuk: 1, buat: 1, yang: 1, tadi: 1, saya: 1, aku: 1, mau: 0 };
+  function nStem(w) { return (w.length >= 6 && /nya$/.test(w) && !isNumTok(w)) ? w.slice(0, -3) : w; }
+  function nIsTrig(w) { return !!(N_NEG[w] || N_AFTER[w] || N_SEP[w] || N_SEP_PRE[w] || N_PEDAS[w]); }
+  function nIsVerb(w) { return has(V_ADD, w) || has(V_REMOVE, w) || has(V_SET, w) || has(V_REDUCE, w) || !!FILLER[w] || !!N_EDGE[w]; }
+  function nOkX(w) { return w !== undefined && w !== null && !isNumTok(w) && !nIsTrig(w) && !nIsVerb(w) && !/^\d/.test(w); }
+  function nTrim(words) {
+    var a = 0, b = words.length;
+    while (a < b && N_EDGE[words[a]]) a++;
+    while (b > a && N_EDGE[words[b - 1]]) b--;
+    return words.slice(a, b);
+  }
+  /* ekstrak catatan (jangan pedas, kuah lebih, sambal dipisah, tanpa bawang, ...) -> { notes, words } */
+  function extractNotes(words) {
+    var notes = [], used = [], i, j;
+    var mark = function (a, b) { for (var k = a; k < b; k++) used[k] = true; };
     for (i = 0; i < words.length; i++) {
-      if (PAYV[words[i]]) {
-        var pc = parsePayClause(words.slice(i + 1));
-        if (pc.amount !== null || pc.method) {
-          nat.pay = pc; words = words.slice(0, i); changed = true;
+      if (used[i]) continue;
+      var w = words[i], x1, x2, endX;
+      if (N_NEG[w]) {                                                       // jangan pedas / tidak pakai bawang / tanpa bawang goreng
+        j = i + 1; while (words[j] && N_SKIP[words[j]]) j++;
+        if (nOkX(words[j]) && !used[j]) {
+          endX = j + 1; if (N_ADJ2[words[endX]] && !used[endX]) endX++;
+          notes.push(words.slice(i, endX).join(' ')); mark(i, endX); i = endX - 1; continue;
         }
-        break;
+        continue;
+      }
+      if (N_SEP_PRE[w]) {                                                   // pisahkan sambal
+        if (nOkX(words[i + 1]) && !used[i + 1]) { notes.push(words[i + 1] + ' dipisah'); mark(i, i + 2); i++; }
+        continue;
+      }
+      if (N_SEP[w]) {                                                       // sambal dipisah / bungkus terpisah
+        if (i > 0 && !used[i - 1] && nOkX(words[i - 1])) { notes.push(words[i - 1] + ' ' + w); mark(i - 1, i + 1); }
+        continue;
+      }
+      if ((w === 'extra' || w === 'more') && nOkX(words[i + 1]) && !used[i + 1]) {   // extra bawang
+        notes.push('extra ' + words[i + 1]); mark(i, i + 2); i++; continue;
+      }
+      if (N_AFTER[w]) {                                                     // kuah lebih / bawang goreng sedikit
+        if (i > 0 && !used[i - 1] && nOkX(words[i - 1]) && !(w === 'kurang' && isNumTok(words[i + 1] || ''))) {
+          var s = i - 1;
+          if (N_ADJ2[words[i - 1]] && i > 1 && !used[i - 2] && nOkX(words[i - 2])) s = i - 2;
+          notes.push(words.slice(s, i + 1).join(' ')); mark(s, i + 1);
+        }
+        continue;
+      }
+      if (w === 'pedas') {                                                  // pedas sedang / pedas banget
+        j = i + 1;
+        if (N_PEDAS[words[j]] && !used[j]) {
+          endX = j + 1; if (words[j] === 'level' && words[endX] && isNumTok(words[endX])) endX++;
+          notes.push(words.slice(i, endX).join(' ')); mark(i, endX); i = endX - 1;
+        }
       }
     }
+    return { notes: notes, words: words.filter(function (_, k) { return !used[k]; }) };
+  }
+  function addNote(text) {
+    var cur = (S.note || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    String(text || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean).forEach(function (n) { if (cur.map(function (c) { return c.toLowerCase(); }).indexOf(n.toLowerCase()) < 0) cur.push(n); });
+    S.note = cur.join(', ').slice(0, 120);
+    if (typeof noteUI === 'function') noteUI();
+    var ni = $('#pNote'); if (ni) ni.value = S.note;
+  }
+  function payMethods() { return (typeof PAY_M !== 'undefined' && PAY_M && PAY_M.length) ? PAY_M : ['Tunai', 'Kartu', 'QRIS', 'E-Wallet']; }
+  function methodFrom(words) {
+    var s = words.join(' ');
+    var pm = payMethods(), k;
+    for (k = 0; k < pm.length; k++) { var mc = clean(pm[k]); if (mc && new RegExp('(^| )' + mc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '( |$)').test(s)) return { method: pm[k] }; }
+    var dm = detectMethod(s);
+    if (dm) return { method: dm };
+    var bad = /\b(transfer|tf|bank|cicilan|paylater|va|virtual account)\b/.exec(s);
+    return bad ? { unknown: bad[1] } : {};
+  }
+  function lastAddedName() { var it = st.last && typeof find === 'function' ? find(st.last) : null; return it ? it.name : ''; }
+  function parseNatural(raw) {
+    var words = clean(raw).split(' ').filter(Boolean).map(nStem);
+    var nat = { items: '', type: null, typeConflict: false, table: null, tableAmbiguous: false, orderNo: null, note: '', pay: null, undo: false };
+    var changed = false, i, r;
+    if (!words.length) return null;
 
-    // Catatan eksplisit: "catatan kuah lebih, bawang lebih".
-    var ni = words.findIndex(function (w) { return w === 'catatan' || w === 'note' || w === 'notes' || w === 'permintaan'; });
-    if (ni >= 0) {
-      nat.note = words.slice(ni + 1).join(' ').slice(0, 120);
-      words = words.slice(0, ni); changed = true;
-    } else {
-      // Frasa catatan umum yang sudah dicontohkan pengguna.
-      var notePhrases = [['kuah','lebih'], ['bawang','lebih']];
-      var foundNotes = [];
-      notePhrases.forEach(function (phrase) {
-        for (var j = 0; j <= words.length - phrase.length; j++) {
-          if (phrase.every(function (w, k) { return words[j + k] === w; })) {
-            foundNotes.push(phrase.join(' ')); words.splice(j, phrase.length); changed = true; break;
-          }
-        }
-      });
-      nat.note = foundNotes.join(', ');
+    // "batalkan pesanan yang terakhir" -> batalkan item yang terakhir ditambahkan (bukan transaksi yang sudah selesai)
+    var REF = { terakhir: 1, tadi: 1, barusan: 1, baru: 1, last: 1, sebelumnya: 1, previous: 1 }, CANC = function (w) { return has(V_REMOVE, w); };
+    if (CANC(words[0]) || (words[1] && CANC(words[1]) && N_EDGE[words[0]])) {
+      var left = words.filter(function (w) { return !CANC(w) && !REF[w] && !N_EDGE[w] && !FILLER[w] && w !== 'pesanan' && w !== 'item' && w !== 'menu' && w !== 'order' && w !== 'yang' && w !== 'paling' && w !== 'itu' && w !== 'the' && w !== 'one' && w !== 'that' && w !== 'saja' && w !== 'akhir'; });
+      if (!left.length && words.some(function (w) { return REF[w]; })) { nat.undo = true; return nat; }
     }
 
-    // Nomor meja atau nomor pesanan.
+    // catatan eksplisit: "catatan kuah lebih" -> sisa ucapan jadi catatan
+    var ni = words.findIndex(function (w) { return w === 'catatan' || w === 'note' || w === 'notes' || w === 'permintaan'; });
+    var explicitNote = '';
+    if (ni >= 0) { explicitNote = words.slice(ni + 1).join(' ').slice(0, 120); words = words.slice(0, ni); changed = true; }
+
+    // nomor meja / nomor pesanan
     for (i = 0; i < words.length; i++) {
-      var start = -1, kind = '';
-      if (words[i] === 'nomor' && words[i + 1] === 'meja') { start = i + 2; kind = 'table'; }
-      else if (words[i] === 'meja' || words[i] === 'table') { start = i + 1; kind = 'table'; }
-      else if (words[i] === 'nomor' && words[i + 1] === 'pesanan') { start = i + 2; kind = 'order'; }
-      else if (words[i] === 'nomor' && words[i + 1] !== undefined) { start = i + 1; kind = 'ambiguous'; }
+      var start = -1, kind = '', w0 = words[i], w1 = words[i + 1], w2 = words[i + 2];
+      var isNo = (w0 === 'nomor' || w0 === 'nomer' || w0 === 'nombor' || w0 === 'no' || w0 === 'number');
+      if (isNo && (w1 === 'meja' || w1 === 'table')) { start = i + 2; kind = 'table'; }
+      else if ((w0 === 'meja' || w0 === 'table') && (w1 === 'nomor' || w1 === 'nomer' || w1 === 'nombor' || w1 === 'no' || w1 === 'number')) { start = i + 2; kind = 'table'; }
+      else if (w0 === 'meja' || w0 === 'table') { start = i + 1; kind = 'table'; }
+      else if (isNo && (w1 === 'pesanan' || w1 === 'order' || w1 === 'antrian' || w1 === 'antrean')) { start = i + 2; kind = 'order'; }
+      else if ((w0 === 'pesanan' || w0 === 'order') && (w1 === 'nomor' || w1 === 'nomer' || w1 === 'no' || w1 === 'number' || w1 === 'nombor')) { start = i + 2; kind = 'order'; }
+      else if (isNo && w1 !== undefined) { start = i + 1; kind = 'ambiguous'; }
       if (start < 0 || start >= words.length) continue;
       r = readNum(words, start);
-      var val = r ? String(r.n) : (/^[a-z0-9]{1,12}$/.test(words[start]) ? words[start] : '');
+      var val = r ? String(r.n) : (/^[a-z]?\d{1,3}[a-z]?$/.test(words[start]) ? words[start] : '');
       if (!val) continue;
       var end = start + (r ? r.len : 1);
-      if (kind === 'table') nat.table = val;
-      else if (kind === 'order') nat.orderNo = val;
-      else { nat.table = val; nat.tableAmbiguous = true; }
-      words.splice(i, end - i); changed = true; break;
+      if (kind === 'table') nat.table = val; else if (kind === 'order') nat.orderNo = val; else { nat.table = val; nat.tableAmbiguous = true; }
+      words.splice(i, end - i); changed = true; i--;
     }
 
-    // Jenis transaksi persis mengikuti pilihan #otype yang tersedia di Ordela.
+    // catatan bebas
+    var en = extractNotes(words);
+    if (en.notes.length) { words = en.words; changed = true; }
+    nat.note = en.notes.concat(explicitNote ? [explicitNote] : []).join(', ').slice(0, 120);
+
+    // jenis / sumber pesanan: persis pilihan #otype yang tersedia
     var typeRules = [
-      { words: ['takeaway'], value: 'Takeaway' }, { words: ['take','away'], value: 'Takeaway' },
-      { words: ['bungkus'], value: 'Takeaway' }, { words: ['tapau'], value: 'Takeaway' },
-      { words: ['bawa','pulang'], value: 'Takeaway' },
-      { words: ['dine','in'], value: 'Dine In' }, { words: ['makan','sini'], value: 'Dine In' },
-      { words: ['makan','di','sini'], value: 'Dine In' },
-      { words: ['delivery'], value: 'Delivery' }, { words: ['gofood'], value: 'GoFood' }, { words: ['go','food'], value: 'GoFood' },
-      { words: ['grabfood'], value: 'GrabFood' }, { words: ['grab','food'], value: 'GrabFood' }, { words: ['shopeefood'], value: 'ShopeeFood' }, { words: ['shopee','food'], value: 'ShopeeFood' }
+      { words: ['takeaway'], value: 'Takeaway' }, { words: ['take', 'away'], value: 'Takeaway' }, { words: ['take', 'out'], value: 'Takeaway' }, { words: ['takeout'], value: 'Takeaway' }, { words: ['to', 'go'], value: 'Takeaway' },
+      { words: ['bungkus'], value: 'Takeaway' }, { words: ['dibungkus'], value: 'Takeaway' }, { words: ['tapau'], value: 'Takeaway' }, { words: ['bawa', 'pulang'], value: 'Takeaway' }, { words: ['bawa', 'balik'], value: 'Takeaway' },
+      { words: ['dine', 'in'], value: 'Dine In' }, { words: ['makan', 'sini'], value: 'Dine In' }, { words: ['makan', 'di', 'sini'], value: 'Dine In' }, { words: ['makan', 'ditempat'], value: 'Dine In' }, { words: ['makan', 'di', 'tempat'], value: 'Dine In' }, { words: ['eat', 'in'], value: 'Dine In' },
+      { words: ['delivery'], value: 'Delivery' }, { words: ['antar'], value: 'Delivery' }, { words: ['diantar'], value: 'Delivery' },
+      { words: ['gofood'], value: 'GoFood' }, { words: ['go', 'food'], value: 'GoFood' }, { words: ['gojek'], value: 'GoFood' },
+      { words: ['grabfood'], value: 'GrabFood' }, { words: ['grab', 'food'], value: 'GrabFood' }, { words: ['shopeefood'], value: 'ShopeeFood' }, { words: ['shopee', 'food'], value: 'ShopeeFood' }
     ];
     var types = [];
     for (i = 0; i < words.length; i++) {
       for (var tr = 0; tr < typeRules.length; tr++) {
         var rule = typeRules[tr], ok = true;
         for (var z = 0; z < rule.words.length; z++) if (words[i + z] !== rule.words[z]) { ok = false; break; }
-        if (ok) {
-          if (types.indexOf(rule.value) < 0) types.push(rule.value);
-          words.splice(i, rule.words.length); changed = true; i--; break;
-        }
+        if (ok) { if (types.indexOf(rule.value) < 0) types.push(rule.value); words.splice(i, rule.words.length); changed = true; i--; break; }
       }
     }
-    nat.type = types.length === 1 ? types[0] : null;
-    nat.typeConflict = types.length > 1;
+    nat.type = types.length === 1 ? types[0] : null; nat.typeConflict = types.length > 1;
+
+    // pembayaran: dari kata "bayar/dibayar/lunas" sampai akhir
+    for (i = 0; i < words.length; i++) {
+      var pw = words[i];
+      if (PAYV[pw] || /^(dibayar|dibayarkan|bayarnya|pembayaran)$/.test(pw)) {
+        var tail = words.slice(i + 1), pc = parsePayClause(tail), mf = methodFrom(tail);
+        if (mf.method) pc.method = mf.method;
+        if (mf.unknown) pc.unknown = mf.unknown;
+        if (pc.amount !== null || pc.method || pc.unknown || pc.exact) { nat.pay = pc; words = words.slice(0, i); changed = true; }
+        break;
+      }
+    }
+
+    // koreksi: "yang tadi ganti jadi 15 sate ayam" -> "ganti sate ayam jadi 15" (tanpa nama = menu terakhir)
+    words = nTrim(words);
+    var v0 = words.findIndex(function (w) { return has(V_SET, w); });
+    if (v0 === 0) {
+      var j = 1; if (words[j] === 'jadi' || words[j] === 'menjadi' || words[j] === 'to' || words[j] === 'into') j++;
+      var rn = readNum(words, j);
+      if (rn && j > 1) {
+        var rest = nTrim(words.slice(j + rn.len)), numT = words.slice(j, j + rn.len);
+        var nm = rest.length ? rest : nameToks(lastAddedName());
+        if (nm.length) { words = [words[0]].concat(nm, ['jadi'], numT); changed = true; }
+      }
+    }
     nat.items = words.join(' ').trim();
     return changed ? nat : null;
   }
 
+  /* batalkan operasi keranjang terakhir (tambah / kurangi / ubah jumlah), bukan transaksi yang sudah selesai */
+  function undoLast() {
+    while (st.hist.length) {
+      var h = st.hist.pop(), it = typeof find === 'function' ? find(h.id) : null; if (!it || !h.d) continue;
+      if (h.d > 0) {
+        var have = qtyOf(it.id); if (!have) continue;
+        var q = Math.min(h.d, have), n0 = st.hist.length; actReduce(it, q, false); st.hist.length = n0; st.last = qtyOf(it.id) > 0 ? it.id : null;
+        return { msg: 'Dibatalkan: tambah ' + q + '× ' + it.name + '. Pesanan yang sudah selesai tidak diubah.' };
+      }
+      var n1 = st.hist.length, back = actAdd(it, -h.d); st.hist.length = n1;
+      return { msg: 'Dibatalkan: ' + it.name + ' dikembalikan ' + (-h.d) + '×' + (back.warn ? ' (' + M('stock').toLowerCase() + ')' : '') + '.', warn: !back.ok };
+    }
+    return { msg: 'Belum ada perubahan terakhir di keranjang yang bisa dibatalkan.', warn: true };
+  }
+  function curWord() { var s = String(money2(0)).replace(/[\d.,\s]/g, ''); return { RM: 'ringgit', Rp: 'rupiah', IDR: 'rupiah', MYR: 'ringgit' }[s] || s; }
+  function cartNames() { return Object.keys(S.cart).filter(function (k) { return S.cart[k] > 0; }).map(function (k) { var it = typeof find === 'function' ? find(bidOf(k)) : null; return S.cart[k] + '× ' + (it ? it.name : k); }); }
+  function curNote() { return (S.note || '').trim(); }
+
   function runNatural(nat) {
+    if (st.pending && st.pending.kind === 'naturalPay') { st.pending = null; if ($('#payOk') && typeof closeModal === 'function') closeModal(); }   // ucapan baru mengubah pesanan: konfirmasi lama batal
+    if (nat.undo) return undoLast();
     if (nat.tableAmbiguous) {
       st.pending = { kind: 'tableClarify', natural: nat, table: nat.table };
-      return { msg: 'Nomor ' + nat.table + ' maksudnya nomor meja atau nomor pesanan? Jawab “meja” atau “pesanan”.', warn: true };
+      return { msg: 'Nomor ' + nat.table + ' maksudnya nomor meja atau nomor pesanan? Jawab “meja” atau “pesanan”.', say: 'Nomor ' + nat.table + ' maksudnya nomor meja atau nomor pesanan?', warn: true };
     }
     if (nat.typeConflict) return { msg: 'Dalam satu invoice hanya bisa ada satu tipe pesanan. Sebutkan satu saja: Takeaway, Dine In, Delivery, GoFood, GrabFood, atau ShopeeFood.', warn: true };
-    if (!nat.items) return { msg: 'Sebutkan menu dan jumlahnya dulu.', warn: true };
 
-    var parsed = parse(nat.items);
-    if (!parsed || !parsed.lines || !parsed.lines.length) return { msg: M('nomatch'), warn: true };
-    var added = run(parsed);
-    if (added.warn || added.chips || added.noop) return added;
+    // 1) menu / perubahan keranjang
+    var out = { msg: '' }, stop = false, itemTouched = false;
+    var parsed = nat.items ? parse(nat.items) : null;
+    if (parsed && parsed.intent !== 'unknown' && parsed.intent !== 'empty' && parsed.intent !== 'yes' && parsed.intent !== 'no') {
+      out = run(parsed); itemTouched = true;
+      if (out.warn || out.chips || out.noop) stop = true;
+    } else if (nat.items && !nat.table && !nat.type && !nat.note && !nat.pay && !nat.orderNo) {
+      return { msg: M('nomatch'), warn: true };
+    }
+    var lines = out.msg ? [out.msg] : [];
 
+    // 2) jenis pesanan, meja, nomor pesanan, catatan: selalu masuk field yang sesuai
     if (nat.type) {
       var typeSelect = $('#otype');
-      if (typeSelect && Array.prototype.some.call(typeSelect.options, function (o) { return o.value === nat.type; })) {
-        S.type = nat.type; typeSelect.value = nat.type;
-      } else return { msg: 'Tipe pesanan ' + nat.type + ' tidak tersedia di invoice ini.', warn: true };
+      if (typeSelect && Array.prototype.some.call(typeSelect.options, function (o) { return o.value === nat.type; })) { S.type = nat.type; typeSelect.value = nat.type; }
+      else { lines.push('Tipe pesanan ' + nat.type + ' tidak tersedia di invoice ini.'); stop = true; }
     }
-    if (nat.table) {
-      S.holdMeta = Object.assign({}, S.holdMeta || {}, { tbl: nat.table });
-    }
-    if (nat.orderNo) {
-      added.msg += '\nNomor invoice dibuat otomatis oleh Ordela; nomor ' + nat.orderNo + ' tidak bisa ditetapkan manual.';
-    }
-    if (nat.note) {
-      S.note = ((S.note ? S.note + ', ' : '') + nat.note).slice(0, 120);
-      if (typeof noteUI === 'function') noteUI();
-      var noteInput = $('#pNote'); if (noteInput) noteInput.value = S.note;
-    }
+    if (nat.table) S.holdMeta = Object.assign({}, S.holdMeta || {}, { tbl: nat.table });
+    if (nat.orderNo) addNote('No. pesanan ' + nat.orderNo);
+    if (nat.note) addNote(nat.note);
     if (typeof renderInvoice === 'function') renderInvoice();
 
+    var hasCart = !!Object.keys(S.cart).length, tblNow = (S.holdMeta && S.holdMeta.tbl) || '';
+    var det = [];
+    if (nat.type) det.push(nat.type); if (nat.table) det.push('Meja ' + nat.table); if (nat.orderNo) det.push('No. pesanan ' + nat.orderNo); if (nat.note) det.push('Catatan: ' + nat.note);
     if (!nat.pay) {
-      var detail = [];
-      if (nat.type) detail.push(nat.type);
-      if (nat.table) detail.push('Meja ' + nat.table);
-      if (nat.note) detail.push('Catatan: ' + nat.note);
-      return { msg: (added.msg ? added.msg + '\n' : '') + 'Invoice diperbarui' + (detail.length ? ' · ' + detail.join(' · ') : '') + '. Pembayaran belum diproses.' };
+      if (!itemTouched && !det.length) return { msg: M('nomatch'), warn: true };
+      var base = lines.filter(Boolean).join('\n');
+      var extra = det.length ? 'Invoice diperbarui · ' + det.join(' · ') : '';
+      return { msg: [base, extra, stop ? '' : (hasCart ? 'Pembayaran belum diproses.' : '')].filter(Boolean).join('\n'), warn: stop && !!out.warn };
     }
 
+    // 3) pembayaran: selalu lewat konfirmasi
+    if (stop) return { msg: lines.concat(['Pembayaran belum diproses karena pesanan perlu dicek dulu.']).join('\n'), warn: true, chips: out.chips };
     if (!cfg().pay) return { msg: M('payOff'), warn: true };
-    if (!Object.keys(S.cart).length) return { msg: M('payNeed'), warn: true };
+    if (!hasCart) return { msg: M('payNeed'), warn: true };
+    if (nat.pay.unknown) return { msg: 'Metode pembayaran “' + nat.pay.unknown + '” belum tersedia di Ordela. Pilihan: ' + payMethods().join(', ') + '.', warn: true };
     if (typeof closeModal === 'function' && $('#mw.on')) closeModal();
     payForm();
     if (!$('#payOk')) return { msg: M('err'), warn: true };
-    if (nat.table) {
-      var tableInput = $('#pTbl');
-      if (!tableInput) return { msg: 'Nomor meja sudah dikenali, tetapi field Nomor Meja belum diaktifkan di pengaturan pembayaran. Keranjang tetap tersimpan; aktifkan field itu sebelum checkout.', warn: true };
-      tableInput.value = nat.table;
+    var tbl = $('#pTbl');
+    if (tblNow) { if (tbl) tbl.value = tblNow; else if (!/meja/i.test(S.note || '')) { addNote('Meja ' + tblNow); lines.push('Field Nomor Meja nonaktif di pengaturan pembayaran; meja dicatat di catatan pesanan.'); } }
+    var method = nat.pay.method || (nat.pay.amount != null || nat.pay.exact ? 'Tunai' : (payMethods().indexOf('Tunai') > -1 ? 'Tunai' : payMethods()[0]));
+    if (payMethods().indexOf(method) < 0) { closeModal(); return { msg: 'Metode ' + method + ' tidak tersedia. Pilihan: ' + payMethods().join(', ') + '.', warn: true }; }
+    setM(method);
+    var totals = payTotals(), received = null;
+    if (method === 'Tunai') {
+      if (nat.pay.exact || nat.pay.amount == null) { if (nat.pay.amount == null && !nat.pay.exact) { /* belum ada nominal: tunai pas */ } received = totals.payable; }
+      else received = nat.pay.amount;
+      if (received + 1e-9 < totals.payable) { st.pending = null; return { msg: lines.concat([M('short') + ': ' + money2(totals.payable - received) + ' (total ' + money2(totals.payable) + '). Sebutkan nominal yang cukup.']).join('\n'), warn: true }; }
+      quick(received);
     }
-    if (nat.pay.method) setM(nat.pay.method);
-    if (nat.pay.amount != null) {
-      if ((nat.pay.method || 'Tunai') !== 'Tunai') return { msg: 'Jumlah uang diterima hanya bisa diisi untuk pembayaran Tunai. Pilih Tunai atau selesaikan metode pembayaran di layar.', warn: true };
-      setM('Tunai'); quick(nat.pay.amount);
+    if ($('#payOk').disabled) return { msg: 'Lengkapi pembayaran di layar sebelum konfirmasi.', warn: true };
+    st.pending = { kind: 'naturalPay', at: Date.now() };
+    var change = received == null ? 0 : Math.max(0, Math.round((received - totals.payable) * 100) / 100);
+    var info = [S.type];
+    if (tblNow) info.push('Meja ' + tblNow); if (nat.orderNo) info.push('No. pesanan ' + nat.orderNo); if (curNote()) info.push('Catatan: ' + curNote());
+    var pay = 'Total ' + money2(totals.payable) + ' · ' + method + (received != null ? ' · Diterima ' + money2(received) + ' · Kembalian ' + money2(change) : '');
+    var say = 'Total belanja ' + spokenMoney(totals.payable) + (received != null ? '. Uang diterima ' + spokenMoney(received) + '. Kembalian ' + spokenMoney(change) : '. Metode ' + method) + '. Apakah transaksi ingin diproses?';
+    return { msg: ['Pesanan: ' + cartNames().join(', '), info.join(' · '), pay, 'Proses transaksi? Ucapkan “Ya”, “Tidak”, atau “Ubah”.'].join('\n'), say: say, big: true };
+  }
+  /* jawaban "ubah" saat menunggu konfirmasi pembayaran: kembali mengedit transaksi */
+  function pendingReply(t) {
+    var pd = st.pending; if (!pd || pd.kind !== 'naturalPay') return null;
+    if (/^(ubah|ubah dulu|edit|edit dulu|koreksi|revisi|ralat|change|modify|sebentar|tunggu|tunggu dulu)$/.test(clean(t))) {
+      st.pending = null; if ($('#payOk') && typeof closeModal === 'function') closeModal();
+      return { msg: 'Silakan ubah pesanan. Sebutkan perubahannya, mis. “ganti jadi 15 sate ayam”, “tambah 2 teh ais”, atau “meja 9”. Pembayaran belum diproses.' };
     }
-    var totals = payTotals(), received = nat.pay.amount;
-    if ($('#payOk').disabled) {
-      var shortage = Math.max(0, totals.payable - (received == null ? 0 : received));
-      return { msg: shortage ? M('short') + ': ' + money2(shortage) : 'Lengkapi jumlah pembayaran di layar sebelum konfirmasi.', warn: true };
-    }
-    st.pending = { kind: 'naturalPay' };
-    var summary = 'Total ' + money2(totals.payable);
-    if (received != null) summary += ' · Diterima ' + money2(received) + ' · Kembalian ' + money2(Math.max(0, received - totals.payable));
-    if (nat.type) summary += ' · ' + nat.type;
-    if (nat.table) summary += ' · Meja ' + nat.table;
-    if (nat.note) summary += ' · Catatan ' + nat.note;
-    return { msg: (added.msg ? added.msg + '\n' : '') + summary + '. Ucapkan “Ya” untuk memproses pembayaran dan mencetak struk, atau “Tidak” untuk membatalkan.', say: summary + '. Ucapkan ya untuk konfirmasi pembayaran.', big: true };
+    return null;
   }
 
   function submit(input) {
@@ -1042,13 +1169,18 @@
     if (!alts.length) return;
     lload(); st.ctxMiss = true;
     st.busy = true; paint(); $('#vcTx').textContent = '“' + alts[0] + '”';
+    var pr0 = alts.length === 1 ? pendingReply(alts[0]) : null;
+    if (pr0) { st.busy = false; paint(); showResult(pr0); return; }
     if (alts.length === 1) {
       var natural = null;
       try { natural = parseNatural(alts[0]); } catch (e) { console.error('voice natural parse', e); }
       if (natural) {
         var naturalOut;
         try { naturalOut = runNatural(natural); } catch (e) { console.error('voice natural checkout', e); naturalOut = { msg: M('err'), warn: true }; }
-        st.busy = false; paint(); showResult(naturalOut); return;
+        st.busy = false; paint(); showResult(naturalOut);
+        var unN = (st.unres || []).slice();
+        if (unN.length && aiOn()) { st.busy = true; paint(); showResult({ msg: (naturalOut.msg ? naturalOut.msg + '\n' : '') + M('aiAsk') }); aiResolve(unN, function (res) { st.busy = false; paint(); if (!res.length) { showResult(naturalOut); return; } showResult({ msg: aiApply(res).join('\n'), warn: res.length < unN.length }); }); }
+        return;
       }
     }
     var bestP = null, bestS = -1;
@@ -1182,6 +1314,8 @@
     // Voice Checkout Natural dipakai juga oleh Listening latar, bukan hanya kolom ketik/tap-tahan.
     // Kasir boleh berbicara alami tanpa menyebut "Ordela"; pembayaran tetap wajib konfirmasi Ya/Tidak.
     var natural = null, naturalText = '';
+    var prB = cand.length ? pendingReply(cand[0]) : null;
+    if (prB) { bg.awake = Date.now() + 20000; toastMsg(prB.msg, false, prB); if (st.speak && c.speak && root.speechSynthesis && !st.listening) say(String(prB.msg).split('\n')[0]); return; }
     for (var ni = 0; ni < cand.length; ni++) {
       try { natural = parseNatural(cand[ni]); } catch (e) { console.error('voice natural parse', e); natural = null; }
       if (natural) { naturalText = cand[ni]; break; }
