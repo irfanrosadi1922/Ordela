@@ -450,6 +450,7 @@ async function aiCloud(q){
     AI.why=r.status===404?'fungsi ai-chat belum di-deploy (404)':r.status===501?'secret AI_API_KEY belum diisi':'';
     if(r.status===404||r.status===501)return null;
     if(r.status===401&&/jwt/i.test(JSON.stringify(j))){AI.why='Verify JWT pada fungsi ai-chat masih menyala';return null}
+    if(r.status>=500){AI.why=String(j.error||'AI tidak merespons').slice(0,160);return null}
     return esc(j.error||'Maaf, jawaban AI kosong. Coba kirim sekali lagi.')}catch(e){AI.why=e&&e.name==='AbortError'?'permintaan melewati batas waktu 35 detik':'fungsi ai-chat tidak terjangkau (periksa koneksi atau CORS)';return null}finally{clearTimeout(timer)}
 }
 
@@ -511,10 +512,14 @@ P2.aiAsk=async function(t){
   const log=$('#aiLog');if(!log){return}
   if(!AI.msgs.length)log.innerHTML='';
   const add=m=>{m.ts=aiTm();AI.msgs.push(m);log.insertAdjacentHTML('beforeend',aiBub(m));aiScroll()};
-  add({me:1,t});let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
-  if(a===null){AI.busy=1;const go=$('#aiGo');if(go)go.disabled=true;
+  add({me:1,t});let a=null;
+  /* semua pertanyaan dijawab AI (asisten toko, memakai data toko + riwayat percakapan); aturan lokal hanya cadangan bila AI tidak terjangkau */
+  const cloud=!!(window.POS_SB&&POS_SB.url&&CL.on&&CL.tok);
+  if(cloud){AI.busy=1;const go=$('#aiGo');if(go)go.disabled=true;
     log.insertAdjacentHTML('beforeend','<div class="cr" id="aiTyp"><div class="cbw"><div class="cb typ"><i></i><i></i><i></i></div></div></div>');aiScroll();
-    AI.why='';try{a=await aiCloud(t)}catch(e){AI.why='terjadi kesalahan saat menghubungi AI';a=null}finally{const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false}if(a===null)a='Maaf, aku belum berhasil menghubungi AI. Coba kirim lagi sebentar ya.'+(AI.why&&isOwner()?'<br><small style="opacity:.65">Detail: '+esc(AI.why)+'.</small>':'')}
+    AI.why='';try{a=await aiCloud(t)}catch(e){AI.why='terjadi kesalahan saat menghubungi AI';a=null}finally{const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false}}
+  if(a===null){let loc=null;try{loc=aiAnswer(t)}catch(e){loc=null}
+    a=loc!==null?loc+(cloud?'<small style="display:block;opacity:.58;margin-top:8px">Jawaban dasar (AI sedang tidak terjangkau)'+(AI.why&&isOwner()?' · '+esc(AI.why):'')+'</small>':''):'Maaf, aku belum berhasil menghubungi AI. Coba kirim lagi sebentar ya.'+(AI.why&&isOwner()?'<br><small style="opacity:.65">Detail: '+esc(AI.why)+'.</small>':'')}
   add({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);aiHistorySave();
   const i=$('#aiIn');if(i&&matchMedia('(hover:hover)').matches)i.focus();
 };
