@@ -353,6 +353,15 @@ button[hidden]{display:none!important}
 .coc{background:var(--card);border-radius:24px;padding:14px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,.06);border-left:6px solid var(--ln)}
 .coc.new{border-left-color:var(--b)}.coc.accepted{border-left-color:var(--ok)}
 .coc.cancelled{opacity:.6}
+.cotabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;border-bottom:1px solid var(--ln);scrollbar-width:none}.cotabs::-webkit-scrollbar{display:none}
+.cotabs button{flex:1 0 auto;background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;font:inherit;font-weight:600;color:var(--mu);white-space:nowrap;cursor:pointer}
+.cotabs button.on{color:var(--ok);border-bottom-color:var(--ok)}
+.cotabs .cnt{font-style:normal;background:#ef4444;color:#fff;border-radius:99px;font-size:11px;min-width:18px;height:18px;display:inline-grid;place-items:center;margin-left:6px;padding:0 5px}
+.coc.cosm{cursor:pointer}.coc.cosm .cos{color:var(--mu);font-size:13px;margin-top:2px}.coc.cosm .nw{color:var(--b)}
+.coc.cosm .cof .btn{width:auto;margin:0;padding:8px 18px}
+#coSpotBg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:55;animation:qovin .2s}
+.coc.cospot{position:relative;z-index:56;animation:cospulse 1.1s ease-in-out infinite}
+@keyframes cospulse{0%,100%{box-shadow:0 0 0 3px #fff,0 0 0 7px rgba(59,130,246,.0),0 10px 30px rgba(0,0,0,.35)}50%{box-shadow:0 0 0 3px #fff,0 0 0 9px rgba(59,130,246,.55),0 10px 30px rgba(0,0,0,.35)}}
 .coh{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .coh .no{font-size:20px;font-weight:800;color:var(--bt)}.coh .cn{font-weight:700;font-size:16px}.coh .ct{color:var(--mu);font-size:12.5px}.coh time{margin-left:auto;color:var(--mu);font-size:12px}
 .coc ul{list-style:none;margin:8px 0;padding:0}.coc li{display:flex;gap:8px;padding:3px 0;font-size:14px}.coc li b{min-width:32px;color:var(--bt)}
@@ -1181,6 +1190,7 @@ function closeAll(){$('#drawer').classList.remove('open');$('#scrim').classList.
 const P2V=['ai','riw','integ','gift','rsv','opname','menu','shift','exp','buy','mem','promo','kds'];
 const ACCV=['acc','accset','accinfo','editacc','accphoto','pw','accver','accnt','accabout','accdel','accok'];
 function go(v){
+  if(v!=='co'&&document.getElementById('coSpotBg'))coSpotEnd();
   if(S.view==='set'&&v!=='set')S.setSub=null;
   if(v==='hist'||v==='rep')v='home';   // Riwayat & Laporan sudah menyatu di Beranda
   if(ACCV.includes(v)&&!(CL.on&&CL.me))v='set';
@@ -3630,7 +3640,10 @@ function coApply(j){
   });
   coEvents(evs);
   coBadge();
-  if(S.view==='co')renderCo(false);
+  if(fresh.length&&CL.on&&can('co')&&coPref('open',true)&&!$('#mw').classList.contains('on')&&!document.hidden){
+    CO.tab='prep';CO.spot=new Set(fresh.map(o=>o.id));
+    if(S.view!=='co')go('co');else renderCo(false);
+  }else if(S.view==='co')renderCo(false);
   coAutoPrint();
 }
 
@@ -3903,7 +3916,7 @@ function renderCo(full){
   const st=CO.set||{on:true,msg:''};
   if(full||!$('#coTop').innerHTML){
     const ck=(k,d,l,fn)=>`<label class="tgl"><input type="checkbox" ${coPref(k,d)?'checked':''} onchange="${fn||`coSetPref('${k}',this.checked)`}"><span>${l}</span></label>`;
-    $('#coTop').innerHTML=`<div class="tgls">${ck('auto',true,'Cetak tiket otomatis')}${ck('sound',true,'Bunyi saat pesanan masuk')}${ck('vib',true,'Getar saat pesanan masuk')}${ck('notif',true,'Notifikasi sistem',"coSetNotif(this.checked)")}${ck('awake',true,'Layar tetap menyala',"coSetAwake(this.checked)")}</div>
+    $('#coTop').innerHTML=`<div class="tgls">${ck('auto',true,'Cetak tiket otomatis')}${ck('open',true,'Buka halaman ini saat pesanan masuk')}${ck('sound',true,'Bunyi saat pesanan masuk')}${ck('vib',true,'Getar saat pesanan masuk')}${ck('notif',true,'Notifikasi sistem',"coSetNotif(this.checked)")}${ck('awake',true,'Layar tetap menyala',"coSetAwake(this.checked)")}</div>
     <div class="cob"><button class="btn sec" onclick="coBeep()"><i class="ic" data-ic="bell"></i>Tes bunyi</button><button class="btn sec" onclick="coTestPrint()"><i class="ic" data-ic="print"></i>Tes tiket</button><button class="btn sec" onclick="prnConnect().then(()=>renderCo(false))"><i class="ic" data-ic="plug"></i>Sambungkan printer</button></div>`;
   }
   const gear=$('#coGear');if(gear)gear.hidden=!can('set');
@@ -3920,31 +3933,50 @@ function renderCo(full){
   $('#coStat').innerHTML=msgs.map(m=>`<div class="chg ${m[0]}" style="margin:0 0 8px"><span>${m[1]}</span></div>`).join('');
   const L=CO.list,act=L.filter(o=>o.status==='new'||o.status==='accepted').sort((a,b)=>a.id-b.id),
     fin=L.filter(o=>o.status==='done'||o.status==='cancelled').sort((a,b)=>b.id-a.id).slice(0,40);
+  const isR=o=>(o.status==='new'||o.status==='accepted')&&(+o.kds||0)>=2,isP=o=>(o.status==='new'||o.status==='accepted')&&(+o.kds||0)<2;
+  const lp=L.filter(isP).sort((a,b)=>a.id-b.id),lr=L.filter(isR).sort((a,b)=>a.id-b.id),
+    ld=L.filter(o=>o.status==='done').sort((a,b)=>b.id-a.id).slice(0,40),lc=L.filter(o=>o.status==='cancelled').sort((a,b)=>b.id-a.id).slice(0,40);
+  const tab=CO.tab||'prep',tabs=[['prep','Disiapkan',lp],['ready','Siap',lr],['done','Selesai',ld],['cancel','Dibatalkan',lc]];
   const card=o=>{
-    const ps=o.printed===2?'<span class="pst ok"><i class="ic" data-ic="check"></i>tercetak</span>':o.printed===1?'<span class="pst w">mencetak…</span>':(o.status==='new'||o.status==='accepted')?'<span class="pst w">belum tercetak</span>':'';
-    const btn=o.status==='new'?`<button class="btn" onclick="coAct(${o.id},'accept')"><i class="ic" data-ic="check"></i>Terima</button>${can('pos')?`<button class="btn sec" onclick="coPay(${o.id})"><i class="ic" data-ic="card"></i>Bayar</button>`:''}`:o.status==='accepted'&&can('pos')?`<button class="btn" onclick="coPay(${o.id})"><i class="ic" data-ic="card"></i>Bayar</button>`:'';
-    const act=(o.status==='new'||o.status==='accepted')?`${btn}<button class="btn sec" onclick="coPrint(${o.id})"><i class="ic" data-ic="print"></i>Cetak</button><button class="btn sec" onclick="coCancel(${o.id})"><i class="ic" data-ic="x"></i>Batal</button>`:'';
-    const pb=isOnl(o)?(o.pst===2?'<span class="pst ok"><i class="ic" data-ic="card"></i>QRIS · diterima</span>':o.pst===1?'<span class="pst w"><i class="ic" data-ic="card"></i>QRIS · '+(o.hp?'bukti masuk, perlu dicek':'pelanggan klaim sudah bayar')+'</span>':o.pst===3?'<span class="pst"><i class="ic" data-ic="card"></i>QRIS · bukti ditolak</span>':'<span class="pst w"><i class="ic" data-ic="card"></i>QRIS · belum dibayar</span>'):'';
-    const pbtn=(isOnl(o)&&(o.status==='new'||o.status==='accepted'))?(o.pst===1&&o.hp?`<button class="btn" onclick="coProof(${o.id})"><i class="ic" data-ic="image"></i>Lihat bukti bayar</button>`:o.pst===2?`<button class="btn sec" onclick="coAct(${o.id},'unpaid')"><i class="ic" data-ic="undo"></i>Batalkan konfirmasi bayar</button>`:`<button class="btn" onclick="coConfirmPay(${o.id})"><i class="ic" data-ic="check"></i>Pembayaran diterima</button>`):'';
-    const tag=o.status==='cancelled'?'<span class="pst">dibatalkan</span>':o.status==='done'?`<span class="pst ok">selesai${o.saleNo?' · '+esc(o.saleNo):''}</span>`:o.status==='accepted'?'<span class="pst ok">diterima</span>':'<span class="pst w">baru</span>';
-    return`<div class="coc ${o.status}"><div class="coh"><span class="no">${esc(o.num)}</span><span class="cn">${esc(o.name)}</span><span class="ct">${o.tbl?'Meja '+esc(o.tbl)+' · ':''}${esc(o.type==='Dine In'?'Dine In':'Takeaway')}</span><time>${ago(o.t)}</time></div>
-    <ul>${o.lines.map(l=>`<li><b>${l.qty}x</b><span>${esc(l.name)}</span></li>`).join('')}</ul>
-    ${o.note?`<div class="nt"><i class="ic" data-ic="note"></i>${esc(o.note)}</div>`:''}
-    <div class="cof"><span>${money(o.total)}</span><span style="display:flex;gap:6px;flex-wrap:wrap">${tag}${pb}${ps}</span></div>
-    ${act?`<div class="cob">${pbtn}${act}</div>`:''}</div>`;
+    const pb=isOnl(o)?(o.pst===2?'<span class="pst ok"><i class="ic" data-ic="card"></i>QRIS · diterima</span>':o.pst===1?'<span class="pst w"><i class="ic" data-ic="card"></i>'+(o.hp?'bukti masuk, perlu dicek':'klaim sudah bayar')+'</span>':o.pst===3?'<span class="pst">bukti ditolak</span>':'<span class="pst w"><i class="ic" data-ic="card"></i>QRIS · belum dibayar</span>'):'<span class="pst">Bayar di kasir</span>';
+    const nitem=o.lines.reduce((a,l)=>a+l.qty,0);
+    const btn=tab==='prep'?`<button class="btn" onclick="event.stopPropagation();coReadyAct(${o.id})"><i class="ic" data-ic="check"></i>Siap</button>`
+      :tab==='ready'?`<button class="btn" onclick="event.stopPropagation();coPay(${o.id})"><i class="ic" data-ic="check"></i>Selesai</button>`:'';
+    return`<div class="coc cosm ${o.status}${CO.spot&&CO.spot.has(o.id)?' cospot':''}" data-id="${o.id}" onclick="coDet(${o.id})">
+      <div class="coh"><span class="no">${esc(o.num)}</span><span class="cn">${esc(o.name)}</span><time>${ago(o.u&&tab!=='prep'?o.u:o.t)}</time></div>
+      <div class="cos">${nitem} item · ${o.tbl?'Meja '+esc(o.tbl)+' · ':''}${esc(o.type==='Dine In'?'Dine In':'Takeaway')}${o.status==='new'?' · <b class="nw">BARU</b>':''}</div>
+      ${o.note?`<div class="nt"><i class="ic" data-ic="note"></i>${esc(o.note)}</div>`:''}
+      <div class="cof"><span>${money(o.total)}</span><span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${pb}${btn}</span></div></div>`;
   };
-  const finRow=o=>`<button class="li" onclick="coDet(${o.id})"><span class="l"><b>${esc(o.num)} · ${esc(o.name)}</b><small>${o.tbl?'Meja '+esc(o.tbl)+' · ':''}${o.type==='Dine In'?'Dine In':'Takeaway'} · ${ago(o.u||o.t)}</small></span><span class="r"><b>${money(o.total)}</b><small>${o.status==='cancelled'?'dibatalkan':'selesai'}${isOnl(o)?' · QRIS'+(o.pst===2?' <i class="ic solo" data-ic="check"></i>':''):''}</small></span><span class="ch">›</span></button>`;
   {const td=new Date().toDateString(),nNew=act.filter(o=>o.status==='new').length,nAcc=act.filter(o=>o.status==='accepted').length,nDone=L.filter(o=>o.status==='done'&&new Date(o.u||o.t).toDateString()===td).length,vAct=act.reduce((a,o)=>a+(+o.total||0),0);
    const kc=(t,v,ic,bg)=>`<div class="kc"><div class="kt"><span>${t}</span></div><div class="kv"><span class="ki" style="background:${bg}"><i class="ic" data-ic="${ic}"></i></span>${v}</div></div>`;
    $('#coKp').innerHTML=kc('Pesanan baru',nNew,'bell','#f7c244')+kc('Diproses',nAcc,'clock','#3b9d6e')+kc('Selesai hari ini',nDone,'check','#6b7280')+kc('Nilai pesanan aktif',money(vAct),'card','#EF4444');}
-  $('#coList').innerHTML=`<div class="cow"><div class="cow-a">`+(act.length?`<div class="sech"><h3>Aktif (${act.length})</h3></div><div class="cog">${act.map(card).join('')}</div>`:'<div class="empty" style="padding:30px 10px">Belum ada pesanan aktif.<br><small>Pesanan dari QR akan muncul di sini.</small></div>')+`</div>`
-    +(fin.length?`<div class="cow-f"><div class="sech sech2"><h3>Selesai / batal (${fin.length})</h3></div><div class="panel"><div class="lst">${fin.map(finRow).join('')}</div></div></div>`:'')+`</div>`;
+  const cur=(tabs.find(x=>x[0]===tab)||tabs[0])[2];
+  $('#coList').innerHTML=`<div class="cotabs" role="tablist">${tabs.map(x=>`<button role="tab" class="${x[0]===tab?'on':''}" onclick="coTab('${x[0]}')">${x[1]}${x[0]==='prep'||x[0]==='ready'?(x[2].length?`<i class="cnt">${x[2].length}</i>`:''):''}</button>`).join('')}</div>`
+    +(cur.length?`<div class="cog">${cur.map(card).join('')}</div>`:`<div class="empty" style="padding:30px 10px">${tab==='prep'?'Belum ada pesanan baru.<br><small>Pesanan dari QR akan muncul di sini.</small>':tab==='ready'?'Belum ada pesanan siap diambil.':'Belum ada.'}</div>`);
+  coSpotlight();
 }
-function coDet(id){
+function coTab(t){CO.tab=t;renderCo(false)}
+async function coReadyAct(id){
+  const o=CO.list.find(x=>x.id===id);if(!o)return;
+  if(o.status==='new'&&!(await coAct(id,'accept')))return;
+  if(await coAct(id,'ready')){o.status='accepted';o.kds=2;if(CO.spot)CO.spot.delete(id);CO.tab='ready';renderCo(false);coBadge();toast(o.num+' siap diambil')}
+}
+async function coUnready(id){closeModal();const o=CO.list.find(x=>x.id===id);if(o&&await coAct(id,'unready')){o.kds=0;CO.tab='prep';renderCo(false)}}
+/* pesanan baru: kartu disorot (latar redup + denyut) sampai disentuh atau 12 detik */
+function coSpotEnd(){CO.spot=null;clearTimeout(coSpotEnd.t);const b=$('#coSpotBg');if(b)b.remove();document.querySelectorAll('.cospot').forEach(e=>e.classList.remove('cospot'))}
+function coSpotlight(){
+  if(!CO.spot||!CO.spot.size||S.view!=='co')return;
+  const el=[...document.querySelectorAll('#coList .cospot')][0];if(!el){return}
+  if(!$('#coSpotBg')){const b=document.createElement('div');b.id='coSpotBg';b.onclick=coSpotEnd;document.body.appendChild(b)}
+  try{el.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}
+  clearTimeout(coSpotEnd.t);coSpotEnd.t=setTimeout(coSpotEnd,12000);
+}
+function coDet(id){coSpotEnd();
   const o=CO.list.find(x=>x.id===id);if(!o)return;
   const tm=t=>new Date(t).toLocaleString(dloc(),{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
   openModal(`<h3>${esc(o.num)} · ${esc(o.name)}</h3>
-  <table class="dl"><tr><td>Status</td><td>${o.status==='cancelled'?'Dibatalkan':o.status==='done'?'Selesai':o.status==='accepted'?'Diterima':'Baru'}</td></tr>
+  <table class="dl"><tr><td>Status</td><td>${o.status==='cancelled'?'Dibatalkan':o.status==='done'?'Selesai':(+o.kds||0)>=2?'Siap diambil':o.status==='accepted'?'Disiapkan':'Baru'}</td></tr>
   <tr><td>Dilayani oleh</td><td>${o.by?esc(o.by):'Pelanggan (pesan sendiri)'}</td></tr>
   <tr><td>Masuk</td><td>${tm(o.t)}</td></tr>${o.u&&o.u!==o.t?`<tr><td>Terakhir diubah</td><td>${tm(o.u)}</td></tr>`:''}
   <tr><td>Tipe</td><td>${o.tbl?'Meja '+esc(o.tbl)+' · ':''}${o.type==='Dine In'?'Dine In':'Takeaway'}</td></tr>
@@ -3956,6 +3988,7 @@ function coDet(id){
   ${o.note?`<div class="nt"><i class="ic" data-ic="note"></i>${esc(o.note)}</div>`:''}
   ${o.saleNo&&db.orders.some(x=>x.no===o.saleNo)?`<button class="btn" onclick="histOpen('${esc(o.saleNo)}')">Lihat transaksi ${esc(o.saleNo)}</button>`:''}
   ${o.hp?`<button class="btn" onclick="coProof(${o.id})"><i class="ic" data-ic="image"></i>Lihat bukti bayar</button>`:''}
+  ${(o.status==='new'||o.status==='accepted')?`<div class="cob">${(+o.kds||0)>=2?`<button class="btn" onclick="closeModal();coPay(${o.id})"><i class="ic" data-ic="check"></i>Selesai</button><button class="btn sec" onclick="coUnready(${o.id})"><i class="ic" data-ic="undo"></i>Kembali disiapkan</button>`:`<button class="btn" onclick="closeModal();coReadyAct(${o.id})"><i class="ic" data-ic="check"></i>Siap</button>`}${isOnl(o)&&o.pst===2?`<button class="btn sec" onclick="closeModal();coAct(${o.id},'unpaid')"><i class="ic" data-ic="undo"></i>Batalkan konfirmasi bayar</button>`:''}${can('pos')&&(+o.kds||0)<2?`<button class="btn sec" onclick="closeModal();coPay(${o.id})"><i class="ic" data-ic="card"></i>Bayar</button>`:''}<button class="btn sec" onclick="closeModal();coCancel(${o.id})"><i class="ic" data-ic="x"></i>Batalkan pesanan</button></div>`:''}
   <button class="btn sec" onclick="coPrint(${o.id});closeModal()"><i class="ic" data-ic="print"></i>Cetak ulang tiket</button>
   <button class="btn sec" onclick="closeModal()">Tutup</button>`);
 }
