@@ -641,3 +641,33 @@ html.kb .vc-fab{display:none!important}
 .vc-fab.live .vcw{animation-delay:1.2s}
 @keyframes vcWave{0%{transform:scale(1);opacity:.55}100%{transform:scale(2.1);opacity:0}}
 @media (prefers-reduced-motion:reduce){.vc-fab.live::before,.vc-fab.live .vcw{animation:none;opacity:.25;transform:scale(1.35)}}
+
+/* ---------- Asisten: tampilan percakapan penuh (gaya aplikasi merchant) ---------- */
+html .chat.gx,html[data-skin] .chat.gx{background:transparent;box-shadow:none;border-radius:0;position:relative;overflow:visible}
+html[data-skin] .chat.gx .chh{background:transparent;color:var(--tx);padding:6px 2px 10px;gap:10px;overflow:visible}
+html[data-skin] .chat.gx .chh:after{display:none}
+.chat.gx .cbk,.chat.gx .cclr{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;padding:0;background:#fff;border:0;color:var(--tx);box-shadow:0 2px 10px rgba(0,0,0,.06)}
+html[data-skin] .chat.gx .chh button{background:#fff;color:var(--ad);padding:0;font-weight:inherit}
+html[data-skin] .chat.gx .cbk{color:var(--tx)}
+.chat.gx .ctt{flex:1;min-width:0;font-size:18px;font-weight:800;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-skin] .chat.gx .clog{background:transparent;padding:6px 2px 14px;gap:12px}
+.chat.gx .cr{max-width:88%}
+html[data-skin] .chat.gx .cb{background:#fff;border:0;box-shadow:0 2px 10px rgba(0,0,0,.05);border-radius:22px;padding:14px 16px;font-size:15px;line-height:1.5;color:var(--tx)}
+html[data-skin] .chat.gx .cr.me .cb{background:var(--ad);color:#fff;box-shadow:none;border-radius:22px}
+.chat.gx .cb b,.chat.gx .cb strong{font-weight:700}.chat.gx .cb ul{margin:6px 0 6px 18px;padding:0}.chat.gx .cb li{margin:2px 0}
+html[data-skin] .chat.gx .csg{background:transparent;padding:6px 0 8px}
+html[data-skin] .chat.gx .csg button{background:#fff;color:var(--tx);border:1px solid var(--ln);box-shadow:none;font-weight:600}
+html[data-skin] .chat.gx .cin{background:#fff;border:1.5px solid var(--ln);border-radius:999px;padding:4px 6px 4px 6px;position:relative;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+html[data-skin] .chat.gx .cin:focus-within{border-color:var(--ad)}
+html[data-skin] .chat.gx .cin input{background:transparent;border:0;border-radius:999px;padding:11px 8px 11px 14px}
+html[data-skin] .chat.gx .cin input:focus{background:transparent}
+.chat.gx .csend{width:40px;height:40px;flex:none}
+html[data-skin] .chat.gx .csend{background:var(--ad);color:#fff;box-shadow:none}
+html[data-skin] .chat.gx .csend.cmic{background:transparent;color:var(--ad)}
+html[data-skin] .chat.gx .csend.cmic.rec{background:color-mix(in srgb,var(--ad) 14%,#fff);animation:aimic 1s ease-in-out infinite}
+@keyframes aimic{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ad) 40%,transparent)}50%{box-shadow:0 0 0 8px transparent}}
+.chat.gx .cdis{text-align:center;color:var(--mu);font-size:11.5px;padding:8px 8px 2px}
+.chat.gx .cdn{position:absolute;right:6px;bottom:148px;z-index:3;width:42px;height:42px;border-radius:50%;background:#fff;color:var(--tx);border:0;box-shadow:0 4px 16px rgba(0,0,0,.18);display:grid;place-items:center}
+.chat.gx .cdn[hidden],.chat.gx [hidden]{display:none!important}
+html.kb[data-skin] .chat.gx .cdis{display:none}
+.chat.gx{max-width:860px;width:100%;margin:0 auto}

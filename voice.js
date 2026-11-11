@@ -930,6 +930,19 @@
   AiRec.prototype.abort = function () { var me = this; if (!me._on) return; me._seg = null; me._end(''); };
   if (!SRN && capSupported()) SR = AiRec;
 
+  /* dikte untuk kolom teks (Asisten): satu ucapan -> teks. cb.text(t) saat ada hasil, cb.end(pesanErr) saat selesai */
+  function canDictate() { return !!(SRN || capSupported()); }
+  function dictate(cb) {
+    if (!canDictate()) return null;
+    var rec; try { rec = newRec(); } catch (e) { return null; }
+    var done = false, err = '', got = '';
+    rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 1;
+    rec.onresult = function (ev) { var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript + ' '; t = t.trim(); if (t) { got = t; cb.text(t); } };
+    rec.onerror = function (ev) { var e = ev && ev.error; if (e === 'not-allowed' || e === 'service-not-allowed') err = 'Izin mikrofon ditolak'; else if (e === 'ai-fatal') err = (ev && ev.message) || 'Pengenalan suara AI tidak tersedia'; else if (e === 'network') err = 'Tidak ada koneksi'; else if (e === 'no-speech') err = got ? '' : 'Tidak ada suara terdengar'; };
+    rec.onend = function () { if (done) return; done = true; cb.end(err); };
+    try { rec.start(); } catch (e) { return null; }
+    return { stop: function () { try { rec.stop(); } catch (e) { /* abaikan */ } } };
+  }
   function startListen() {
     if (!SR) { showResult({ msg: M('nosr') }); return; }
     if (st.listening) return;
@@ -1544,7 +1557,7 @@
     ensureUI(); injectMic(); injectFab(); setInterval(supervise, 300);
     var n = 0, t = setInterval(function () { injectMic(); injectFab(); if (($('#vcMic') && $('#vcFab')) || ++n > 40) clearInterval(t); }, 500);
   }
-  root.VC = { refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, D: { interp: function (t, cb) { aiInterpret(t, function (r, m) { cb(aiInterpApply(r, m || [])); }); }, capFake: function (v) { Cap.fake = !!v; }, capFeed: function (f) { Cap.sinks.slice().forEach(function (s) { s(f); }); }, useAi: useAi, tr: function (fn) { aiTranscribe = fn; }, log: function () { return DG.slice(); }, bg: function () { return { live: !!bg.run, blocked: !!bg.blocked, fail: bg.fail, wanted: bgWanted() }; } }, L: {
+  root.VC = { canDictate: canDictate, dictate: dictate, refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, D: { interp: function (t, cb) { aiInterpret(t, function (r, m) { cb(aiInterpApply(r, m || [])); }); }, capFake: function (v) { Cap.fake = !!v; }, capFeed: function (f) { Cap.sinks.slice().forEach(function (s) { s(f); }); }, useAi: useAi, tr: function (fn) { aiTranscribe = fn; }, log: function () { return DG.slice(); }, bg: function () { return { live: !!bg.run, blocked: !!bg.blocked, fail: bg.fail, wanted: bgWanted() }; } }, L: {
     data: function () { var L = lload(); return JSON.parse(JSON.stringify(L)); },
     delAlias: function (k) { var L = lload(); delete L.al[k]; lsave(); },
     delMiss: function (k) { var L = lload(); delete L.miss[k]; lsave(); },

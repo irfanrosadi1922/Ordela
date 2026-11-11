@@ -454,7 +454,7 @@ async function aiCloud(q){
 }
 
 const aiTm=()=>new Date().toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
-const aiBub=m=>`<div class="cr ${m.me?'me':''}">${m.me?'':'<span class="cav"><img class="ai-logo" src="brand/ordela-mark.svg" alt="Ordela"></span>'}<div class="cbw"><div class="cb">${m.me?esc(m.t):m.t}</div><small>${esc(m.ts||'')}</small></div></div>`;
+const aiBub=m=>`<div class="cr ${m.me?'me':''}"><div class="cbw"><div class="cb">${m.me?esc(m.t):m.t}</div></div></div>`;
 const AISUG=['Omzet hari ini','Menu terlaris minggu ini','Stok menipis','Jam ramai','Laba bulan ini','Pasangan menu untuk upsell','Cara split bill','Cara buka shift'];
 function aiScroll(){const l=$('#aiLog');if(l)l.scrollTop=l.scrollHeight}
 async function aiHistoryRequest(action,messages){
@@ -484,11 +484,26 @@ V.ai=function(){
   const uid=CL.on&&CL.tok&&CL.me&&CL.me.id?String(CL.me.id):'';
   if(AI.uid!==uid){AI.uid=uid;AI.msgs=[];AI.loaded=!uid;AI.loading=false;}
   const load=!!uid&&!AI.loaded&&!AI.loading;if(load)AI.loading=true;
-  el.innerHTML=`<div class="chat" id="aiChat"><div class="chh"><span class="cav lg"><img class="ai-logo" src="brand/ordela-mark.svg" alt="Ordela"></span><div class="cht"><b>Asisten Ordela</b><small><i class="cdot"></i>Siap membantu · jawaban dari data toko ini</small></div><button class="cclr" type="button" onclick="P2.aiClear()" aria-label="Hapus percakapan" title="Hapus percakapan">Hapus</button></div>
-  <div class="clog" id="aiLog">${AI.loading?'<p class="hint">Memuat riwayat percakapan…</p>':AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten Ordela. Tanyakan penjualan, stok, jam ramai, atau cara memakai aplikasi. Saya hanya menampilkan data sesuai hak akses Anda.',ts:aiTm()})}</div>
+  const mic=!!(window.VC&&VC.canDictate&&VC.canDictate());
+  const svg=(p,w)=>`<svg viewBox="0 0 24 24" width="${w||22}" height="${w||22}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  el.innerHTML=`<div class="chat gx" id="aiChat"><div class="chh"><button class="cbk" type="button" onclick="go('pos')" aria-label="Kembali">${svg('<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>')}</button><b class="ctt">Asisten Ordela</b><button class="cclr" type="button" onclick="P2.aiClear()" aria-label="Hapus percakapan" title="Hapus percakapan">${svg('<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',22)}</button></div>
+  <div class="clog" id="aiLog" onscroll="P2.aiOnScroll()">${AI.loading?'<p class="hint">Memuat riwayat percakapan…</p>':AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten Ordela. Tanyakan penjualan, stok, jam ramai, atau cara memakai aplikasi. Saya hanya menampilkan data sesuai hak akses Anda.',ts:aiTm()})}</div>
+  <button class="cdn" id="aiDn" type="button" hidden onclick="P2.aiDown()" aria-label="Ke pesan terbaru">${svg('<path d="M12 5v14"/><path d="M5 12l7 7 7-7"/>',20)}</button>
   <div class="csg" id="aiSug">${AISUG.map(x=>`<button type="button" onclick="P2.aiAsk(this.textContent)">${x}</button>`).join('')}</div>
-  <form class="cin" onsubmit="event.preventDefault();P2.aiSend();return false"><input id="aiIn" ${AI.loading?'disabled':''} placeholder="Tulis pertanyaan…" autocomplete="off" maxlength="200" enterkeyhint="send"><button class="csend" id="aiGo" ${AI.loading?'disabled':''} type="submit" aria-label="Kirim"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></button></form></div>`;
+  <form class="cin" id="aiForm" onsubmit="event.preventDefault();P2.aiSend();return false"><input id="aiIn" ${AI.loading?'disabled':''} placeholder="Tulis balasan…" autocomplete="off" maxlength="200" enterkeyhint="send" oninput="P2.aiTgl()"><button class="csend cmic" id="aiMic" type="button" ${mic?'':'hidden'} onclick="P2.aiMic()" aria-label="Bicara">${svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>',22)}</button><button class="csend" id="aiGo" ${AI.loading?'disabled':''} type="submit" aria-label="Kirim" ${mic?'hidden':''}>${svg('<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',20)}</button></form>
+  <div class="cdis">Asisten AI bisa saja keliru. Periksa kembali sebelum bertindak.</div></div>`;
   aiScroll();if(load)aiHistoryLoad(uid);
+};
+P2.aiTgl=function(){const i=$('#aiIn'),m=$('#aiMic'),g=$('#aiGo');if(!i||!g)return;const has=!!i.value.trim(),canMic=!!(window.VC&&VC.canDictate&&VC.canDictate());if(m)m.hidden=!canMic||has;g.hidden=canMic&&!has};
+P2.aiOnScroll=function(){const l=$('#aiLog'),d=$('#aiDn');if(l&&d)d.hidden=l.scrollHeight-l.scrollTop-l.clientHeight<140};
+P2.aiDown=function(){const l=$('#aiLog');if(l)l.scrollTo({top:l.scrollHeight,behavior:'smooth'})};
+let aiDic=null;
+P2.aiMic=function(){
+  const b=$('#aiMic'),i=$('#aiIn');if(!b||!i)return;
+  if(aiDic){aiDic.stop();return}
+  b.classList.add('rec');
+  aiDic=VC.dictate({text:t=>{i.value=String(t||'').slice(0,200);P2.aiTgl()},end:err=>{aiDic=null;const m=$('#aiMic');if(m)m.classList.remove('rec');if(err)toast(err);const x=$('#aiIn');if(x&&x.value.trim()&&!err)x.focus()}});
+  if(!aiDic){b.classList.remove('rec');toast('Mikrofon tidak tersedia')}
 };
 P2.aiSend=function(){const i=$('#aiIn');if(!i)return;const v=i.value;i.value='';P2.aiAsk(v)};
 P2.aiAsk=async function(t){
@@ -498,7 +513,7 @@ P2.aiAsk=async function(t){
   const add=m=>{m.ts=aiTm();AI.msgs.push(m);log.insertAdjacentHTML('beforeend',aiBub(m));aiScroll()};
   add({me:1,t});let a=null;try{a=aiAnswer(t)}catch(e){a='Maaf, terjadi kesalahan saat membaca data.'}
   if(a===null){AI.busy=1;const go=$('#aiGo');if(go)go.disabled=true;
-    log.insertAdjacentHTML('beforeend','<div class="cr" id="aiTyp"><span class="cav"><img class="ai-logo" src="brand/ordela-mark.svg" alt="Ordela"></span><div class="cbw"><div class="cb typ"><i></i><i></i><i></i></div></div></div>');aiScroll();
+    log.insertAdjacentHTML('beforeend','<div class="cr" id="aiTyp"><div class="cbw"><div class="cb typ"><i></i><i></i><i></i></div></div></div>');aiScroll();
     AI.why='';try{a=await aiCloud(t)}catch(e){AI.why='terjadi kesalahan saat menghubungi AI';a=null}finally{const ty=$('#aiTyp');if(ty)ty.remove();AI.busy=0;if($('#aiGo'))$('#aiGo').disabled=false}if(a===null)a='Maaf, aku belum berhasil menghubungi AI. Coba kirim lagi sebentar ya.'+(AI.why&&isOwner()?'<br><small style="opacity:.65">Detail: '+esc(AI.why)+'.</small>':'')}
   add({t:a});if(AI.msgs.length>60)AI.msgs.splice(0,AI.msgs.length-60);aiHistorySave();
   const i=$('#aiIn');if(i&&matchMedia('(hover:hover)').matches)i.focus();
