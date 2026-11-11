@@ -1701,7 +1701,20 @@ function imgToRaster(src,dots,w){
         const h=Math.max(1,Math.round(im.height*w/im.width)),c=document.createElement('canvas');
         c.width=dots;c.height=h;
         const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,dots,h);x.drawImage(im,Math.round((dots-w)/2),0,w,h);
-        const d=x.getImageData(0,0,dots,h).data,bpr=dots/8,o=[0x1d,0x76,0x30,0,bpr&255,bpr>>8,h&255,h>>8];
+        const img=x.getImageData(0,0,dots,h),d=img.data,bpr=dots/8,o=[0x1d,0x76,0x30,0,bpr&255,bpr>>8,h&255,h>>8];
+        // Logo ber-background gelap: buang warna latar yang tersambung ke tepi,
+        // agar latar menjadi putih dan simbol merah tetap tercetak hitam.
+        const lum=i=>d[i]*.3+d[i+1]*.59+d[i+2]*.11;
+        const corners=[0,(dots-1)*4,((h-1)*dots)*4,((h*dots)-1)*4];
+        let bg=corners[0];for(const i of corners)if(lum(i)<lum(bg))bg=i;
+        if(lum(bg)<100){
+          const br=d[bg],bgc=d[bg+1],bb=d[bg+2],seen=new Uint8Array(dots*h),q=new Int32Array(dots*h);
+          let head=0,tail=0;
+          const addBg=(p)=>{if(p<0||p>=dots*h||seen[p])return;const i=p*4,dr=d[i]-br,dg=d[i+1]-bgc,db=d[i+2]-bb;if(dr*dr+dg*dg+db*db>75*75)return;seen[p]=1;q[tail++]=p};
+          for(let xx=0;xx<dots;xx++){addBg(xx);addBg((h-1)*dots+xx)}
+          for(let yy=1;yy<h-1;yy++){addBg(yy*dots);addBg(yy*dots+dots-1)}
+          while(head<tail){const p=q[head++],i=p*4;d[i]=d[i+1]=d[i+2]=255;const xx=p%dots,yy=(p/dots)|0;if(xx)addBg(p-1);if(xx<dots-1)addBg(p+1);if(yy)addBg(p-dots);if(yy<h-1)addBg(p+dots)}
+        }
         for(let y=0;y<h;y++)for(let b=0;b<bpr;b++){
           let v=0;
           for(let k=0;k<8;k++){const i=(y*dots+b*8+k)*4;if(d[i]*.3+d[i+1]*.59+d[i+2]*.11<140)v|=0x80>>k}
