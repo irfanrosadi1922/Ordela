@@ -29,6 +29,21 @@
   }
   /* notifikasi native (FCM) — aktif bila APK dibuat dengan google-services.json (window.POS_FCM) */
   if(P.OrdelaBg)window.OrdelaBg={status:function(){return P.OrdelaBg.status()},set:function(on){return P.OrdelaBg.setEnabled({on:!!on})},overlay:function(){return P.OrdelaBg.requestOverlay()},battery:function(){return P.OrdelaBg.requestBattery()},info:function(){return P.OrdelaBg.openAppInfo()}};   /* layanan latar belakang + gelembung (APK) */
+  /* unduhan file (blob:/data:) tidak jalan di WebView: simpan lewat plugin ke folder Unduhan/Ordela */
+  if(P.OrdelaBg&&P.OrdelaBg.saveFile){
+    var dlSave=function(a){
+      var href=a.href,name=a.getAttribute('download')||'ordela-file';
+      fetch(href).then(function(r){return r.blob()}).then(function(b){return new Promise(function(ok,no){
+        var fr=new FileReader();fr.onload=function(){ok({b:b,d:String(fr.result).split(',')[1]||''})};fr.onerror=no;fr.readAsDataURL(b)})})
+      .then(function(x){return P.OrdelaBg.saveFile({name:name,mime:x.b.type||'application/octet-stream',data:x.d})})
+      .then(function(r){try{window.toast(name+' tersimpan di '+(r&&r.where||'Unduhan'))}catch(e){}})
+      .catch(function(){try{window.toast('Gagal menyimpan file')}catch(e){}});
+    };
+    var isDl=function(a){return a&&a.hasAttribute&&a.hasAttribute('download')&&/^(blob:|data:)/.test(a.href||'')};
+    var oc=HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click=function(){if(isDl(this)){dlSave(this);return}return oc.apply(this,arguments)};
+    document.addEventListener('click',function(e){var a=e.target&&e.target.closest?e.target.closest('a[download]'):null;if(isDl(a)){e.preventDefault();dlSave(a)}},true);
+  }
   var fcmReady=(P.ClassicBt&&P.ClassicBt.hasFcm)?P.ClassicBt.hasFcm().then(function(r){return !!(r&&r.fcm)}).catch(function(){return !!window.POS_FCM}):Promise.resolve(!!window.POS_FCM);
   if(P.PushNotifications){
     var PN=P.PushNotifications,cur='',hooked=false;
