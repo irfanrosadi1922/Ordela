@@ -671,3 +671,13 @@ html[data-skin] .chat.gx .csend.cmic.rec{background:color-mix(in srgb,var(--ad) 
 .chat.gx .cdn[hidden],.chat.gx [hidden]{display:none!important}
 html.kb[data-skin] .chat.gx .cdis{display:none}
 .chat.gx{max-width:860px;width:100%;margin:0 auto}
+
+/* Asisten: halaman penuh (tanpa bilah atas & navigasi bawah) */
+body:has(#v-ai:not([hidden])) .top{display:none!important}
+@media (max-width:700px){
+  body:has(#v-ai:not([hidden])) .bnav{display:none!important}
+  html[data-skin] .main:has(#v-ai:not([hidden])),html.kb[data-skin] .main:has(#v-ai:not([hidden])){padding-top:calc(8px + env(safe-area-inset-top,0px));padding-bottom:0}
+  html[data-skin] #v-ai:not([hidden]),html.kb[data-skin] #v-ai:not([hidden]){padding-bottom:calc(8px + var(--sab))}
+  .chat.gx .cdn{bottom:158px}
+}
+@media (max-width:700px){html body .main:has(#v-ai:not([hidden])),html.kb body .main:has(#v-ai:not([hidden])){padding-bottom:0!important}}
