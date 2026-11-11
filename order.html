@@ -15,6 +15,8 @@
 :root{color-scheme:only light;--b:#111111;--bd:#000000;--pr:#111111;--bg:#F6F6F6;--ac:#FFCB74;--acx:#111111;--card:#fff;--tx:#161616;--mu:#6f6f6f;--ln:#ececec;--ok:#15803d;--bad:#b91c1c;--pe:#ececec;--cr:#f4f4f4}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea{-webkit-user-select:text;user-select:text}
+*{touch-action:pan-x pan-y}
+.p .im{cursor:pointer}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 img,svg{-webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none}
 img{pointer-events:none}
@@ -181,6 +183,7 @@ document.addEventListener('selectstart',e=>{if(!/^(INPUT|TEXTAREA)$/.test(e.targ
 document.addEventListener('dragstart',e=>e.preventDefault());
 ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 document.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&['+','=','-','_','0'].includes(e.key))e.preventDefault()});
 const U=new URLSearchParams(location.search);
@@ -385,7 +388,7 @@ function renderGrid(){
   $('#grid').innerHTML=list.map(i=>{
     const n=cart[i.id]||0,out=i.stock<=0;
     const ac=out?`<span class="tag">${esc(t('soldout'))}</span>`:n?`<span class="step"><button onclick="chg('${i.id}',-1)" aria-label="${esc(t('dec',i.name))}">−</button><span aria-live="polite">${n}</span><button class="pl" onclick="chg('${i.id}',1)" aria-label="${esc(t('inc',i.name))}" ${n>=Math.min(i.stock,99)?'disabled':''}>+</button></span>`:`<button class="add" onclick="chg('${i.id}',1)" aria-label="${esc(t('inc',i.name))}">+</button>`;
-    return`<div class="p ${out?'out':''}"><div class="im">${thumb(i)}</div><b>${esc(i.name)}</b><small>${esc(i.cat)}</small><div class="pr">${money(i.price)}</div><div class="ac">${ac}</div></div>`;
+    return`<div class="p ${out?'out':''}"><div class="im" ${out?'':`onclick="chg('${i.id}',1)" role="button" aria-label="${esc(t('inc',i.name))}"`}>${thumb(i)}</div><b>${esc(i.name)}</b><small>${esc(i.cat)}</small><div class="pr">${money(i.price)}</div><div class="ac">${ac}</div></div>`;
   }).join('')||`<div class="empty">${esc(t('noMenu'))}</div>`;
 }
 function chg(id,d){
