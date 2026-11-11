@@ -545,6 +545,7 @@ async function refresh(){
     if(r.status===404){LS.d('co_tok');backToMenu();return}
     if(!r.ok)return;const j=await r.json();
     if(j.status!==cur.status||j.pst!==cur.pst){cur=j;showStatus(j);if(navigator.vibrate)try{navigator.vibrate(120)}catch(e){}}
+    if(j.status==='done'||j.status==='cancelled'){stopPoll();LS.d('co_tok')}
   }catch(e){}
 }
 function startPoll(){stopPoll();poll=setInterval(()=>{if(!document.hidden)refresh()},4000)}
@@ -568,7 +569,7 @@ $('#lang').innerHTML=LANGS.map(l=>`<option value="${l[0]}">${l[1]}</option>`).jo
     const tk=LS.g('co_tok');
     if(tk){
       const r=await fetch('/api/public/order/'+encodeURIComponent(tk),{cache:'no-store'}).catch(()=>null);
-      if(r&&r.ok){const j=await r.json();if(j.status==='new'||j.status==='accepted'||(Date.now()-new Date(j.t))<30*60e3&&j.status==='done'){showStatus(j);startPoll()}else LS.d('co_tok')}
+      if(r&&r.ok){const j=await r.json();if(j.status==='new'||j.status==='accepted'){showStatus(j);startPoll()}else LS.d('co_tok')}
       else if(r&&r.status===404)LS.d('co_tok');
     }
   }catch(e){
