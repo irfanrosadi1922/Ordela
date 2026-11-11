@@ -667,7 +667,7 @@ P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSa
 
 
 /* ================= PENGATURAN VOICE CASHIER (db.set.vc) ================= */
-P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,fab:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
+P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,stt:0,fab:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
 P2.voiceSet=function(){
   closeAll();
   const c=P2.vcCfg(),sup=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
@@ -695,6 +695,7 @@ P2.voiceSet=function(){
   <h5 class="invh">Pelajaran suara</h5>
   ${T('learn','Belajar dari koreksi')}
   ${T('ai','Bantuan AI','Hanya untuk ucapan yang tidak dikenal')}
+  ${T('stt','Pengenalan suara AI')}
   <div id="vcLn"></div>
   <h5 class="invh">Diagnostik mikrofon</h5>
   <div id="vcDg"></div>
