@@ -66,7 +66,9 @@ Deno.serve(async (req: Request) => {
   const to = setTimeout(() => ctrl.abort(), 55000);
   try {
     const endpoint = String(config.base_url).trim().replace(/\/+$/, "") + "/chat/completions";
-    const model = String(config.vision_model || config.model).trim();
+    const isGroq = /groq\.com/i.test(String(config.base_url));
+    // Model teks (mis. gpt-oss) tidak bisa membaca gambar: pada Groq pakai model gambar bawaan bila vision_model belum diatur.
+    const model = String(config.vision_model || (isGroq ? "meta-llama/llama-4-scout-17b-16e-instruct" : config.model)).trim();
     const r = await fetch(endpoint, {
       method: "POST", signal: ctrl.signal, headers: { ...J, Authorization: `Bearer ${key.trim()}` },
       body: JSON.stringify({
@@ -78,7 +80,7 @@ Deno.serve(async (req: Request) => {
     const j = Array.isArray(j0) ? j0[0] : j0;
     if (!r.ok) {
       const raw = String(j?.error?.message ?? j?.message ?? "").replace(/[\r\n]+/g, " ").slice(0, 140);
-      const why: Record<number, string> = { 400: "model AI ini kemungkinan tidak mendukung gambar (ganti ke model dengan kemampuan gambar)", 401: "API key tidak berlaku", 402: "saldo penyedia AI habis", 403: "akses ditolak", 404: "model tidak ditemukan", 429: "kuota habis atau terlalu cepat" };
+      const why: Record<number, string> = { 400: "model AI ini kemungkinan tidak mendukung gambar (atur vision_model di konfigurasi AI ke model dengan kemampuan gambar)", 401: "API key tidak berlaku", 402: "saldo penyedia AI habis", 403: "akses ditolak", 404: "model tidak ditemukan", 429: "kuota habis atau terlalu cepat" };
       return out({ error: `Penyedia AI menolak (${r.status}): ${why[r.status] ?? "kesalahan penyedia"}${raw ? " — " + raw : ""} [model=${model}]` }, 502);
     }
     let text = String(j?.choices?.[0]?.message?.content ?? "").trim();
