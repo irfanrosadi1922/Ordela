@@ -353,6 +353,10 @@ button[hidden]{display:none!important}
 .coc{background:var(--card);border-radius:24px;padding:14px 16px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,.06);border-left:6px solid var(--ln)}
 .coc.new{border-left-color:var(--b)}.coc.accepted{border-left-color:var(--ok)}
 .coc.cancelled{opacity:.6}
+.aiscan{padding:18px 4px;text-align:center}.aiscan-bar{height:6px;border-radius:99px;background:var(--ln);overflow:hidden;margin-bottom:12px}.aiscan-bar i{display:block;height:100%;width:40%;background:var(--ad,#2f6bff);border-radius:99px;animation:aisc 1.1s ease-in-out infinite}@keyframes aisc{0%{margin-left:-40%}100%{margin-left:100%}}
+.scl{max-height:52vh;overflow:auto;margin:0 -4px 10px;padding:0 4px}.scr{border:1px solid var(--ln);border-radius:14px;padding:10px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px;background:#fff}.scr.on{border-color:var(--ad,#2f6bff)}
+.scc{display:flex;gap:10px;align-items:center}.scc>input{width:20px;height:20px;flex:none}.scn{flex:1;min-width:0}.scn .fi{margin:0}.scr .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.scr .fi{margin:0}
+.scx{color:var(--mu);font-size:12px}.scx.w{color:#b45309}.scf{display:flex;gap:8px}.scf .btn{flex:1}
 .cotabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;border-bottom:1px solid var(--ln);scrollbar-width:none}.cotabs::-webkit-scrollbar{display:none}
 .cotabs button{flex:1 0 auto;background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;font:inherit;font-weight:600;color:var(--mu);white-space:nowrap;cursor:pointer}
 .cotabs button.on{color:var(--ok);border-bottom-color:var(--ok)}
@@ -981,6 +985,7 @@ html[data-theme=dark] .pm.w{background:#1e2a44;color:#93b4ff}html[data-theme=dar
     <section id="v-inv" hidden>
       <div class="bar"><h2><i class="ic" data-ic="box"></i>Inventori</h2>
         <button class="btn sm sec ibtn" id="opnBtn" aria-label="Stok Opname" title="Stok Opname" onclick="go('opname')"><i class="ic" data-ic="check"></i><span>Stok Opname</span></button>
+        <button class="btn sm sec ibtn own-only" aria-label="Scan Menu (AI)" title="Scan Menu (AI)" onclick="P2.scanOpen()"><i class="ic" data-ic="camera"></i><span>Scan Menu</span></button>
         <button class="own-only fab-add" id="addItemBtn" aria-label="Tambah Item" title="Tambah Item" onclick="itemForm(null,S.itab==='ns')"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
         <button class="btn sm red" id="bulkDel" onclick="bulkDel()" hidden><i class="ic" data-ic="trash"></i>Hapus terpilih (0)</button>
         <button class="btn sm sec ibtn own-only" aria-label="Atur Urutan Menu" title="Atur Urutan Menu" onclick="orderForm()"><i class="ic" data-ic="reorder"></i><span>Atur Urutan Menu</span></button>

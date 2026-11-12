@@ -495,6 +495,75 @@ V.ai=function(){
   <div class="cdis">Asisten AI bisa saja keliru. Periksa kembali sebelum bertindak.</div></div>`;
   aiScroll();if(load)aiHistoryLoad(uid);
 };
+/* ===== Scan menu dari gambar: AI membaca foto menu, pemilik mengecek, lalu dimasukkan ke menu ===== */
+const SC={rows:[]};
+P2.scanOpen=function(){
+  if(!isOwner()){toast('Hanya owner yang boleh mengubah data menu');return}
+  if(!(window.POS_SB&&POS_SB.url&&CL.on&&CL.tok)){toast('Scan menu butuh login dan koneksi internet');return}
+  openModal(`<h3>Scan menu dengan AI</h3>
+  <p class="hint">Foto buku menu, papan menu, atau daftar harga. AI membaca nama, harga, dan kategori; Anda cek dulu sebelum dimasukkan.</p>
+  <div class="two"><button class="btn" onclick="$('#scCam').click()"><i class="ic" data-ic="camera"></i>Ambil foto</button><button class="btn sec" onclick="$('#scPick').click()">Pilih gambar</button></div>
+  <input type="file" id="scCam" accept="image/*" capture="environment" hidden onchange="P2.scanFile(this)"><input type="file" id="scPick" accept="image/*" hidden onchange="P2.scanFile(this)">
+  <button class="btn sec" onclick="closeModal()">Tutup</button>`);
+};
+function scanShrink(file){return new Promise((ok,no)=>{
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{try{
+    let side=1600,q=.82,out='';
+    for(let k=0;k<4;k++){const sc=Math.min(1,side/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*sc));c.height=Math.max(1,Math.round(img.height*sc));
+      const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);out=c.toDataURL('image/jpeg',q);
+      if(out.length<2.8e6)break;side=Math.round(side*.75);q=Math.max(.6,q-.08)}
+    URL.revokeObjectURL(url);ok(out)}catch(e){no(e)}};
+  img.onerror=()=>{URL.revokeObjectURL(url);no(new Error('Gambar tidak bisa dibaca'))};img.src=url})}
+P2.scanFile=async function(inp){
+  const f=inp.files&&inp.files[0];inp.value='';if(!f)return;
+  openModal(`<h3>Membaca menu…</h3><div class="aiscan"><div class="aiscan-bar"><i></i></div><p class="hint">AI sedang membaca gambar. Biasanya 5–20 detik.</p></div>`);
+  try{
+    const image=await scanShrink(f);
+    const C=window.POS_SB,ctrl=new AbortController(),to=setTimeout(()=>ctrl.abort(),60000);
+    let j;try{
+      const r=await fetch(C.url+'/functions/v1/menu-scan',{method:'POST',signal:ctrl.signal,headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,image,cur:db.set.cur||'',cats:db.cats.slice(0,30)})});
+      j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('Gagal ('+r.status+')'));
+    }finally{clearTimeout(to)}
+    const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    const ex={};db.items.forEach(i=>{ex[norm(i.name)]=i});
+    SC.rows=(j.items||[]).map(x=>{const e=ex[norm(x.name)];return{name:x.name,price:x.price==null?'':String(x.price),cat:x.category||'Lainnya',ex:e?e.id:null,exPrice:e?e.price:null,on:!e&&x.price!=null}});
+    P2.scanReview();
+  }catch(e){
+    openModal(`<h3>Scan gagal</h3><p class="hint">${esc(e&&e.name==='AbortError'?'AI terlalu lama merespons. Coba lagi dengan foto yang lebih kecil.':(e&&e.message)||'Terjadi kesalahan')}</p><button class="btn" onclick="P2.scanOpen()">Coba lagi</button><button class="btn sec" onclick="closeModal()">Tutup</button>`);
+  }
+};
+P2.scanReview=function(){
+  const R=SC.rows;
+  if(!R.length){openModal(`<h3>Tidak ada menu terbaca</h3><p class="hint">Pastikan foto jelas, terang, dan memperlihatkan nama beserta harga.</p><button class="btn" onclick="P2.scanOpen()">Coba foto lain</button><button class="btn sec" onclick="closeModal()">Tutup</button>`);return}
+  const n=R.filter(r=>r.on).length;
+  openModal(`<h3>Hasil scan (${R.length} menu)</h3>
+  <p class="hint">Periksa dan perbaiki bila perlu. Menu yang sudah ada tidak dicentang; mencentangnya memperbarui harganya. Menu baru ditambahkan tanpa pelacakan stok (bisa diatur nanti).</p>
+  <datalist id="scCats">${db.cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+  <div class="scl">${R.map((r,i)=>`<div class="scr${r.on?' on':''}${r.ex?' ex':''}">
+    <label class="scc"><input type="checkbox" ${r.on?'checked':''} onchange="P2.scanTog(${i},this.checked)"><span class="scn"><input class="fi" value="${esc(r.name)}" oninput="SC.rows[${i}].name=this.value" aria-label="Nama"></span></label>
+    <div class="two"><input class="fi" inputmode="decimal" placeholder="Harga" value="${esc(r.price)}" oninput="P2.scanPrice(${i},this.value)" aria-label="Harga"><input class="fi" list="scCats" value="${esc(r.cat)}" oninput="SC.rows[${i}].cat=this.value" aria-label="Kategori"></div>
+    ${r.ex?`<small class="scx">Sudah ada${r.exPrice!=null?' · harga sekarang '+esc(money(r.exPrice)):''}</small>`:''}${r.price===''?'<small class="scx w">Harga tidak terbaca, isi manual</small>':''}</div>`).join('')}</div>
+  <div class="scf"><button class="btn" id="scGo" onclick="P2.scanAdd()" ${n?'':'disabled'}>Masukkan ${n} menu</button><button class="btn sec" onclick="closeModal()">Batal</button></div>`);
+};
+P2.scanTog=function(i,v){SC.rows[i].on=!!v;P2.scanCnt()};
+P2.scanPrice=function(i,v){const r=SC.rows[i];r.price=v;if(v!==''&&!r.ex&&!r.on){r.on=true;const cb=document.querySelectorAll('.scr input[type=checkbox]')[i];if(cb)cb.checked=true}P2.scanCnt()};
+P2.scanCnt=function(){const n=SC.rows.filter(r=>r.on).length,b=$('#scGo');if(b){b.disabled=!n;b.textContent='Masukkan '+n+' menu'}};
+P2.scanAdd=function(){
+  if(!isOwner())return;
+  let add=0,upd=0,bad=0;
+  SC.rows.filter(r=>r.on).forEach(r=>{
+    const name=String(r.name||'').trim().slice(0,60),p=r.price===''?NaN:rnd(String(r.price).replace(',','.'));
+    if(!name||!(p>=0)){bad++;return}
+    const cat=String(r.cat||'').trim().slice(0,30)||'Lainnya';
+    if(r.ex){const it=find(r.ex);if(it&&it.price!==p){it.price=p;upd++}return}
+    if(db.items.some(x=>String(x.name).toLowerCase()===name.toLowerCase())){bad++;return}
+    if(!db.cats.includes(cat))db.cats.push(cat);
+    db.items.push({id:uid(),emoji:'🍽️',name,cat,price:p,cost:0,stock:0,min:db.set.low,img:'',ns:1});add++;
+  });
+  if(!add&&!upd){toast(bad?'Periksa nama dan harga yang dicentang':'Tidak ada perubahan');return}
+  save();closeModal();render();toast((add?add+' menu ditambahkan':'')+(add&&upd?', ':'')+(upd?upd+' harga diperbarui':''));
+};
 P2.aiTgl=function(){const i=$('#aiIn'),m=$('#aiMic'),g=$('#aiGo');if(!i||!g)return;const has=!!i.value.trim(),canMic=!!(window.VC&&VC.canDictate&&VC.canDictate());if(m)m.hidden=!canMic||has;g.hidden=canMic&&!has};
 P2.aiOnScroll=function(){const l=$('#aiLog'),d=$('#aiDn');if(l&&d)d.hidden=l.scrollHeight-l.scrollTop-l.clientHeight<140};
 P2.aiDown=function(){const l=$('#aiLog');if(l)l.scrollTo({top:l.scrollHeight,behavior:'smooth'})};
