@@ -625,7 +625,7 @@ html.kb .fab-add{display:none!important}
 }
 
 /* ---------- Tombol suara melayang (tahan untuk bicara) ---------- */
-.vc-fab{position:fixed;right:16px;bottom:calc(max(var(--sab),12px) + 150px);z-index:40;width:60px;height:60px;-webkit-tap-highlight-color:transparent;border-radius:50%;border:3px solid rgba(255,255,255,.92);display:grid;place-items:center;background:linear-gradient(150deg,var(--ac),color-mix(in srgb,var(--ac) 72%,#000));color:var(--acx);box-shadow:0 12px 28px rgba(15,23,42,.30),0 3px 8px rgba(15,23,42,.18);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .15s,background .15s,box-shadow .15s}
+.vc-fab{position:fixed;right:16px;bottom:calc(max(var(--sab),12px) + 150px);z-index:40;width:60px;height:60px;-webkit-tap-highlight-color:transparent;border-radius:50%;border:0;display:grid;place-items:center;background:linear-gradient(150deg,var(--ac),color-mix(in srgb,var(--ac) 72%,#000));color:var(--acx);box-shadow:0 12px 28px rgba(15,23,42,.30),0 3px 8px rgba(15,23,42,.18);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .15s,background .15s,box-shadow .15s}
 .vc-fab svg{width:26px;height:26px;pointer-events:none;display:block}
 .vc-fab .vcw{position:absolute;inset:0;border-radius:50%;pointer-events:none}
 .vc-fab.press{transform:scale(.94)}
@@ -681,3 +681,15 @@ body:has(#v-ai:not([hidden])) .top{display:none!important}
   .chat.gx .cdn{bottom:158px}
 }
 @media (max-width:700px){html body .main:has(#v-ai:not([hidden])),html.kb body .main:has(#v-ai:not([hidden])){padding-bottom:0!important}}
+
+/* AI Cashier: robot bergerak saat mendengarkan */
+.vc-fab svg,.vc-mic svg,.vc-go svg{overflow:visible}
+.bt-ey,.bt-an{transform-box:fill-box;transform-origin:center}
+@keyframes btBob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-1.5px) rotate(-6deg)}75%{transform:translateY(-1.5px) rotate(6deg)}}
+@keyframes btBlink{0%,42%,50%,100%{transform:scaleY(1)}46%{transform:scaleY(.1)}}
+@keyframes btAn{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.5px) scale(1.5)}}
+.vc-fab.rec svg,.vc-fab.hold svg,.vc-mic.rec svg,.vc-go.rec svg{animation:btBob .7s ease-in-out infinite;transform-origin:50% 80%}
+.vc-fab.live:not(.rec) svg,.vc-mic.live:not(.rec) svg{animation:btBob 2.4s ease-in-out infinite;transform-origin:50% 80%}
+.vc-fab.rec .bt-ey,.vc-fab.hold .bt-ey,.vc-fab.live .bt-ey,.vc-mic.rec .bt-ey,.vc-mic.live .bt-ey,.vc-go.rec .bt-ey{animation:btBlink 1.6s infinite}
+.vc-fab.rec .bt-an,.vc-fab.hold .bt-an,.vc-fab.live .bt-an,.vc-mic.rec .bt-an,.vc-mic.live .bt-an,.vc-go.rec .bt-an{animation:btAn .7s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.vc-fab svg,.vc-mic svg,.vc-go svg,.bt-ey,.bt-an{animation:none!important}}
