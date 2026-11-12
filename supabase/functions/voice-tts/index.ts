@@ -35,8 +35,8 @@ Deno.serve(async (req: Request) => {
       method: "POST", signal: ctrl.signal, headers: { ...J, "xi-api-key": key, Accept: "audio/mpeg" },
       body: JSON.stringify({
         text, model_id: model, ...(lang ? { language_code: lang } : {}),
-        // stabilitas rendah + gaya = intonasi dan emosi lebih hidup
-        voice_settings: { stability: 0.38, similarity_boost: 0.8, style: 0.4, use_speaker_boost: true, speed: 1.0 },
+        // stabilitas sedang: suara konsisten antar kalimat, intonasi tetap hidup
+        voice_settings: { stability: 0.6, similarity_boost: 0.85, style: 0.2, use_speaker_boost: true, speed: 1.0 },
       }),
     });
     if (!r.ok) {

@@ -782,7 +782,7 @@
       if (/google/i.test(nm)) sc += 4;
       if (v.localService === false) sc += 2;
       if (/compact|espeak/i.test(nm)) sc -= 3;
-      if (sc > bs) { bs = sc; best = v; }
+      if (sc > bs || (sc === bs && best && String(v.name) < String(best.name))) { bs = sc; best = v; }
     });
     voiceCache[key] = { n: vs.length, v: best }; return best;
   }
@@ -838,7 +838,14 @@
     var now = Date.now(); tts.hist = tts.hist.filter(function (x) { return now - x < 3600000; });
     if (!ttsOk() || tts.hist.length >= 60) return sayLocal(t, opt);
     tts.hist.push(now); stopSay(); var token = tts.seq; bgStop(); st.speaking = true;
-    ttsFetch(txt).then(function (b) { if (token === tts.seq) playBlob(b, token, function () { sayLocal(t, opt); }); }, function (e) { if (token !== tts.seq) return; ttsBadFor(e); st.speaking = false; sayLocal(t, opt); });
+    var tryCloud = function (again) {
+      ttsFetch(txt).then(function (b) { if (token === tts.seq) playBlob(b, token, function () { sayLocal(t, opt); }); }, function (e) {
+        if (token !== tts.seq) return;
+        var cs = e && e.status; if (again && (!cs || cs === 504 || cs === 429)) { setTimeout(function () { if (token === tts.seq) tryCloud(false); }, 700); return; }   // gangguan sesaat: coba sekali lagi agar suara tidak berganti
+        ttsBadFor(e); st.speaking = false; sayLocal(t, opt);
+      });
+    };
+    tryCloud(true);
     return true;
   }
   /* uji suara dari Pengaturan: melaporkan suara AI aktif, atau alasan jatuh ke suara perangkat */
