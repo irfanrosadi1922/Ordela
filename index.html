@@ -277,6 +277,7 @@ td .th img{width:100%;height:100%;object-fit:cover}
 .rcgrid{display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start}
 .rcside{position:sticky;top:12px}
 .tgls{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0 10px;margin-bottom:4px}
+.adv{margin:10px 0 6px;border:1px solid var(--bd,#dbe3ef);border-radius:12px;padding:0 12px}.adv>summary{display:block!important;cursor:pointer;padding:11px 0;font-weight:600;font-size:13.5px;list-style:none}.adv>summary::-webkit-details-marker{display:none}.adv>summary::after{content:'▾';float:right;opacity:.6}.adv[open]>summary::after{content:'▴'}.adv>summary small{display:block;font-weight:400;opacity:.6;font-size:12px;margin-top:2px}.adv[open]{padding-bottom:8px}
 .tgl{display:flex;align-items:center;gap:10px;padding:8px 2px;font-size:13.5px;cursor:pointer}
 .tgl{flex-direction:row-reverse;justify-content:space-between}.tgl>span{flex:1;min-width:0}
 .tgl input[type=checkbox]{-webkit-appearance:none;appearance:none;position:relative;width:46px;height:28px;border-radius:999px;background:#c8c8cd;border:0;margin:0;flex:none;cursor:pointer;transition:background .2s;outline:0}
@@ -2247,21 +2248,23 @@ function itemForm(id,ns){
   <input type="file" id="imgF" accept="image/*" hidden onchange="pickImg(this)"></div></div>
   <label class="fl">Nama item *</label><input class="fi" id="fN" value="${esc(i.name)}">
   <div class="two"><div><label class="fl">Kategori</label><select class="fi" id="fC">${db.cats.map(c=>`<option ${c===i.cat?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
-  <div><label class="fl">atau kategori baru</label><input class="fi" id="fC2" placeholder="Opsional"></div></div>
+  <div><label class="fl">Kategori baru</label><input class="fi" id="fC2" placeholder="Bila perlu"></div></div>
   <div class="two"><div><label class="fl">Harga jual *</label><input class="fi" id="fP" type="number" step="any" min="0" value="${i.price}"></div>
   <div><label class="fl">Harga modal</label><input class="fi" id="fK" type="number" step="any" min="0" value="${i.cost||''}"></div></div>
-  <div class="two"><div><label class="fl">Barcode (opsional)</label><input class="fi" id="fBC" value="${esc(i.bc||'')}" inputmode="text" autocomplete="off" placeholder="Scan / ketik"></div><div class="scanwrap"><button type="button" class="btn sec scanbtn" onclick="P2.scan(c=>{$('#fBC').value=c;return true},{once:true,keep:true})"><i class="ic" data-ic="camera"></i><span>Scan kamera</span></button></div></div>
-  <div class="two"><div><label class="fl">Stasiun (opsional)</label><input class="fi" id="fSt" list="stL" maxlength="20" placeholder="Dapur / Bar" value="${esc(i.stn||'')}"><datalist id="stL"><option>Dapur</option><option>Bar</option><option>Dessert</option></datalist></div>
-  <div><label class="fl">Satuan beli (opsional)</label><div style="display:flex;gap:6px"><input class="fi" id="fPuN" maxlength="12" placeholder="karung" value="${esc((i.pu||{}).n||'')}" style="flex:1;min-width:0"><input class="fi" id="fPuF" type="number" min="0" step="any" inputmode="decimal" placeholder="isi" value="${(i.pu||{}).f||''}" style="width:72px"></div></div></div>
-  <small class="hint" style="display:block;margin:-2px 0 6px">Satuan beli: mis. 1 karung = 25000 (gram). Dipakai di Pembelian agar stok bertambah otomatis.</small>
-  <label class="fl">Varian &amp; tambahan (opsional)</label><textarea class="fi modsta" id="fMods" rows="4" placeholder="Level pedas (wajib): Sedang, Pedas +2000&#10;Topping (banyak): Keju +5000, Telur +4000">${esc(modsText(i.mods))}</textarea>
-  <small class="hint">Satu baris satu grup. Tulis (wajib) bila harus dipilih, (banyak) bila boleh pilih lebih dari satu, dan +harga untuk tambahan biaya.</small>
-  <label class="tgl"><input type="checkbox" id="fNS" ${i.ns?'checked':''} onchange="nsToggle()"><span>Bahan / tidak dijual (hanya untuk stok &amp; opname, tidak muncul di Kasir)</span></label>
-  <label class="tgl" id="fBL" ${i.ns?'hidden':''}><input type="checkbox" id="fB" ${isB(i)?'checked':''} onchange="bdToggle()"><span>Item paket / resep (berisi beberapa item)</span></label>
-  <div id="bdTypeW" ${isB(i)?'':'hidden'}><label class="fl">Jenis isi</label><select class="fi" id="fBT" onchange="S.edit.rc=this.value==='rc';bdRender()"><option value="pk" ${i.rc?'':'selected'}>Paket: beberapa menu dijual jadi satu</option><option value="rc" ${i.rc?'selected':''}>Resep: kurangi bahan otomatis saat terjual</option></select></div>
-  <div id="bdBox" ${isB(i)?'':'hidden'}>  <div id="bdRows"></div><button class="btn sm sec" type="button" onclick="bdAdd()">+ Tambah isi</button></div>
   <div id="stkRow" style="${isB(i)?'display:none':''}"><div class="two"><div><label class="fl">Stok</label><input class="fi" id="fS" type="number" min="0" step="any" value="${isB(i)?0:i.stock}"></div>
   <div><label class="fl">Batas stok menipis</label><input class="fi" id="fM" type="number" min="0" value="${i.min}"></div></div></div>
+  <label class="tgl"><input type="checkbox" id="fNS" ${i.ns?'checked':''} onchange="nsToggle()"><span>Bahan (tidak dijual, hanya stok)</span></label>
+  <label class="tgl" id="fBL" ${i.ns?'hidden':''}><input type="checkbox" id="fB" ${isB(i)?'checked':''} onchange="bdToggle()"><span>Paket / resep (isi beberapa item)</span></label>
+  <div id="bdTypeW" ${isB(i)?'':'hidden'}><label class="fl">Jenis isi</label><select class="fi" id="fBT" onchange="S.edit.rc=this.value==='rc';bdRender()"><option value="pk" ${i.rc?'':'selected'}>Paket: beberapa menu dijual jadi satu</option><option value="rc" ${i.rc?'selected':''}>Resep: kurangi bahan otomatis saat terjual</option></select></div>
+  <div id="bdBox" ${isB(i)?'':'hidden'}>  <div id="bdRows"></div><button class="btn sm sec" type="button" onclick="bdAdd()">+ Tambah isi</button></div>
+  <details class="adv" ${(i.bc||i.stn||(i.pu&&i.pu.n)||(i.mods&&i.mods.length))?'open':''}><summary>Opsi lainnya <small>barcode, varian, stasiun, satuan beli</small></summary>
+  <div class="two"><div><label class="fl">Barcode (opsional)</label><input class="fi" id="fBC" value="${esc(i.bc||'')}" inputmode="text" autocomplete="off" placeholder="Scan / ketik"></div><div class="scanwrap"><button type="button" class="btn sec scanbtn" onclick="P2.scan(c=>{$('#fBC').value=c;return true},{once:true,keep:true})"><i class="ic" data-ic="camera"></i><span>Scan kamera</span></button></div></div>
+  <label class="fl">Varian &amp; tambahan (opsional)</label><textarea class="fi modsta" id="fMods" rows="3" placeholder="Level pedas (wajib): Sedang, Pedas +2000&#10;Topping (banyak): Keju +5000, Telur +4000">${esc(modsText(i.mods))}</textarea>
+  <small class="hint">Satu baris satu grup. (wajib) = harus pilih, (banyak) = boleh lebih dari satu, +harga = biaya tambahan.</small>
+  <div class="two"><div><label class="fl">Stasiun (opsional)</label><input class="fi" id="fSt" list="stL" maxlength="20" placeholder="Dapur / Bar" value="${esc(i.stn||'')}"><datalist id="stL"><option>Dapur</option><option>Bar</option><option>Dessert</option></datalist></div>
+  <div><label class="fl">Satuan beli (opsional)</label><div style="display:flex;gap:6px"><input class="fi" id="fPuN" maxlength="12" placeholder="karung" value="${esc((i.pu||{}).n||'')}" style="flex:1;min-width:0"><input class="fi" id="fPuF" type="number" min="0" step="any" inputmode="decimal" placeholder="isi" value="${(i.pu||{}).f||''}" style="width:72px"></div></div></div>
+  <small class="hint" style="display:block;margin:-2px 0 6px">Satuan beli: 1 karung = 25000 → stok naik otomatis saat Pembelian.</small>
+  </details>
   <button class="btn" onclick="saveItem()">Simpan</button><button class="btn sec" onclick="closeModal()">Batal</button>${id?`<button class="btn red" onclick="delItem('${id}')">Hapus Item</button>`:''}`);
   bdRender();
 }
