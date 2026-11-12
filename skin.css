@@ -693,3 +693,11 @@ body:has(#v-ai:not([hidden])) .top{display:none!important}
 .vc-fab.rec .bt-ey,.vc-fab.hold .bt-ey,.vc-fab.live .bt-ey,.vc-mic.rec .bt-ey,.vc-mic.live .bt-ey,.vc-go.rec .bt-ey{animation:btBlink 1.6s infinite}
 .vc-fab.rec .bt-an,.vc-fab.hold .bt-an,.vc-fab.live .bt-an,.vc-mic.rec .bt-an,.vc-mic.live .bt-an,.vc-go.rec .bt-an{animation:btAn .7s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.vc-fab svg,.vc-mic svg,.vc-go svg,.bt-ey,.bt-an{animation:none!important}}
+
+/* ===== Responsif sentuh (kasir & admin): tanpa jeda ketuk dua kali, umpan balik tekan instan ===== */
+button,[role=button],.btn,.chip,.pill,.adr,summary,label.tgl,select,.ib,.mini{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:disabled,.btn:disabled{cursor:not-allowed}
+@media (hover:none){
+  :where(button:not(:disabled),[role=button],.btn,.chip,.adr,.ib,.mini):active{transform:scale(.96);filter:brightness(.94);transition:transform .06s ease-out,filter .06s ease-out}
+}
+@media (prefers-reduced-motion:reduce){:where(button,.btn,.chip,.adr):active{transform:none}}
