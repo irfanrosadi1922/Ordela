@@ -1,4 +1,4 @@
-/* Voice Cashier Ordela: perintah suara tanpa AI/LLM.
+/* AI Cashier Ordela: perintah suara tanpa AI/LLM.
    Pengenalan suara memakai SpeechRecognition bawaan peramban (bila ada); hasilnya dibaca parser aturan
    (Indonesia, Inggris, Melayu) lalu memakai fungsi keranjang & pembayaran yang sudah ada di Ordela.
    Bila peramban/WebView tidak mendukung, panel tetap bisa dipakai lewat kolom ketik (atau mikrofon keyboard). */
@@ -669,7 +669,7 @@
   function spokenMoney(v) { try { return new Intl.NumberFormat(SRLANG[st.lang] || 'id-ID', { maximumFractionDigits: 2 }).format(v) + (typeof curWord === 'function' && curWord() ? ' ' + curWord() : ''); } catch (e) { return String(v); } }
 
   /* ---------- UI ---------- */
-  var ICON_MIC = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+  var ICON_MIC = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4.5M3 12.5v3M21 12.5v3M9.5 16.5h5"/><circle cx="12" cy="3.5" r="1"/><circle cx="9.5" cy="12.5" r=".9" fill="currentColor"/><circle cx="14.5" cy="12.5" r=".9" fill="currentColor"/></svg>';
   function ensureUI() {
     if ($('#vcP')) return;
     var p = document.createElement('div'); p.id = 'vcP'; p.hidden = true;

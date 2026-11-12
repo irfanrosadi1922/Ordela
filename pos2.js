@@ -838,40 +838,44 @@ P2.invQnAdd=function(){const i=$('#invQnI'),v=(i.value||'').trim().slice(0,30);i
 P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSave(c);P2.invQnPaint()};
 
 
-/* ================= PENGATURAN VOICE CASHIER (db.set.vc) ================= */
+/* ================= PENGATURAN AI CASHIER (db.set.vc) ================= */
 P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,stt:0,fab:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
 P2.voiceSet=function(){
   closeAll();
   const c=P2.vcCfg(),sup=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
   const T=(k,t,d)=>`<label class="tgl"><input type="checkbox" ${c[k]?'checked':''} onchange="P2.vcTog('${k}',this.checked)"><span>${t}${d?`<small>${d}</small>`:''}</span></label>`;
   const items=(db.items||[]).filter(i=>!i.ns).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
-  openModal(`<h3>Voice Cashier</h3>
+  openModal(`<h3>AI Cashier</h3>
   ${sup?'':'<p class="hint" style="margin:0 0 6px">Perangkat ini tidak mendukung suara, kasir memakai kolom ketik.</p>'}
-  ${T('on','Aktifkan Voice Cashier')}
+  ${T('on','Aktifkan AI Cashier')}
   <h5 class="invh">Bahasa</h5>
   <div class="chips" id="vcLg">${[['auto','Ikuti bahasa aplikasi'],['id','Indonesia'],['en','English'],['ms','Melayu']].map(([k,n])=>`<button class="chip ${c.lang===k?'on':''}" onclick="P2.vcLang('${k}')">${n}</button>`).join('')}</div>
   <h5 class="invh">Mode suara</h5>
   ${T('fab','Tombol suara melayang','Tahan untuk bicara, lepas untuk selesai')}
-  ${T('always','Selalu mendengarkan','Tanpa menekan mikrofon')}
+  ${T('always','Selalu mendengarkan','Tanpa menekan tombol')}
   ${T('wake','Pakai kata panggil','Mis. “Ordela, tambah dua nasi goreng”')}
   <input class="fi" id="vcWord" maxlength="20" placeholder="Kata panggil" value="${esc(c.wakeWord||'ordela')}" onchange="P2.vcWord(this.value)" style="margin:2px 0 6px">
   ${T('direct','Bayar langsung satu kalimat','Tanpa membuka layar bayar')}
-  <h5 class="invh">Perilaku</h5>
+  <details class="adv"><summary>Perilaku <small>suara balasan, pembayaran suara</small></summary>
   ${T('speak','Suara balasan')}
   ${T('pay','Boleh membayar dengan suara')}
   ${T('confirm','Boleh konfirmasi pembayaran dengan suara')}
-  <h5 class="invh">Nama panggilan menu</h5>
+  </details>
+  <details class="adv"><summary>Nama panggilan menu <small>mis. nasgor = Nasi Goreng</small></summary>
   <div class="inv-qn" id="vcAl"></div>
   <input class="fi" id="vcAlA" maxlength="30" placeholder="Ucapan, mis. nasgor" style="margin-bottom:8px">
   <div style="display:flex;gap:8px"><select class="fi" id="vcAlI" style="flex:1;min-width:0;margin:0">${items.map(i=>`<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</select><button class="btn sec" style="width:auto;margin:0" onclick="P2.vcAlAdd()">Tambah</button></div>
-  <h5 class="invh">Pelajaran suara</h5>
+  </details>
+  <details class="adv"><summary>Pelajaran &amp; AI <small>belajar koreksi, bantuan AI</small></summary>
   ${T('learn','Belajar dari koreksi')}
   ${T('ai','Bantuan AI','Hanya untuk ucapan yang tidak dikenal')}
   ${T('stt','Pengenalan suara AI')}
   <div id="vcLn"></div>
-  <h5 class="invh">Diagnostik mikrofon</h5>
+  </details>
+  <details class="adv" ontoggle="if(this.open)P2.vcDgPaint()"><summary>Diagnostik mikrofon</summary>
   <div id="vcDg"></div>
-  <button class="btn" style="margin-top:14px" onclick="closeModal()">Selesai</button>`);
+  </details>
+  <div class="stkb"><button class="btn" onclick="closeModal()">Selesai</button></div>`);
   P2.vcAlPaint();P2.vcLnPaint();P2.vcDgPaint();
 };
 P2.vcLnPaint=function(){

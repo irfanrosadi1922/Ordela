@@ -277,7 +277,7 @@ td .th img{width:100%;height:100%;object-fit:cover}
 .rcgrid{display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start}
 .rcside{position:sticky;top:12px}
 .tgls{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0 10px;margin-bottom:4px}
-.adv{margin:10px 0 6px;border:1px solid var(--bd,#dbe3ef);border-radius:12px;padding:0 12px}.adv>summary{display:block!important;cursor:pointer;padding:11px 0;font-weight:600;font-size:13.5px;list-style:none}.adv>summary::-webkit-details-marker{display:none}.adv>summary::after{content:'▾';float:right;opacity:.6}.adv[open]>summary::after{content:'▴'}.adv>summary small{display:block;font-weight:400;opacity:.6;font-size:12px;margin-top:2px}.adv[open]{padding-bottom:8px}
+.stkb{position:sticky;bottom:-1px;background:linear-gradient(transparent,#fff 30%);padding:14px 0 2px;margin-top:6px}.stkb .btn{margin:0}.adv{margin:10px 0 6px;border:1px solid var(--bd,#dbe3ef);border-radius:12px;padding:0 12px}.adv>summary{display:block!important;cursor:pointer;padding:11px 0;font-weight:600;font-size:13.5px;list-style:none}.adv>summary::-webkit-details-marker{display:none}.adv>summary::after{content:'▾';float:right;opacity:.6}.adv[open]>summary::after{content:'▴'}.adv>summary small{display:block;font-weight:400;opacity:.6;font-size:12px;margin-top:2px}.adv[open]{padding-bottom:8px}
 .tgl{display:flex;align-items:center;gap:10px;padding:8px 2px;font-size:13.5px;cursor:pointer}
 .tgl{flex-direction:row-reverse;justify-content:space-between}.tgl>span{flex:1;min-width:0}
 .tgl input[type=checkbox]{-webkit-appearance:none;appearance:none;position:relative;width:46px;height:28px;border-radius:999px;background:#c8c8cd;border:0;margin:0;flex:none;cursor:pointer;transition:background .2s;outline:0}
@@ -2468,7 +2468,7 @@ const SETP=[
  ['payForm','Pesanan & Pembayaran','shield','Pembayaran Online','QRIS dinamis dan DuitNow untuk pelanggan.','qris duitnow bayar payment'],
  ['rc','Perlengkapan','receipt','Desain Struk','Tata letak, teks, logo, dan ukuran kertas struk.','struk nota receipt kertas logo footer header','set'],
  ['prn','Perlengkapan','print','Printer','Sambungkan printer Bluetooth/USB dan atur cara cetak.','printer bluetooth usb cetak thermal ble','prn'],
- ['voiceSet','Perlengkapan','mic','Voice Cashier','Perintah suara untuk kasir: bahasa, suara balasan, dan nama panggilan menu.','suara voice mikrofon perintah bicara alias'],
+ ['voiceSet','Perlengkapan','mic','AI Cashier','Perintah suara untuk kasir: bahasa, suara balasan, dan nama panggilan menu.','suara voice mikrofon perintah bicara alias'],
  ['themeForm','Tampilan','sun','Warna','Pilih warna aplikasi.','warna tema biru hijau ungu oranye mawar teal'],
  ['langForm','Tampilan','globe','Bahasa','Bahasa tampilan aplikasi.','language indonesia english'],
  ['attForm','Tim & Absensi','clock','Absensi & Shift','Aktifkan absensi, jam shift, lokasi toko, dan jadwal karyawan.','absen shift jadwal gps lokasi radius selfie telat','#owner'],
@@ -4325,7 +4325,7 @@ function accStore(m){
 const APP_VER='1.0.0';
 /* ikon garis 24px untuk halaman profil */
 const PFI={
- mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+ mic:'<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4.5M3 12.5v3M21 12.5v3M9.5 16.5h5"/><circle cx="12" cy="3.5" r="1"/><circle cx="9.5" cy="12.5" r=".9" fill="currentColor"/><circle cx="14.5" cy="12.5" r=".9" fill="currentColor"/>',
  receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
  print:'<path d="M7 9V3h10v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
