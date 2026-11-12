@@ -68,7 +68,7 @@ Deno.serve(async (req: Request) => {
     const endpoint = String(config.base_url).trim().replace(/\/+$/, "") + "/chat/completions";
     const isGroq = /groq\.com/i.test(String(config.base_url));
     // Model teks (mis. gpt-oss) tidak bisa membaca gambar: pada Groq pakai model gambar bawaan bila vision_model belum diatur.
-    const model = String(config.vision_model || (isGroq ? "meta-llama/llama-4-scout-17b-16e-instruct" : config.model)).trim();
+    const model = String(config.vision_model || (isGroq ? "qwen/qwen3.8-27b" : config.model)).trim();
     const r = await fetch(endpoint, {
       method: "POST", signal: ctrl.signal, headers: { ...J, Authorization: `Bearer ${key.trim()}` },
       body: JSON.stringify({
