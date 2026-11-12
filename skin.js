@@ -315,7 +315,7 @@
         ['branch', 'Cabang', 'Pindah stok antar cabang', 'store', '#d946ef'],
         ['integ', 'Integrasi', 'GoFood, GrabFood, ShopeeFood, webhook', 'nodes', '#0ea5e9'],
         ['voice', 'Voice Cashier', 'Bahasa, suara balasan, nama panggilan', 'mic', '#e11d48'],
-        ['inv', 'Invoice & pembayaran', 'Kolom bayar, catatan cepat, struk', 'receipt', '#8b5cf6'],
+        ['invset', 'Invoice & pembayaran', 'Kolom bayar, catatan cepat, struk', 'receipt', '#8b5cf6'],
         ['prn', 'Printer', 'Struk & printer', 'printer', '#475569'],
         ['plan', 'Paket & langganan', 'Paket, kuota & tagihan', 'wallet', 'var(--ad)'],
         ['upd', 'Pembaruan aplikasi', 'Periksa & unduh versi terbaru', 'dl', 'var(--ad)'],
@@ -349,10 +349,10 @@
         var stats = canRep ? '<div class="adst"><div class="adc"><h4>Target harian</h4><div class="adring"><svg viewBox="0 0 60 60"><circle class="tr" cx="30" cy="30" r="24"/><circle class="pg" cx="30" cy="30" r="24" stroke-dasharray="' + (C * pct).toFixed(1) + ' ' + C.toFixed(1) + '"/></svg><div><b>' + Math.round(pct * 100) + '%</b><span>dari rata-rata 7 hari</span></div></div></div>' +
           '<div class="adc w ' + (low ? '' : 'ok') + '"><h4>Stok</h4><div class="big"><i><i class="ic" data-ic="' + (low ? 'alert' : 'check') + '"></i></i>' + low + '</div><small>' + (low ? 'item menipis' : 'semua aman') + '</small></div></div>' : '';
         var secs = G.map(function (gr) {
-          var rows = gr[2].filter(function (r) { return r[0] === 'upd' ? !!window.OrdelaUpdate : r[0] === 'voice' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.voiceSet) : r[0] === 'inv' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.invSet) : r[0] === 'plan' ? (isOwn() && typeof CL !== 'undefined' && CL.on && !!window.P2 && !!P2.plan) : show(r[0]); });
+          var rows = gr[2].filter(function (r) { return r[0] === 'upd' ? !!window.OrdelaUpdate : r[0] === 'voice' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.voiceSet) : r[0] === 'invset' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.invSet) : r[0] === 'plan' ? (isOwn() && typeof CL !== 'undefined' && CL.on && !!window.P2 && !!P2.plan) : show(r[0]); });
           if (!rows.length) return '';
           return '<div class="adgt"><h3>' + gr[0] + '</h3><span>' + gr[1] + '</span></div><div class="adl">' + rows.map(function (r) {
-            var act = r[0] === 'branch' ? 'P2.branch()' : r[0] === 'voice' ? 'P2.voiceSet()' : r[0] === 'inv' ? 'P2.invSet()' : r[0] === 'plan' ? 'P2.plan()' : r[0] === 'upd' ? 'OrdelaUpdate.open()' : "go('" + r[0] + "')";
+            var act = r[0] === 'branch' ? 'P2.branch()' : r[0] === 'voice' ? 'P2.voiceSet()' : r[0] === 'invset' ? 'P2.invSet()' : r[0] === 'plan' ? 'P2.plan()' : r[0] === 'upd' ? 'OrdelaUpdate.open()' : "go('" + r[0] + "')";
             var lk = lockOf(r[0]);
             return '<button class="adr' + (lk ? ' lkd' : '') + '" onclick="' + act + '"><span class="ti" style="--c:' + r[4] + '">' + ico(r[3]) + (r[0] === 'co' && nb ? '<b class="nb">' + nb + '</b>' : '') + '</span><span class="tx"><b>' + esc(r[1]) + tierBadge(VIEW_LOCK[r[0]] || '') + '</b><span>' + esc(lk ? 'Mulai paket ' + lk : r[2]) + '</span></span>' + (lk ? LOCKSVG : CHEV) + '</button>';
           }).join('') + '</div>';
