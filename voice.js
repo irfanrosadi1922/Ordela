@@ -769,14 +769,52 @@
     };
     $('#vcPk').oninput = fill; fill(); $('#vcPk').focus();
   }
-  function say(t) {
+  /* suara balasan: pilih suara terbaik yang ada di perangkat (jaringan/neural/Google lebih natural), kalimat dipecah agar jeda terdengar wajar */
+  var voiceCache = {};
+  function pickVoice(lang) {
+    var ss = root.speechSynthesis; if (!ss || !ss.getVoices) return null;
+    var vs = ss.getVoices() || [], key = lang; if (voiceCache[key] && vs.length === voiceCache[key].n) return voiceCache[key].v;
+    var pre = lang.slice(0, 2).toLowerCase(), best = null, bs = -1;
+    vs.forEach(function (v) {
+      var vl = String(v.lang || '').replace('_', '-').toLowerCase(); if (vl.slice(0, 2) !== pre) return;
+      var sc = vl === lang.toLowerCase() ? 4 : 0, nm = String(v.name || '');
+      if (/natural|neural|online|wavenet|premium|enhanced/i.test(nm)) sc += 6;
+      if (/google/i.test(nm)) sc += 4;
+      if (v.localService === false) sc += 2;
+      if (/compact|espeak/i.test(nm)) sc -= 3;
+      if (sc > bs) { bs = sc; best = v; }
+    });
+    voiceCache[key] = { n: vs.length, v: best }; return best;
+  }
+  try { if (root.speechSynthesis) { root.speechSynthesis.getVoices(); if (root.speechSynthesis.addEventListener) root.speechSynthesis.addEventListener('voiceschanged', function () { voiceCache = {}; }); } } catch (e) { /* abaikan */ }
+  function speakParts(t) {
+    var txt = String(t).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, ' ').replace(/[×·*_#`]/g, ' ').replace(/\s+/g, ' ').trim();
+    var parts = txt.match(/[^.!?;\n]+[.!?;]*/g) || [txt], out = [], cur = '';
+    parts.forEach(function (p) { p = p.trim(); if (!p) return; if ((cur + ' ' + p).length > 170 && cur) { out.push(cur); cur = p; } else cur = cur ? cur + ' ' + p : p; });
+    if (cur) out.push(cur); return out;
+  }
+  function say(t, opt) {
     try {
-      var u = new SpeechSynthesisUtterance(String(t).replace(/[×·]/g, ' ')); u.lang = SRLANG[st.lang] || 'id-ID'; u.rate = 1.05;
+      var ss = root.speechSynthesis, lang = SRLANG[st.lang] || 'id-ID', parts = speakParts(t); if (!ss || !parts.length) return false;
+      var v = pickVoice(lang), total = parts.join(' ').length;
       bgStop(); st.speaking = true;
-      var done = function () { st.speaking = false; bg.pausedUntil = Date.now() + 250; };
-      u.onend = done; u.onerror = done; setTimeout(function () { if (st.speaking) done(); }, Math.min(9000, 1500 + String(t).length * 90));
-      root.speechSynthesis.cancel(); root.speechSynthesis.speak(u);
-    } catch (e) { st.speaking = false; }
+      var done = function () { st.speaking = false; bg.pausedUntil = Date.now() + 250; }, n = 0;
+      ss.cancel();
+      parts.forEach(function (p, i) {
+        var u = new SpeechSynthesisUtterance(p); u.lang = v ? v.lang : lang; if (v) u.voice = v; u.rate = opt && opt.rate || 1; u.pitch = 1;
+        u.onend = function () { if (++n >= parts.length) done(); }; u.onerror = function () { n = parts.length; done(); };
+        ss.speak(u);
+      });
+      setTimeout(function () { if (st.speaking) done(); }, Math.min(40000, 2500 + total * 85));
+      return true;
+    } catch (e) { st.speaking = false; return false; }
+  }
+  /* uji suara dari Pengaturan: mengabarkan bila perangkat tidak punya mesin suara */
+  function speakTest() {
+    var ss = root.speechSynthesis; if (!ss) return { ok: false, msg: 'Perangkat ini tidak mendukung suara balasan.' };
+    var lang = SRLANG[st.lang] || 'id-ID', v = pickVoice(lang), n = (ss.getVoices() || []).length;
+    if (!n) return { ok: false, msg: 'Tidak ada mesin suara. Pasang atau aktifkan “Speech Services by Google” di pengaturan HP.' };
+    say('Halo, saya asisten kasir Ordela. Begini suara saya, enak didengar kan?'); return { ok: true, msg: v ? 'Suara: ' + v.name : 'Memakai suara bawaan perangkat' };
   }
   function applyCfg() {
     var on = cfg().on, fab = cfg().fab, m = $('#vcMic'); if (m) m.hidden = !on || fab;
@@ -1538,7 +1576,7 @@
       try { naturalOut = runNatural(natural); } catch (e) { console.error('voice natural checkout', e); naturalOut = { msg: M('err'), warn: true }; }
       if (chatWorthy(null, naturalOut, naturalText) && (woke || inWin) && chatOn()) {
         bg.awake = Date.now() + 25000;
-        chatAsk(naturalText, function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut); return; } toastMsg(ans, false); if (c.speak && root.speechSynthesis) say(ans); });
+        chatAsk(naturalText, function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut); return; } toastMsg(ans, false); if (st.speak && c.speak && root.speechSynthesis) say(ans); });
         return;
       }
       toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut);
@@ -1553,7 +1591,7 @@
     try { out = run(bestP); } catch (e) { console.error('voice', e); return; }
     if (chatWorthy(bestP, out, cand[0]) && (woke || inWin) && chatOn()) {
       bg.awake = Date.now() + 25000;
-      chatAsk(cand[0], function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), true, out); return; } toastMsg(ans, false); if (c.speak && root.speechSynthesis) say(ans); });
+      chatAsk(cand[0], function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), true, out); return; } toastMsg(ans, false); if (st.speak && c.speak && root.speechSynthesis) say(ans); });
       return;
     }
     if (out.noop) return;
@@ -1588,7 +1626,7 @@
     ensureUI(); injectMic(); injectFab(); setInterval(supervise, 300);
     var n = 0, t = setInterval(function () { injectMic(); injectFab(); if (($('#vcMic') && $('#vcFab')) || ++n > 40) clearInterval(t); }, 500);
   }
-  root.VC = { canDictate: canDictate, dictate: dictate, refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, D: { interp: function (t, cb) { aiInterpret(t, function (r, m) { cb(aiInterpApply(r, m || [])); }); }, capFake: function (v) { Cap.fake = !!v; }, capFeed: function (f) { Cap.sinks.slice().forEach(function (s) { s(f); }); }, useAi: useAi, tr: function (fn) { aiTranscribe = fn; }, log: function () { return DG.slice(); }, bg: function () { return { live: !!bg.run, blocked: !!bg.blocked, fail: bg.fail, wanted: bgWanted() }; } }, L: {
+  root.VC = { speakTest: speakTest, canDictate: canDictate, dictate: dictate, refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, D: { interp: function (t, cb) { aiInterpret(t, function (r, m) { cb(aiInterpApply(r, m || [])); }); }, capFake: function (v) { Cap.fake = !!v; }, capFeed: function (f) { Cap.sinks.slice().forEach(function (s) { s(f); }); }, useAi: useAi, tr: function (fn) { aiTranscribe = fn; }, log: function () { return DG.slice(); }, bg: function () { return { live: !!bg.run, blocked: !!bg.blocked, fail: bg.fail, wanted: bgWanted() }; } }, L: {
     data: function () { var L = lload(); return JSON.parse(JSON.stringify(L)); },
     delAlias: function (k) { var L = lload(); delete L.al[k]; lsave(); },
     delMiss: function (k) { var L = lload(); delete L.miss[k]; lsave(); },
