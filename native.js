@@ -85,7 +85,8 @@
         var rel=await r.json();meta=JSON.parse(rel.body||'{}');lastChk=Date.now();avail=+meta.build>+info.build;done=true;fire();
         if(+meta.build>+info.build){
           var k='pos_upd_n',seen='';try{seen=localStorage.getItem(k)||''}catch(e){}
-          note('Pembaruan tersedia','Ordela '+meta.version+' siap diunduh. Versi Anda '+info.version+'.',download);
+          /* pemberitahuan hanya SEKALI per build (tidak berulang tiap buka aplikasi); tombol Pembaruan di Tentang tetap bisa dipakai kapan saja */
+          if(manual||seen!==String(meta.build))note('Pembaruan tersedia','Ordela '+meta.version+' siap diunduh. Versi Anda '+info.version+'.',download);
           if(seen!==String(meta.build)){try{localStorage.setItem(k,String(meta.build))}catch(e){}
             if(window.nativeNotify)window.nativeNotify.show('Pembaruan Ordela tersedia','Versi '+meta.version+' siap diunduh. Buka aplikasi lalu tekan Perbarui.')}
         }else if(manual)note('Sudah terbaru','Ordela '+info.version+' adalah versi terakhir.');
