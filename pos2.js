@@ -537,6 +537,19 @@ async function aiCloud(q){
     return esc(j.error||'Maaf, jawaban AI kosong. Coba kirim sekali lagi.')}catch(e){AI.why=e&&e.name==='AbortError'?'permintaan melewati batas waktu 35 detik':'fungsi ai-chat tidak terjangkau (periksa koneksi atau CORS)';return null}finally{clearTimeout(timer)}
 }
 
+/* ngobrol lewat AI Cashier: jawaban singkat tanpa format untuk dibacakan; tanpa alat (tidak mengubah data) */
+const VCH=[];
+P2.voiceChat=async function(q){
+  const C=window.POS_SB;if(!(C&&C.url)||!(CL.on&&CL.tok))return null;
+  const now=Date.now();while(VCH.length&&now-VCH[0].t>600000)VCH.shift();
+  const messages=VCH.slice(-8).map(m=>({role:m.r,content:m.c})).concat([{role:'user',content:String(q).slice(0,500)}]);
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),25000);
+  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',signal:ctrl.signal,headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q:String(q).slice(0,500)+'\n(Jawab ramah dan singkat, 1-2 kalimat, tanpa tanda format, untuk dibacakan lewat suara. Kamu hanya menjawab, tidak mengubah data.)',ctx:aiCtx(),messages})});
+    const j=await r.json().catch(()=>({}));
+    const a=r.ok&&typeof j.answer==='string'?j.answer.replace(/[*_#`>]+/g,'').replace(/\s+/g,' ').trim():'';
+    if(!a)return null;VCH.push({r:'user',c:String(q).slice(0,500),t:now},{r:'assistant',c:a.slice(0,500),t:now});return a}catch(e){return null}finally{clearTimeout(timer)}
+};
+
 const aiTm=()=>new Date().toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
 const aiBub=m=>`<div class="cr ${m.me?'me':''}"><div class="cbw"><div class="cb">${m.me?esc(m.t):m.t}</div></div></div>`;
 const AISUG=['Omzet hari ini','Menu terlaris minggu ini','Stok menipis','Jam ramai','Laba bulan ini','Pasangan menu untuk upsell','Cara split bill','Cara buka shift'];
@@ -839,7 +852,7 @@ P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSa
 
 
 /* ================= PENGATURAN AI CASHIER (db.set.vc) ================= */
-P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,stt:0,fab:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
+P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,stt:0,fab:1,chat:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
 P2.voiceSet=function(){
   closeAll();
   const c=P2.vcCfg(),sup=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
@@ -856,6 +869,7 @@ P2.voiceSet=function(){
   ${T('wake','Pakai kata panggil','Mis. “Ordela, tambah dua nasi goreng”')}
   <input class="fi" id="vcWord" maxlength="20" placeholder="Kata panggil" value="${esc(c.wakeWord||'ordela')}" onchange="P2.vcWord(this.value)" style="margin:2px 0 6px">
   ${T('direct','Bayar langsung satu kalimat','Tanpa membuka layar bayar')}
+  ${T('chat','Ngobrol dengan AI','Pertanyaan biasa dijawab AI dan dibacakan')}
   <details class="adv"><summary>Perilaku <small>suara balasan, pembayaran suara</small></summary>
   ${T('speak','Suara balasan')}
   ${T('pay','Boleh membayar dengan suara')}

@@ -351,7 +351,7 @@
     ms: { learned: 'Diingati', pttHint: 'Tahan, cakap, lepas', aiAsk: 'Bertanya AI…', wakeMiss: 'Diabaikan, mulakan dengan', searchMenu: 'Cari menu…', vAdd: 'Tambah', vRemove: 'Padam', vReduce: 'Kurangkan' }
   };
   Object.keys(LM).forEach(function (l) { Object.keys(LM[l]).forEach(function (k) { MSG[l][k] = LM[l][k]; }); });
-  function cfg() { var c = (typeof db !== 'undefined' && db.set && db.set.vc) || {}; return { on: c.on !== 0 && c.on !== false, lang: c.lang || 'auto', speak: c.speak !== 0 && c.speak !== false, pay: c.pay !== 0 && c.pay !== false, confirm: c.confirm === 1 || c.confirm === true, al: Array.isArray(c.al) ? c.al : [], always: c.always === 1 || c.always === true, wake: c.wake !== 0 && c.wake !== false, wakeWord: String(c.wakeWord || 'ordela'), direct: c.direct !== 0 && c.direct !== false, learn: c.learn !== 0 && c.learn !== false, ai: c.ai !== 0 && c.ai !== false, stt: c.stt === 1 || c.stt === true, fab: c.fab !== 0 && c.fab !== false }; }
+  function cfg() { var c = (typeof db !== 'undefined' && db.set && db.set.vc) || {}; return { on: c.on !== 0 && c.on !== false, lang: c.lang || 'auto', speak: c.speak !== 0 && c.speak !== false, pay: c.pay !== 0 && c.pay !== false, confirm: c.confirm === 1 || c.confirm === true, al: Array.isArray(c.al) ? c.al : [], always: c.always === 1 || c.always === true, wake: c.wake !== 0 && c.wake !== false, wakeWord: String(c.wakeWord || 'ordela'), direct: c.direct !== 0 && c.direct !== false, learn: c.learn !== 0 && c.learn !== false, ai: c.ai !== 0 && c.ai !== false, stt: c.stt === 1 || c.stt === true, fab: c.fab !== 0 && c.fab !== false, chat: c.chat !== 0 && c.chat !== false }; }
   function M(k) { return (MSG[st.lang] || MSG.id)[k] || MSG.id[k] || ''; }
   function money2(v) { return typeof money === 'function' ? money(v) : String(v); }
   function sellable() { return (typeof db !== 'undefined' && db.items ? db.items : []).filter(function (i) { return !i.ns; }); }
@@ -1009,6 +1009,17 @@
   function aiOn() {
     var C = root.POS_SB; return !!(cfg().ai && C && C.url && typeof CL !== 'undefined' && CL.on && CL.tok && Date.now() > aiBad && root.navigator && navigator.onLine !== false);
   }
+  /* ngobrol: ucapan yang bukan pesanan dijawab AI (teks saja, tanpa data pembayaran) dan dibacakan. Tidak mengubah data apa pun. */
+  var chatHist = [];
+  function chatOn() { return cfg().chat && aiOn() && !!(root.P2 && root.P2.voiceChat); }
+  function chatWorthy(bp, out, text) { return !!(out && (out.warn || String(out.msg || '').indexOf(M('notfound')) === 0) && !looksLikeOrder(text) && (!bp || bp.intent === 'unknown' || bp.intent === 'empty' || out.msg === M('nomatch') || String(out.msg || '').indexOf(M('notfound')) === 0)); }
+  function chatAsk(text, done) {
+    var now = Date.now(); chatHist = chatHist.filter(function (t) { return now - t < 3600000; });
+    if (chatHist.length >= 30) { done(null); return; }
+    chatHist.push(now);
+    var fin = false, to = setTimeout(function () { if (!fin) { fin = true; done(null); } }, 30000);
+    Promise.resolve(root.P2.voiceChat(text)).then(function (a) { if (fin) return; fin = true; clearTimeout(to); done(a ? String(a).slice(0, 400) : null); }, function () { if (fin) return; fin = true; clearTimeout(to); done(null); });
+  }
   /* kirim frasa yang gagal ke fungsi voice-ai; hasilnya hanya dipakai bila cocok persis dengan menu yang ada */
   function aiResolve(unres, done) {
     var C = root.POS_SB, cands = aiCands(unres), ctrl = root.AbortController ? new AbortController() : null, to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 9000);
@@ -1361,6 +1372,11 @@
       if (natural) {
         var naturalOut;
         try { naturalOut = runNatural(natural); } catch (e) { console.error('voice natural checkout', e); naturalOut = { msg: M('err'), warn: true }; }
+        if (chatWorthy(null, naturalOut, alts[0]) && chatOn()) {
+          showResult({ msg: M('aiAsk') });
+          chatAsk(alts[0], function (ans) { st.busy = false; paint(); showResult(ans ? { msg: ans, say: ans } : naturalOut); });
+          return;
+        }
         st.busy = false; paint(); showResult(naturalOut);
         var unN = (st.unres || []).slice();
         if (unN.length && aiOn()) { st.busy = true; paint(); showResult({ msg: (naturalOut.msg ? naturalOut.msg + '\n' : '') + M('aiAsk') }); aiResolve(unN, function (res) { st.busy = false; paint(); if (!res.length) { showResult(naturalOut); return; } showResult({ msg: aiApply(res).join('\n'), warn: res.length < unN.length }); }); }
@@ -1378,6 +1394,11 @@
     if (alts.length === 1 && out.warn && (!bestP || bestP.intent === 'unknown' || out.msg === M('nomatch')) && aiOn() && looksLikeOrder(alts[0])) {
       st.busy = true; paint(); showResult({ msg: M('aiAsk') });
       aiInterpret(alts[0], function (r, menu) { st.busy = false; paint(); var ap = null; try { ap = aiInterpApply(r, menu || []); } catch (e) { console.error('voice interp', e); } showResult(ap || out); });
+      return;
+    }
+    if (alts.length === 1 && chatWorthy(bestP, out, alts[0]) && chatOn()) {
+      st.busy = true; paint(); showResult({ msg: M('aiAsk') });
+      chatAsk(alts[0], function (ans) { st.busy = false; paint(); showResult(ans ? { msg: ans, say: ans } : out); });
       return;
     }
     var un = (st.unres || []).slice(); if (un.length && aiOn()) {
@@ -1515,6 +1536,11 @@
       st.ctxMiss = true;
       var naturalOut;
       try { naturalOut = runNatural(natural); } catch (e) { console.error('voice natural checkout', e); naturalOut = { msg: M('err'), warn: true }; }
+      if (chatWorthy(null, naturalOut, naturalText) && (woke || inWin) && chatOn()) {
+        bg.awake = Date.now() + 25000;
+        chatAsk(naturalText, function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut); return; } toastMsg(ans, false); if (c.speak && root.speechSynthesis) say(ans); });
+        return;
+      }
       toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut);
       if (naturalOut.msg && st.speak && c.speak && root.speechSynthesis && !st.listening) say(naturalOut.say || String(naturalOut.msg).split('\n')[0]);
       return;
@@ -1525,6 +1551,11 @@
     st.ctxMiss = true;
     var out;
     try { out = run(bestP); } catch (e) { console.error('voice', e); return; }
+    if (chatWorthy(bestP, out, cand[0]) && (woke || inWin) && chatOn()) {
+      bg.awake = Date.now() + 25000;
+      chatAsk(cand[0], function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), true, out); return; } toastMsg(ans, false); if (c.speak && root.speechSynthesis) say(ans); });
+      return;
+    }
     if (out.noop) return;
     if (out.warn && (!bestP || bestP.intent === 'unknown' || out.msg === M('nomatch')) && (woke || inWin) && aiOn() && looksLikeOrder(cand[0])) {
       bg.awake = Date.now() + 20000;
