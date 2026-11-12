@@ -544,7 +544,7 @@ P2.voiceChat=async function(q){
   const now=Date.now();while(VCH.length&&now-VCH[0].t>600000)VCH.shift();
   const messages=VCH.slice(-8).map(m=>({role:m.r,content:m.c})).concat([{role:'user',content:String(q).slice(0,500)}]);
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),25000);
-  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',signal:ctrl.signal,headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q:String(q).slice(0,500)+'\n(Ini percakapan suara. Jawab seperti kasir ramah yang ngobrol santai: 1-2 kalimat pendek, bahasa lisan yang natural (boleh “ya”, “nih”, “kok”), sesuai bahasa lawan bicara, tanpa emoji, tanpa tanda format, angka dan uang ditulis seperti diucapkan. Kamu hanya menjawab, tidak mengubah data.)',ctx:aiCtx(),messages})});
+  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',signal:ctrl.signal,headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q:String(q).slice(0,500)+'\n(Ini percakapan suara. Jawab seperti kasir ramah yang ngobrol santai: 1-2 kalimat pendek, bahasa lisan yang natural (boleh “ya”, “nih”, “kok”, “wah”, “hmm”, “haha”), beri emosi sesuai konteks lewat tanda seru, tanda tanya, dan jeda “…”, sesuai bahasa lawan bicara, tanpa emoji, tanpa tanda format, angka dan uang ditulis seperti diucapkan. Kamu hanya menjawab, tidak mengubah data.)',ctx:aiCtx(),messages})});
     const j=await r.json().catch(()=>({}));
     const a=r.ok&&typeof j.answer==='string'?j.answer.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/[*_#`>]+/g,'').replace(/\s+/g,' ').trim():'';
     if(!a)return null;VCH.push({r:'user',c:String(q).slice(0,500),t:now},{r:'assistant',c:a.slice(0,500),t:now});return a}catch(e){return null}finally{clearTimeout(timer)}
@@ -852,7 +852,7 @@ P2.invQnDel=function(i){const c=invCfg();c.qn=c.qn.filter((_,j)=>j!==i);P2.invSa
 
 
 /* ================= PENGATURAN AI CASHIER (db.set.vc) ================= */
-P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,stt:0,fab:1,chat:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
+P2.vcCfg=function(){const c=Object.assign({on:1,lang:'auto',speak:1,pay:1,confirm:0,always:0,wake:1,wakeWord:'ordela',direct:1,learn:1,ai:1,stt:0,fab:1,chat:1,tts:1,al:[]},(db.set&&db.set.vc)||{});if(!Array.isArray(c.al))c.al=[];return c};
 P2.voiceSet=function(){
   closeAll();
   const c=P2.vcCfg(),sup=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
@@ -872,6 +872,7 @@ P2.voiceSet=function(){
   ${T('chat','Ngobrol dengan AI','Pertanyaan biasa dijawab AI dan dibacakan')}
   <details class="adv"><summary>Perilaku <small>suara balasan, pembayaran suara</small></summary>
   ${T('speak','Suara balasan')}
+  ${T('tts','Suara AI (natural)','Lebih manusiawi; cadangan suara HP')}
   <button type="button" class="btn sec" style="margin:4px 0 8px" onclick="P2.vcSpeakTest()">Tes suara balasan</button><p class="hint" id="vcSpkR" style="margin:0 0 6px"></p>
   ${T('pay','Boleh membayar dengan suara')}
   ${T('confirm','Boleh konfirmasi pembayaran dengan suara')}
@@ -1207,4 +1208,4 @@ window.kdsSet=async function(src,id,st){
 setInterval(()=>{if(!document.hidden&&S.view==='kds')V.kds()},20000);
 })();
 
-P2.vcSpeakTest=function(){const r=window.VC&&VC.speakTest?VC.speakTest():{ok:false,msg:'Fitur suara belum siap.'};const e=document.getElementById('vcSpkR');if(e){e.textContent=r.msg;e.style.color=r.ok?'':'#b45309'}};
+P2.vcSpeakTest=async function(){const e=document.getElementById('vcSpkR');if(e){e.textContent='Menguji…';e.style.color=''}const r=window.VC&&VC.speakTest?await VC.speakTest():{ok:false,msg:'Fitur suara belum siap.'};const e2=document.getElementById('vcSpkR');if(e2){e2.textContent=r.msg;e2.style.color=r.ok?'':'#b45309'}};
