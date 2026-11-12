@@ -434,6 +434,89 @@ function aiFormat(raw){
   }
   flush();return out.join('');
 }
+/* ===== Agen AI: AI mengusulkan aksi, aplikasi meminta konfirmasi lalu menjalankannya dengan hak akses pengguna ===== */
+const AG={pend:{}};
+const agN=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const agNum=v=>{if(typeof v==='number')return v;const n=parseFloat(String(v??'').replace(/[^0-9.,-]/g,'').replace(',','.'));return Number.isFinite(n)?n:NaN};
+function agMenu(name){
+  const q=agN(name);if(!q)return{err:'Nama menu kosong'};
+  const ex=db.items.filter(i=>agN(i.name)===q);if(ex.length===1)return{it:ex[0]};
+  const sc=db.items.map(i=>{const n=agN(i.name);let s=0;if(n===q)s=100;else if(n.includes(q)||q.includes(n))s=50+Math.min(n.length,q.length);else{const a=new Set(q.split(' '));s=n.split(' ').filter(w=>a.has(w)).length*10}return{i,s}}).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+  if(!sc.length)return{err:'Menu "'+name+'" tidak ditemukan'};
+  if(sc.length>1&&sc[0].s===sc[1].s)return{err:'"'+name+'" cocok dengan beberapa menu ('+sc.slice(0,4).map(x=>x.i.name).join(', ')+'). Sebutkan lebih jelas'};
+  return{it:sc[0].i};
+}
+const agOwn=()=>isOwner(),agInv=()=>isOwner()||can('inv');
+const agCat=n=>{const t=String(n||'').trim().slice(0,30);return db.cats.find(c=>agN(c)===agN(t))||t};
+const AG_PAGES={beranda:'home',laporan:'home',kasir:'pos',riwayat:'riw',inventori:'inv',stok:'inv',menu:'inv',stok_opname:'opname',pesanan_online:'co',meja:'table',promo:'promo',pengeluaran:'exp',pembelian:'buy',member:'mem',shift:'shift',pengaturan:'set',dapur:'kds',pengguna:'usr',absensi:'att',kartu_hadiah:'gift',reservasi:'rsv',integrasi:'integ',gaji:'pyr',asisten:'ai'};
+const P=(o,r)=>({type:'object',properties:o,required:r||Object.keys(o)});
+const S_=d=>({type:'string',description:d}),N_=d=>({type:'number',description:d});
+const AGT=[
+ {name:'adjust_stock',desc:'Ubah stok satu menu: tambah, kurangi, atau atur ke jumlah tertentu.',perm:agInv,params:P({menu:S_('Nama menu persis'),qty:N_('Jumlah (>=0)'),mode:{type:'string',enum:['tambah','kurangi','atur'],description:'tambah=stok+qty, kurangi=stok-qty, atur=stok jadi qty'}}),
+  prep(a){const m=agMenu(a.menu);if(m.err)return m;const i=m.it;if(isB(i))return{err:i.name+' adalah paket; stoknya mengikuti isi paket'};if(i.ns)return{err:i.name+' tidak melacak stok'};
+    const q=agNum(a.qty);if(!(q>=0))return{err:'Jumlah stok tidak valid'};const o=+i.stock||0,mode=a.mode||'tambah',n=Math.round((mode==='atur'?q:mode==='kurangi'?Math.max(0,o-q):o+q)*1000)/1000;
+    return{text:`Stok ${i.name}: ${o} → ${n}`+(mode==='atur'?'':' ('+(mode==='kurangi'?'−':'+')+q+')'),run(){i.stock=n;logAdd(i.name,n-o,'Diubah via Asisten AI',n);save();return`Stok ${i.name} sekarang ${n}`}}}},
+ {name:'set_price',desc:'Ubah harga jual satu menu.',perm:agOwn,params:P({menu:S_('Nama menu persis'),price:N_('Harga baru')}),
+  prep(a){const m=agMenu(a.menu);if(m.err)return m;const p=rnd(agNum(a.price));if(!(p>=0))return{err:'Harga tidak valid'};const i=m.it;return{text:`Harga ${i.name}: ${money(i.price)} → ${money(p)}`,run(){i.price=p;save();return`Harga ${i.name} sekarang ${money(p)}`}}}},
+ {name:'set_cost',desc:'Ubah modal (HPP) satu menu.',perm:agOwn,params:P({menu:S_('Nama menu persis'),cost:N_('Modal baru')}),
+  prep(a){const m=agMenu(a.menu);if(m.err)return m;const c=rnd(agNum(a.cost));if(!(c>=0))return{err:'Modal tidak valid'};const i=m.it;return{text:`Modal ${i.name}: ${money(i.cost||0)} → ${money(c)}`,run(){i.cost=c;save();return`Modal ${i.name} sekarang ${money(c)}`}}}},
+ {name:'set_min_stock',desc:'Ubah batas stok menipis satu menu.',perm:agInv,params:P({menu:S_('Nama menu persis'),min:N_('Batas minimum')}),
+  prep(a){const m=agMenu(a.menu);if(m.err)return m;const v=Math.max(0,Math.floor(agNum(a.min)));if(!Number.isFinite(v))return{err:'Batas tidak valid'};const i=m.it;return{text:`Batas stok menipis ${i.name}: ${i.min??0} → ${v}`,run(){i.min=v;save();return`Batas stok ${i.name} jadi ${v}`}}}},
+ {name:'rename_menu',desc:'Ganti nama satu menu.',perm:agOwn,params:P({menu:S_('Nama menu sekarang'),new_name:S_('Nama baru')}),
+  prep(a){const m=agMenu(a.menu);if(m.err)return m;const nn=String(a.new_name||'').trim().slice(0,60);if(nn.length<2)return{err:'Nama baru terlalu pendek'};if(db.items.some(x=>x!==m.it&&agN(x.name)===agN(nn)))return{err:'Sudah ada menu bernama "'+nn+'"'};const i=m.it,old=i.name;return{text:`Ganti nama "${old}" → "${nn}"`,run(){i.name=nn;save();return`"${old}" diganti jadi "${nn}"`}}}},
+ {name:'set_menu_category',desc:'Pindahkan satu menu ke kategori lain (dibuat bila belum ada).',perm:agOwn,params:P({menu:S_('Nama menu persis'),category:S_('Nama kategori')}),
+  prep(a){const m=agMenu(a.menu);if(m.err)return m;const c=agCat(a.category);if(!c)return{err:'Kategori kosong'};const i=m.it;return{text:`Pindahkan ${i.name}: ${i.cat} → ${c}`,run(){if(!db.cats.includes(c))db.cats.push(c);i.cat=c;save();return`${i.name} dipindah ke ${c}`}}}},
+ {name:'add_menu',desc:'Tambah menu baru. Isi stock hanya bila stok ingin dilacak.',perm:agOwn,params:P({name:S_('Nama menu'),price:N_('Harga jual'),category:S_('Kategori'),cost:N_('Modal (opsional)'),stock:N_('Stok awal (opsional)')},['name','price']),
+  prep(a){const nm=String(a.name||'').trim().slice(0,60),p=rnd(agNum(a.price));if(nm.length<2)return{err:'Nama menu terlalu pendek'};if(!(p>=0))return{err:'Harga tidak valid'};if(db.items.some(x=>agN(x.name)===agN(nm)))return{err:'Menu "'+nm+'" sudah ada'};
+    const c=agCat(a.category)||db.cats[0]||'Lainnya',cost=a.cost==null?0:rnd(agNum(a.cost)),st=a.stock==null?null:Math.max(0,agNum(a.stock));
+    return{text:`Tambah menu "${nm}" · ${money(p)} · kategori ${c}`+(st!=null&&st===st?` · stok ${st}`:' · tanpa pelacakan stok'),run(){if(!db.cats.includes(c))db.cats.push(c);const it={id:uid(),emoji:'🍽️',name:nm,cat:c,price:p,cost:cost>=0?cost:0,stock:0,min:db.set.low,img:''};if(st!=null&&st===st){it.stock=st;if(st)logAdd(nm,st,'Stok awal',st)}else it.ns=1;db.items.push(it);save();return`Menu "${nm}" ditambahkan`}}}},
+ {name:'delete_menu',desc:'Hapus satu menu dari daftar.',perm:agOwn,params:P({menu:S_('Nama menu persis')}),
+  prep(a){const m=agMenu(a.menu);if(m.err)return m;const i=m.it,u=bdUsedBy(i.id);if(u)return{err:i.name+' dipakai di paket "'+u.name+'"; ubah paketnya dulu'};return{text:`HAPUS menu "${i.name}" (riwayat penjualan tidak terpengaruh)`,danger:1,run(){db.items=db.items.filter(x=>x.id!==i.id);delete S.cart[i.id];if(i.stock&&!isB(i))logAdd(i.name,-i.stock,'Item dihapus',0);save();return`Menu "${i.name}" dihapus`}}}},
+ {name:'add_category',desc:'Tambah kategori menu baru.',perm:agOwn,params:P({name:S_('Nama kategori')}),
+  prep(a){const c=String(a.name||'').trim().slice(0,30);if(!c)return{err:'Nama kategori kosong'};if(db.cats.some(x=>agN(x)===agN(c)))return{err:'Kategori "'+c+'" sudah ada'};return{text:`Tambah kategori "${c}"`,run(){db.cats.push(c);save();return`Kategori "${c}" ditambahkan`}}}},
+ {name:'rename_category',desc:'Ganti nama kategori (semua menu di dalamnya ikut pindah).',perm:agOwn,params:P({old_name:S_('Nama lama'),new_name:S_('Nama baru')}),
+  prep(a){const o=db.cats.find(x=>agN(x)===agN(a.old_name));if(!o)return{err:'Kategori "'+a.old_name+'" tidak ditemukan'};const n=String(a.new_name||'').trim().slice(0,30);if(!n)return{err:'Nama baru kosong'};if(db.cats.some(x=>x!==o&&agN(x)===agN(n)))return{err:'Kategori "'+n+'" sudah ada'};return{text:`Ganti nama kategori "${o}" → "${n}"`,run(){db.cats=db.cats.map(x=>x===o?n:x);db.items.forEach(i=>{if(i.cat===o)i.cat=n});if(S.cat===o)S.cat=n;save();return`Kategori "${o}" jadi "${n}"`}}}},
+ {name:'delete_category',desc:'Hapus kategori yang sudah kosong (tidak ada menunya).',perm:agOwn,params:P({name:S_('Nama kategori')}),
+  prep(a){const c=db.cats.find(x=>agN(x)===agN(a.name));if(!c)return{err:'Kategori "'+a.name+'" tidak ditemukan'};const n=db.items.filter(i=>i.cat===c).length;if(n)return{err:`Kategori "${c}" masih berisi ${n} menu; pindahkan dulu`};return{text:`Hapus kategori "${c}"`,danger:1,run(){db.cats=db.cats.filter(x=>x!==c);if(S.cat===c)S.cat='all';save();return`Kategori "${c}" dihapus`}}}},
+ {name:'add_expense',desc:'Catat pengeluaran operasional.',perm:()=>isOwner()||can('exp'),params:P({amount:N_('Jumlah'),category:{type:'string',enum:EXP_CATS,description:'Kategori pengeluaran'},note:S_('Keterangan singkat (opsional)')},['amount','category']),
+  prep(a){const v=rnd(agNum(a.amount));if(!(v>0))return{err:'Jumlah pengeluaran tidak valid'};const c=EXP_CATS.includes(a.category)?a.category:'Lainnya',nt=String(a.note||'').trim().slice(0,80);return{text:`Catat pengeluaran ${c}: ${money(v)}`+(nt?' · '+nt:''),run(){db.exps.unshift({id:'e'+uid(),t:nowIso(),by:myName(),cat:c,amt:v,note:nt,src:'lain',sh:null,u:Date.now()});save();return`Pengeluaran ${c} ${money(v)} dicatat`}}}},
+ {name:'order_action',desc:'Proses pesanan online: tandai siap, buka pembayaran untuk menyelesaikan, atau batalkan.',perm:()=>can('co'),params:P({order_number:S_('Nomor pesanan, mis. 001'),action:{type:'string',enum:['siap','selesai','batal']}}),
+  prep(a){const d=String(a.order_number||'').replace(/\D/g,'');const o=(window.CO&&CO.list||[]).find(x=>String(x.num).replace(/\D/g,'')===d&&d);if(!o)return{err:'Pesanan online #'+(d||'?')+' tidak ditemukan di daftar aktif'};
+    if(a.action==='siap'){if(o.status!=='new'&&o.status!=='accepted')return{err:'Pesanan '+o.num+' sudah '+(o.status==='done'?'selesai':'dibatalkan')};return{text:`Tandai pesanan ${o.num} (${o.name}) siap diambil`,run(){coReadyAct(o.id);return`Pesanan ${o.num} ditandai siap`}}}
+    if(a.action==='selesai')return{text:`Selesaikan pesanan ${o.num} (${o.name}) — membuka pembayaran`,run(){coPay(o.id);return`Membuka pembayaran ${o.num}`}};
+    return{text:`BATALKAN pesanan ${o.num} (${o.name})`,danger:1,run(){coCancel(o.id);return`Membuka konfirmasi pembatalan ${o.num}`}}}},
+ {name:'open_page',desc:'Buka halaman di aplikasi.',perm:()=>true,auto:1,params:P({page:{type:'string',enum:Object.keys(AG_PAGES)}}),
+  prep(a){const v=AG_PAGES[a.page];if(!v)return{err:'Halaman tidak dikenal'};if(!can(v==='inv'?'inv':v==='home'?'hist':v)&&!['home','pos','ai'].includes(v)&&!isOwner())return{err:'Anda tidak punya akses ke halaman itu'};return{text:'Buka halaman '+a.page.replace(/_/g,' '),run(){go(v);return'Membuka '+a.page.replace(/_/g,' ')}}}},
+];
+const agTools=()=>AGT.filter(t=>{try{return t.perm()}catch(e){return false}}).map(t=>({name:t.name,description:t.desc,parameters:t.params}));
+function agPlan(calls){
+  const items=[],errs=[],auto=[];
+  (calls||[]).forEach(c=>{const t=AGT.find(x=>x.name===c.name);if(!t||!t.perm()){errs.push('Tidak diizinkan untuk akun ini: '+(c.name||'?'));return}
+    let r;try{r=t.prep(c.args||{})}catch(e){r={err:'Gagal menyiapkan aksi'}}
+    if(r.err){errs.push(r.err);return}(t.auto?auto:items).push(r)});
+  let msg='';
+  auto.forEach(r=>{try{msg+=(msg?' · ':'')+r.run()}catch(e){errs.push('Gagal: '+(e&&e.message||e))}});
+  let html='';
+  if(items.length){const id='ag'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);AG.pend[id]=items;
+    html+=`<div class="agc" data-ag="${id}"><b>Konfirmasi aksi</b><ul>${items.map(r=>`<li${r.danger?' class="dg"':''}>${esc(r.text)}</li>`).join('')}</ul><p class="agb"><button type="button" class="btn sm" onclick="P2.agRun('${id}')">Jalankan</button><button type="button" class="btn sm sec" onclick="P2.agNo('${id}')">Batal</button></p></div>`}
+  if(msg)html+=`<p class="agm">✓ ${esc(msg)}</p>`;
+  if(errs.length)html+=`<p class="agm w">⚠ ${errs.map(esc).join('<br>⚠ ')}</p>`;
+  return html;
+}
+function agFinish(id,html){
+  const re=new RegExp('<div class="agc" data-ag="'+id+'">[\\s\\S]*?</div>');
+  AI.msgs.forEach(m=>{if(!m.me&&m.t&&m.t.includes('data-ag="'+id+'"'))m.t=m.t.replace(re,html)});
+  document.querySelectorAll('.agc[data-ag="'+id+'"]').forEach(e=>{e.outerHTML=html});
+  delete AG.pend[id];aiHistorySave();
+}
+P2.agRun=function(id){
+  const items=AG.pend[id];if(!items){agFinish(id,'<p class="agm w">⚠ Aksi ini sudah kedaluwarsa. Minta lagi ke asisten.</p>');return}
+  const ok=[],bad=[];
+  items.forEach(r=>{try{ok.push(r.run())}catch(e){bad.push(e&&e.message||'gagal')}});
+  agFinish(id,(ok.length?`<p class="agm">✓ ${ok.map(esc).join('<br>✓ ')}</p>`:'')+(bad.length?`<p class="agm w">⚠ ${bad.map(esc).join('<br>⚠ ')}</p>`:''));
+  try{render()}catch(e){}
+};
+P2.agNo=function(id){agFinish(id,'<p class="agm">Dibatalkan, tidak ada yang diubah.</p>')};
 async function aiCloud(q){
   const C=window.POS_SB;if(!(C&&C.url)||!(CL.on&&CL.tok))return null;
   // AI.msgs sudah berisi pesan pengguna terbaru. Bersihkan markup tampilan
@@ -444,9 +527,9 @@ async function aiCloud(q){
     return {role:m.me?'user':'assistant',content:content.slice(0,2000)};
   }).filter(m=>m.content);
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),35000);
-  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',signal:ctrl.signal,headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx(),messages:history})});
+  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',signal:ctrl.signal,headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q,ctx:aiCtx(),messages:history,tools:agTools()})});
     const j=await r.json().catch(()=>({}));
-    if(r.ok&&typeof j.answer==='string'&&j.answer.trim())return aiFormat(j.answer)+'<small style="display:block;opacity:.58;margin-top:8px">✦ Ordela AI</small>';
+    if(r.ok&&((typeof j.answer==='string'&&j.answer.trim())||(j.calls&&j.calls.length))){const card=agPlan(j.calls);return (j.answer&&j.answer.trim()?aiFormat(j.answer):'')+card+'<small style="display:block;opacity:.58;margin-top:8px">✦ Ordela AI</small>'}
     AI.why=r.status===404?'fungsi ai-chat belum di-deploy (404)':r.status===501?'secret AI_API_KEY belum diisi':'';
     if(r.status===404||r.status===501)return null;
     if(r.status===401&&/jwt/i.test(JSON.stringify(j))){AI.why='Verify JWT pada fungsi ai-chat masih menyala';return null}
@@ -471,7 +554,7 @@ async function aiHistoryLoad(uid){
   }catch(e){AI.msgs=[]}
   AI.loaded=true;AI.loading=false;
   const log=$('#aiLog');if(log){
-    log.innerHTML=AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten Ordela. Tanyakan penjualan, stok, jam ramai, atau cara memakai aplikasi. Saya hanya menampilkan data sesuai hak akses Anda.',ts:aiTm()});
+    log.innerHTML=AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten toko Ordela. Selain menjawab soal penjualan dan stok, saya bisa membantu mengubah stok, harga, menu, kategori, mencatat pengeluaran, memproses pesanan online, dan membuka halaman. Setiap perubahan saya minta konfirmasi dulu.',ts:aiTm()});
     aiScroll();
   }
   const input=$('#aiIn'),go=$('#aiGo');if(input)input.disabled=false;if(go)go.disabled=false;
@@ -488,7 +571,7 @@ V.ai=function(){
   const mic=!!(window.VC&&VC.canDictate&&VC.canDictate());
   const svg=(p,w)=>`<svg viewBox="0 0 24 24" width="${w||22}" height="${w||22}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   el.innerHTML=`<div class="chat gx" id="aiChat"><div class="chh"><button class="cbk" type="button" onclick="go('pos')" aria-label="Kembali">${svg('<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>')}</button><b class="ctt">Asisten Ordela</b><button class="cclr" type="button" onclick="P2.aiClear()" aria-label="Hapus percakapan" title="Hapus percakapan">${svg('<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',22)}</button></div>
-  <div class="clog" id="aiLog" onscroll="P2.aiOnScroll()">${AI.loading?'<p class="hint">Memuat riwayat percakapan…</p>':AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten Ordela. Tanyakan penjualan, stok, jam ramai, atau cara memakai aplikasi. Saya hanya menampilkan data sesuai hak akses Anda.',ts:aiTm()})}</div>
+  <div class="clog" id="aiLog" onscroll="P2.aiOnScroll()">${AI.loading?'<p class="hint">Memuat riwayat percakapan…</p>':AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten toko Ordela. Selain menjawab soal penjualan dan stok, saya bisa membantu mengubah stok, harga, menu, kategori, mencatat pengeluaran, memproses pesanan online, dan membuka halaman. Setiap perubahan saya minta konfirmasi dulu.',ts:aiTm()})}</div>
   <button class="cdn" id="aiDn" type="button" hidden onclick="P2.aiDown()" aria-label="Ke pesan terbaru">${svg('<path d="M12 5v14"/><path d="M5 12l7 7 7-7"/>',20)}</button>
   <div class="csg" id="aiSug">${AISUG.map(x=>`<button type="button" onclick="P2.aiAsk(this.textContent)">${x}</button>`).join('')}</div>
   <form class="cin" id="aiForm" onsubmit="event.preventDefault();P2.aiSend();return false"><input id="aiIn" ${AI.loading?'disabled':''} placeholder="Tulis balasan…" autocomplete="off" maxlength="200" enterkeyhint="send" oninput="P2.aiTgl()"><button class="csend cmic" id="aiMic" type="button" ${mic?'':'hidden'} onclick="P2.aiMic()" aria-label="Bicara">${svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>',22)}</button><button class="csend" id="aiGo" ${AI.loading?'disabled':''} type="submit" aria-label="Kirim" ${mic?'hidden':''}>${svg('<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',20)}</button></form>
