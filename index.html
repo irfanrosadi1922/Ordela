@@ -277,7 +277,7 @@ td .th img{width:100%;height:100%;object-fit:cover}
 .rcgrid{display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start}
 .rcside{position:sticky;top:12px}
 .tgls{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0 10px;margin-bottom:4px}
-.stkb{position:sticky;bottom:-1px;background:linear-gradient(transparent,#fff 30%);padding:14px 0 2px;margin-top:6px}.stkb .btn{margin:0}.adv{margin:10px 0 6px;border:1px solid var(--bd,#dbe3ef);border-radius:12px;padding:0 12px}.adv>summary{display:block!important;cursor:pointer;padding:11px 0;font-weight:600;font-size:14px;list-style:none}.adv>summary::-webkit-details-marker{display:none}.adv>summary::after{content:'▾';float:right;opacity:.6}.adv[open]>summary::after{content:'▴'}.adv>summary small{display:block;font-weight:400;opacity:.6;font-size:12px;margin-top:2px}.adv[open]{padding-bottom:8px}
+.stkb{position:sticky;bottom:-20px;z-index:5;display:flex;flex-direction:column;gap:8px;margin:10px -20px -20px;padding:16px 20px calc(20px + env(safe-area-inset-bottom,0px));background:linear-gradient(rgba(255,255,255,0),var(--card) 26%);border-radius:0 0 32px 32px}.stkb>*{margin:0!important}.stkb>.btn,.stkb>button{width:100%}.adv{margin:10px 0 6px;border:1px solid var(--bd,#dbe3ef);border-radius:12px;padding:0 12px}.adv>summary{display:block!important;cursor:pointer;padding:11px 0;font-weight:600;font-size:14px;list-style:none}.adv>summary::-webkit-details-marker{display:none}.adv>summary::after{content:'▾';float:right;opacity:.6}.adv[open]>summary::after{content:'▴'}.adv>summary small{display:block;font-weight:400;opacity:.6;font-size:12px;margin-top:2px}.adv[open]{padding-bottom:8px}
 .tgl{display:flex;align-items:center;gap:10px;padding:8px 2px;font-size:14px;cursor:pointer}
 .tgl{flex-direction:row-reverse;justify-content:space-between}.tgl>span{flex:1;min-width:0}
 .tgl input[type=checkbox]{-webkit-appearance:none;appearance:none;position:relative;width:46px;height:28px;border-radius:999px;background:#c8c8cd;border:0;margin:0;flex:none;cursor:pointer;transition:background .2s;outline:0}
@@ -5461,7 +5461,15 @@ function usrDel(id){
 }
 
 /* ---------- modal & boot ---------- */
-function openModal(h){$('#modal').innerHTML=h;$('#mw').classList.remove('sheetm');$('#mw').classList.add('on')}
+/* tombol aksi di bagian bawah modal ditempel (tidak ikut scroll): bungkus deretan tombol terakhir dengan .stkb */
+function stickFoot(){
+  const m=$('#modal');if(!m||m.querySelector('.stkb'))return;
+  const isAct=e=>e&&e.nodeType===1&&(e.matches('button,.btn')||(e.children.length&&[...e.children].every(c=>c.matches('button,.btn'))&&!e.matches('table,ul,ol,select')));
+  const k=[...m.children];let i=k.length;while(i>0&&isAct(k[i-1]))i--;
+  if(i===k.length)return;
+  const w=document.createElement('div');w.className='stkb';k[i].before(w);k.slice(i).forEach(e=>w.appendChild(e));
+}
+function openModal(h){$('#modal').innerHTML=h;$('#mw').classList.remove('sheetm');$('#mw').classList.add('on');try{stickFoot()}catch(e){}}
 function closeModal(){attStop();$('#mw').classList.remove('on')}
 function render(){
   renderCats();renderGrid();renderInvoice();
