@@ -227,6 +227,7 @@ const STATIC = {
   '/config.js': ['text/javascript', 'no-cache'],
   '/sbapi.js': ['text/javascript', 'no-cache'],
   '/native.js': ['text/javascript', 'no-cache'],
+  '/xlsx.js': ['text/javascript', 'no-cache'],
   '/qr.js': ['text/javascript', 'no-cache'],
   '/qris.js': ['text/javascript', 'no-cache'],
   '/auth.js': ['text/javascript', 'no-cache'],
