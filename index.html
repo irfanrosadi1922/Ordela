@@ -2072,52 +2072,6 @@ function setStock(id,v){
 
 /* ---------- stok opname: hitung fisik di Excel, unggah, tinjau selisih, terapkan ---------- */
 const OP={rows:[],skip:0,miss:[],bad:[],name:''};
-async function zipRead(buf){
-  const dv=new DataView(buf),u=new Uint8Array(buf),td=new TextDecoder();let e=-1;
-  for(let i=u.length-22;i>=Math.max(0,u.length-65558);i--){if(dv.getUint32(i,true)===0x06054b50){e=i;break}}
-  if(e<0)throw new Error('bukan file xlsx');
-  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const ent={};
-  for(let k=0;k<n;k++){
-    if(dv.getUint32(p,true)!==0x02014b50)break;
-    const meth=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
-    ent[td.decode(u.subarray(p+46,p+46+nl))]={meth,csz,lo};p+=46+nl+el+cl;
-  }
-  return async name=>{
-    const f=ent[name];if(!f)return null;
-    const s0=f.lo+30+dv.getUint16(f.lo+26,true)+dv.getUint16(f.lo+28,true),raw=u.subarray(s0,s0+f.csz);
-    if(f.meth===0)return td.decode(raw);
-    if(typeof DecompressionStream==='undefined')throw new Error('browser belum mendukung baca xlsx, simpan sebagai CSV');
-    return td.decode(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
-  };
-}
-async function xlsxRead(buf){
-  const get=await zipRead(buf),P=t=>new DOMParser().parseFromString(t,'application/xml');
-  const wb=await get('xl/workbook.xml'),rel=await get('xl/_rels/workbook.xml.rels');let path='xl/worksheets/sheet1.xml';
-  if(wb&&rel){const sh=P(wb).getElementsByTagName('sheet')[0],rid=sh&&(sh.getAttribute('r:id')||sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id'));
-    const r=[...P(rel).getElementsByTagName('Relationship')].find(x=>x.getAttribute('Id')===rid);
-    if(r){const t=r.getAttribute('Target');path=t[0]==='/'?t.slice(1):'xl/'+t}}
-  const ss=await get('xl/sharedStrings.xml'),strs=ss?[...P(ss).getElementsByTagName('si')].map(si=>[...si.getElementsByTagName('t')].map(t=>t.textContent).join('')):[];
-  const sx=await get(path);if(!sx)throw new Error('lembar tidak ditemukan');
-  return [...P(sx).getElementsByTagName('row')].map(r=>{const row=[];
-    [...r.getElementsByTagName('c')].forEach(c=>{
-      let ci=0;for(const ch of (c.getAttribute('r')||'A').replace(/\d+/g,''))ci=ci*26+ch.charCodeAt(0)-64;ci--;
-      const t=c.getAttribute('t');let v;
-      if(t==='inlineStr')v=[...c.getElementsByTagName('t')].map(x=>x.textContent).join('');
-      else{const ve=c.getElementsByTagName('v')[0];v=ve?ve.textContent:'';if(t==='s')v=strs[+v]||'';else if(t!=='str'&&t!=='b'&&t!=='e'&&v!==''&&!isNaN(v))v=+v}
-      row[ci]=v});
-    return row});
-}
-function csvRead(t){
-  t=t.replace(/^﻿/,'');const first=t.split(/\r?\n/)[0]||'',d=[';','\t',','].map(x=>[x,first.split(x).length]).sort((a,b)=>b[1]-a[1])[0][0];
-  const rows=[];let r=[],c='',q=false;
-  for(let i=0;i<t.length;i++){const ch=t[i];
-    if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
-    else if(ch==='"')q=true;else if(ch===d){r.push(c);c=''}
-    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;r.push(c);c='';rows.push(r);r=[]}
-    else c+=ch}
-  if(c!==''||r.length){r.push(c);rows.push(r)}
-  return rows;
-}
 function dlBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 function opnTemplate(){
   const its=db.items.filter(i=>!isB(i));
