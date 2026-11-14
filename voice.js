@@ -751,7 +751,7 @@
     document.body.appendChild(p);
     var tt = document.createElement('div'); tt.id = 'vcT'; tt.hidden = true; tt.setAttribute('role', 'status'); tt.setAttribute('aria-live', 'polite'); document.body.appendChild(tt);
     $('#vcX').onclick = closePanel; $('#vcStage').onclick = botPoke; botStart();
-    p.addEventListener('click', function (e) { if (e.target === p) closePanel(); });   // ketuk di luar wajah = tutup
+    p.addEventListener('click', function (e) { if (e.target === p && Date.now() - (st.openAt || 0) > 600) closePanel(); });   // ketuk di luar wajah = tutup
     $('#vcKb').onclick = function () { var pp = $('#vcP'); pp.classList.toggle('kb'); clearTimeout(bub.hide); if (pp.classList.contains('kb')) setTimeout(function () { try { $('#vcIn').focus(); } catch (e) { /* abaikan */ } }, 60); };
     $('#vcSp2').onclick = function () { var c = $('#vcSpk'); c.checked = !c.checked; c.onchange(); paint(); };
     $('#vcF').onsubmit = function (e) { e.preventDefault(); var v = $('#vcIn').value; $('#vcIn').value = ''; submit(v); };
@@ -1009,7 +1009,7 @@
     if (!cfg().on) return;
     ensureUI();
     if (typeof S !== 'undefined' && S.view !== 'pos' && typeof go === 'function') { try { go('pos'); } catch (e) { /* abaikan */ } }
-    var p = $('#vcP'); p.hidden = false; document.documentElement.classList.add('vc-open'); p.classList.remove('kb'); clearTimeout(bub.hide); st.open = true; $('#vcTx').textContent = ''; $('#vcRes').textContent = ''; $('#vcCh').innerHTML = '';
+    var p = $('#vcP'); st.openAt = Date.now(); p.hidden = false; document.documentElement.classList.add('vc-open'); p.classList.remove('kb'); clearTimeout(bub.hide); st.open = true; $('#vcTx').textContent = ''; $('#vcRes').textContent = ''; $('#vcCh').innerHTML = '';
     var mm = $('#vcMic'); if (mm) mm.setAttribute('aria-expanded', 'true');
     paint();
     if (autoListen && SR) startListen(); else if (!SR) { p.classList.add('kb'); setTimeout(function () { try { $('#vcIn').focus(); } catch (e) { /* abaikan */ } }, 80); showResult({ msg: M('nosr') }); }
