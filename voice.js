@@ -898,11 +898,31 @@
     });
   }
   function ttsBadFor(e) { var s = e && e.status; tts.why = (e && e.msg) || 'tidak terjangkau'; tts.bad = Date.now() + (s === 501 ? 30 * 60000 : s === 429 ? 10 * 60000 : s === 401 || s === 402 || s === 404 || s === 502 ? 5 * 60000 : 60000); }
+  /* iPhone/Safari: suara hanya boleh dibunyikan setelah ada sentuhan pengguna. Elemen audio dibuka (di-"unlock") pada sentuhan pertama lalu dipakai ulang untuk semua balasan. */
+  function silentWav() {
+    var n = 800, b = new Uint8Array(44 + n * 2), dv = new DataView(b.buffer), w = function (o, s) { for (var i = 0; i < s.length; i++) b[o + i] = s.charCodeAt(i); };
+    w(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, 8000, true); dv.setUint32(28, 16000, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+  }
+  function unlockAudio() {
+    if (st.speaking) return;
+    try {
+      if (!tts.unl && !tts.unlP && root.Audio) {
+        if (!tts.el) { tts.el = new Audio(); try { tts.el.setAttribute('playsinline', ''); } catch (e) { /* abaikan */ } }
+        tts.el.src = tts.sil || (tts.sil = silentWav()); tts.el.muted = false; tts.el.volume = 1;
+        var p = tts.el.play(); if (p && p.then) { tts.unlP = 1; p.then(function () { tts.unl = 1; tts.unlP = 0; try { tts.el.pause(); } catch (e) { /* abaikan */ } }, function () { tts.unlP = 0; /* belum diizinkan: coba lagi di sentuhan berikutnya */ }); }
+        else tts.unl = 1;
+      }
+      var ss = root.speechSynthesis;
+      if (ss && !tts.ssu) { tts.ssu = 1; var u = new SpeechSynthesisUtterance(' '); u.volume = 0; ss.speak(u); }
+    } catch (e) { /* abaikan */ }
+  }
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(function (ev) { try { document.addEventListener(ev, unlockAudio, { capture: true, passive: true }); } catch (e) { /* abaikan */ } });
   function playBlob(blob, token, fallback) {
-    var url = URL.createObjectURL(blob), a = new Audio(url); tts.cur = a;
+    var url = URL.createObjectURL(blob), a = tts.el || (tts.el = new Audio()); try { a.setAttribute('playsinline', ''); } catch (e) { /* abaikan */ } a.src = url; a.muted = false; a.volume = 1; tts.cur = a;
     var done = function () { try { URL.revokeObjectURL(url); } catch (e) { /* abaikan */ } if (token === tts.seq) { tts.cur = null; st.speaking = false; bg.pausedUntil = Date.now() + 250; } };
     a.onended = done; a.onerror = function () { done(); if (token === tts.seq && fallback) fallback(); };
-    var pr = a.play(); if (pr && pr.catch) pr.catch(function () { done(); if (token === tts.seq && fallback) fallback(); });
+    var pr = a.play(); if (pr && pr.catch) pr.catch(function (err) { done(); if (!tts.warned && err && err.name === 'NotAllowedError') { tts.warned = 1; try { toastMsg('🔇 Suara diblokir oleh perangkat. Ketuk layar sekali lalu coba lagi', true); } catch (e) { /* abaikan */ } } if (token === tts.seq && fallback) fallback(); });
   }
   function say(t, opt) {
     var txt = ttsText(t); if (!txt) return false;
@@ -921,7 +941,7 @@
   }
   /* uji suara dari Pengaturan: melaporkan suara AI aktif, atau alasan jatuh ke suara perangkat */
   function speakTest() {
-    var sample = 'Halo! Saya asisten kasir Ordela. Gimana, suaraku enak didengar, kan?';
+    var sample = 'Halo! Saya asisten kasir Ordela. Gimana, suaraku enak didengar, kan?'; unlockAudio();
     return new Promise(function (res) {
       var local = function (why) {
         var ss = root.speechSynthesis; if (!ss) { res({ ok: false, msg: (why ? why + '. ' : '') + 'Perangkat ini tidak punya mesin suara.' }); return; }

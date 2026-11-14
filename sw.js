@@ -1,5 +1,5 @@
 /* Service worker: aplikasi tetap terbuka saat internet putus. Data tidak di-cache di sini (disimpan lokal oleh aplikasi). */
-const V = 'ordela-v153';
+const V = 'ordela-v154';
 const SHELL = ['./', 'xlsx.js', 'mod-inti.js', 'mod-inventori.js', 'mod-kasir.js', 'mod-printer.js', 'mod-pengaturan.js', 'mod-sinkron.js', 'mod-pesanan.js', 'mod-akun.js', 'mod-staf.js', 'manifest.webmanifest', 'icon-ordela-dark.svg', 'icon-512.png', 'icon-maskable-512.png', 'icon-light-192.png', 'icon-light-512.png', 'icon-ordela-dark.svg', 'icon-ordela-red.svg', 'icon-ordela-maskable.svg'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(V).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
