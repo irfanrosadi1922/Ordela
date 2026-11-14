@@ -670,18 +670,87 @@
 
   /* ---------- UI ---------- */
   var ICON_MIC = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4.5M3 12.5v3M21 12.5v3M9.5 16.5h5"/><circle class="bt-an" cx="12" cy="3.5" r="1"/><circle class="bt-ey" cx="9.5" cy="12.5" r=".9" fill="currentColor"/><circle class="bt-ey" cx="14.5" cy="12.5" r=".9" fill="currentColor"/></svg>';
+
+  /* ---------- wajah robot: ekspresi mengikuti keadaan (mendengar, berpikir, bicara) dan emosi jawaban ---------- */
+  var bot = { emo: 'idle', talk: '0', tmp: null, last: Date.now(), pokes: [], on: false };
+  function botFace(cls) {
+    return '<span class="bf ' + (cls || '') + '" data-emo="' + bot.emo + '" data-talk="' + bot.talk + '"><svg viewBox="0 0 100 70" aria-hidden="true">' +
+      '<ellipse class="bf-sh" cx="50" cy="65" rx="34" ry="4"/><rect class="bf-bd" x="6" y="6" width="88" height="52" rx="26"/>' +
+      '<g class="bf-ey"><ellipse class="bf-e bf-el" cx="36" cy="30" rx="4.6" ry="6.4"/><ellipse class="bf-e bf-er" cx="64" cy="30" rx="4.6" ry="6.4"/></g>' +
+      '<g class="bf-ha"><path d="M30 33q6-10 12 0"/><path d="M58 33q6-10 12 0"/></g><g class="bf-sl"><path d="M30 31h12"/><path d="M58 31h12"/></g>' +
+      '<g class="bf-mo"><rect class="m-dash" x="44" y="41" width="12" height="4" rx="2"/><rect class="m-o" x="42" y="39" width="16" height="11" rx="5"/>' +
+      '<path class="m-smile" d="M40 40q10 10 20 0"/><path class="m-sad" d="M41 47q9-8 18 0"/><path class="m-wave" d="M40 44q5-5 10 0t10 0"/><path class="m-open" d="M38 38h24a12 11 0 0 1-24 0z"/></g></svg></span>';
+  }
+  function botBase() {
+    if (st.listening) return 'listen';
+    if (st.busy) return 'think';
+    return Date.now() - bot.last > 60000 ? 'sleep' : 'idle';
+  }
+  function botTick() {
+    if (root.document && document.hidden) return;
+    var now = Date.now(), e;
+    if (st.listening || st.busy || st.speaking) bot.last = now;
+    if (bot.tmp && (now < bot.tmp.until || (bot.tmp.sticky && st.speaking))) e = bot.tmp.emo; else { bot.tmp = null; e = botBase(); }
+    var tk = st.speaking ? '1' : '0';
+    if (e === bot.emo && tk === bot.talk) return;
+    bot.emo = e; bot.talk = tk;
+    var els = document.querySelectorAll('.bf'); for (var i = 0; i < els.length; i++) { els[i].dataset.emo = e; els[i].dataset.talk = tk; }
+  }
+  function emote(emo, ms, sticky) { bot.tmp = { emo: emo, until: Date.now() + (ms || 1800), sticky: !!sticky }; bot.last = Date.now(); botTick(); }
+  /* emosi dari isi kalimat (cadangan bila AI tidak memberi tag) */
+  function emoOf(t) {
+    t = String(t || '').toLowerCase();
+    if (/\b(wk(wk)+|haha+|hehe+|hihi+|ngakak|lucu banget|kocak)\b/.test(t)) return 'laugh';
+    if (/\b(hah\??|astaga|ya ampun|waduh|serius\??|kaget|wah\b|busyet|ya allah)\b|\?\!|\!\?/.test(t)) return 'surprise';
+    if (/\b(maaf|sayang sekali|sedih|belum bisa|gagal|tidak bisa|ga bisa|nggak bisa)\b/.test(t)) return 'sad';
+    if (/\b(bingung|kurang jelas|tidak paham|nggak paham|ga paham|ulangi|maksudnya|hmm+)\b/.test(t)) return 'confused';
+    if (/\b(terima kasih|makasih|siap|oke|berhasil|selamat|senang|sama-sama|ditambah|sudah)\b|!/.test(t)) return 'happy';
+    return null;
+  }
+  var EMOMAP = { senang: 'happy', kaget: 'surprise', bingung: 'confused', sedih: 'sad', tertawa: 'laugh', santai: null };
+  function botReact(r) {
+    if (r.emo) { emote(r.emo, 2600, true); return; }
+    var e = emoOf(r.msg || r.say);
+    if (r.chat) { if (e) emote(e, 3000, true); return; }
+    if (r.warn) emote('confused', 2200);
+    else if ((r.chips || []).length) emote('think', 2200);
+    else if (r.msg && !st.busy) emote(e === 'laugh' || e === 'sad' ? e : 'happy', 1700);
+  }
+  function botStart() {
+    if (bot.on) return; bot.on = true;
+    setInterval(botTick, 200);
+    var loop = function () {
+      setTimeout(function () {
+        var els = document.querySelectorAll('.bf');
+        if (!document.hidden && bot.emo !== 'sleep' && bot.emo !== 'happy' && bot.emo !== 'laugh') {
+          var side = Math.random() < .25 && bot.emo === 'idle' ? (Math.random() < .5 ? 'lk-l' : 'lk-r') : '';
+          for (var i = 0; i < els.length; i++) { els[i].classList.add('blink'); if (side) els[i].classList.add(side); }
+          setTimeout(function () { for (var j = 0; j < els.length; j++) els[j].classList.remove('blink'); }, 140);
+          if (side) setTimeout(function () { for (var k = 0; k < els.length; k++) els[k].classList.remove('lk-l', 'lk-r'); }, 900);
+        }
+        loop();
+      }, 2200 + Math.random() * 3600);
+    };
+    loop();
+  }
+  /* disentuh: kaget lalu senang; ditoel berkali-kali jadi tertawa */
+  function botPoke() {
+    var now = Date.now(); bot.pokes = bot.pokes.filter(function (t) { return now - t < 4000; }); bot.pokes.push(now);
+    if (bot.pokes.length >= 3) { emote('laugh', 1800); return; }
+    emote('surprise', 550); setTimeout(function () { if (!bot.tmp || bot.tmp.emo === 'surprise') emote('happy', 1300); }, 560);
+  }
   function ensureUI() {
     if ($('#vcP')) return;
     var p = document.createElement('div'); p.id = 'vcP'; p.hidden = true;
     p.setAttribute('role', 'dialog'); p.setAttribute('aria-live', 'polite');
     p.innerHTML = '<div class="vc-h"><span class="vc-ind" id="vcInd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><b id="vcSt"></b><span class="vc-sp"></span>' +
       '<div class="vc-lg" id="vcLg" role="group"></div><button type="button" class="vc-x" id="vcX" aria-label="Tutup">✕</button></div>' +
-      '<div class="vc-tx" id="vcTx"></div><div class="vc-res" id="vcRes"></div><div class="vc-ch" id="vcCh"></div>' +
+      '<div class="vc-stage" id="vcStage">' + botFace('bf-l') + '</div><div class="vc-tx" id="vcTx"></div><div class="vc-res" id="vcRes"></div><div class="vc-ch" id="vcCh"></div>' +
       '<form class="vc-f" id="vcF" autocomplete="off"><input class="fi" id="vcIn" enterkeyhint="send" autocapitalize="none" spellcheck="false"><button type="button" class="vc-go" id="vcMic2" aria-label="Mikrofon">' + ICON_MIC + '</button><button class="vc-send" type="submit" id="vcSend"></button></form>' +
       '<label class="vc-sw"><input type="checkbox" id="vcSpk"><span id="vcSpkL"></span></label>';
     document.body.appendChild(p);
     var tt = document.createElement('div'); tt.id = 'vcT'; tt.hidden = true; tt.setAttribute('role', 'status'); tt.setAttribute('aria-live', 'polite'); document.body.appendChild(tt);
-    $('#vcX').onclick = closePanel;
+    $('#vcX').onclick = closePanel; $('#vcStage').onclick = botPoke; botStart();
     $('#vcF').onsubmit = function (e) { e.preventDefault(); var v = $('#vcIn').value; $('#vcIn').value = ''; submit(v); };
     $('#vcMic2').onclick = toggleListen;
     $('#vcSpk').onchange = function () { st.speak = this.checked; try { localStorage.setItem('ordela_vc_speak', this.checked ? '1' : '0'); } catch (e) { /* abaikan */ } if (!this.checked) stopSay(); };
@@ -709,7 +778,7 @@
   /* tombol suara melayang: tahan = bicara (lepas untuk selesai), ketuk = buka panel */
   function injectFab() {
     var host = $('#v-pos'); if (!host || $('#vcFab')) return;
-    var b = document.createElement('button'); b.type = 'button'; b.id = 'vcFab'; b.className = 'vc-fab'; b.innerHTML = ICON_MIC + '<i class="vcw"></i>';
+    var b = document.createElement('button'); b.type = 'button'; b.id = 'vcFab'; b.className = 'vc-fab'; b.innerHTML = botFace('bf-s') + '<i class="vcw"></i>'; botStart();
     b.setAttribute('aria-label', 'Perintah suara (tahan untuk bicara)'); b.title = M('pttHint');
     try { localStorage.removeItem('ordela_vc_fab'); } catch (e) { /* abaikan */ }   // posisi tetap (fitur geser dihapus)
     var timer = 0, down = false, held = false;
@@ -736,6 +805,7 @@
   function paint() {
     var p = $('#vcP'); if (!p) return;
     var fb = $('#vcFab'); if (fb) fb.classList.toggle('rec', st.listening);
+    botTick();
     p.classList.toggle('on', st.listening);
     $('#vcSt').textContent = st.listening ? M('listen') : st.busy ? M('proc') : (SR ? M('idle') : M('nosr'));
     $('#vcIn').placeholder = M('typeHolder'); $('#vcSend').textContent = M('send');
@@ -748,6 +818,7 @@
   }
   function showResult(r) {
     if (!st.open && root.document && !st.listening) { if ((r.chips || []).length) openPanel(false); else if (r.msg) toastMsg(r.msg, !!r.warn); }
+    try { botReact(r); } catch (e) { /* abaikan */ }
     var el = $('#vcRes'); el.textContent = r.msg || ''; el.classList.toggle('warn', !!r.warn); el.classList.toggle('big', !!r.big);
     var ch = $('#vcCh');
     ch.innerHTML = (r.chips || []).map(function (c) { return chipHtml(c); }).join('');
@@ -1104,7 +1175,7 @@
     if (chatHist.length >= 30) { done(null); return; }
     chatHist.push(now);
     var fin = false, to = setTimeout(function () { if (!fin) { fin = true; done(null); } }, 30000);
-    Promise.resolve(root.P2.voiceChat(text)).then(function (a) { if (fin) return; fin = true; clearTimeout(to); done(a ? String(a).slice(0, 400) : null); }, function () { if (fin) return; fin = true; clearTimeout(to); done(null); });
+    Promise.resolve(root.P2.voiceChat(text)).then(function (a) { if (fin) return; fin = true; clearTimeout(to); var tx = a ? String(a) : '', m = /^\s*\[(senang|kaget|bingung|sedih|tertawa|santai)\]\s*/i.exec(tx); st.nextEmo = null; if (m) { tx = tx.slice(m[0].length); st.nextEmo = EMOMAP[m[1].toLowerCase()] || null; } done(tx ? tx.slice(0, 400) : null); }, function () { if (fin) return; fin = true; clearTimeout(to); done(null); });
   }
   /* kirim frasa yang gagal ke fungsi voice-ai; hasilnya hanya dipakai bila cocok persis dengan menu yang ada */
   function aiResolve(unres, done) {
@@ -1450,6 +1521,7 @@
     if (!alts.length) return;
     lload(); st.ctxMiss = true;
     st.busy = true; paint(); $('#vcTx').textContent = '“' + alts[0] + '”';
+    if (/\b(wk(wk)+|haha+|hehe+|hihi+)\b/i.test(alts[0])) emote('laugh', 1400);
     var pr0 = alts.length === 1 ? pendingReply(alts[0]) : null;
     if (pr0) { st.busy = false; paint(); showResult(pr0); return; }
     if (alts.length === 1) {
@@ -1460,7 +1532,7 @@
         try { naturalOut = runNatural(natural); } catch (e) { console.error('voice natural checkout', e); naturalOut = { msg: M('err'), warn: true }; }
         if (chatWorthy(null, naturalOut, alts[0]) && chatOn()) {
           showResult({ msg: M('aiAsk') });
-          chatAsk(alts[0], function (ans) { st.busy = false; paint(); showResult(ans ? { msg: ans, say: ans } : naturalOut); });
+          chatAsk(alts[0], function (ans) { st.busy = false; paint(); showResult(ans ? { msg: ans, say: ans, chat: 1, emo: st.nextEmo || undefined } : naturalOut); });
           return;
         }
         st.busy = false; paint(); showResult(naturalOut);
@@ -1484,7 +1556,7 @@
     }
     if (alts.length === 1 && chatWorthy(bestP, out, alts[0]) && chatOn()) {
       st.busy = true; paint(); showResult({ msg: M('aiAsk') });
-      chatAsk(alts[0], function (ans) { st.busy = false; paint(); showResult(ans ? { msg: ans, say: ans } : out); });
+      chatAsk(alts[0], function (ans) { st.busy = false; paint(); showResult(ans ? { msg: ans, say: ans, chat: 1, emo: st.nextEmo || undefined } : out); });
       return;
     }
     var un = (st.unres || []).slice(); if (un.length && aiOn()) {
@@ -1624,7 +1696,7 @@
       try { naturalOut = runNatural(natural); } catch (e) { console.error('voice natural checkout', e); naturalOut = { msg: M('err'), warn: true }; }
       if (chatWorthy(null, naturalOut, naturalText) && (woke || inWin) && chatOn()) {
         bg.awake = Date.now() + 25000;
-        chatAsk(naturalText, function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut); return; } toastMsg(ans, false); if (st.speak && c.speak && canSpeak()) say(ans); });
+        chatAsk(naturalText, function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut); return; } toastMsg(ans, false, { chat: 1, emo: st.nextEmo || undefined }); if (st.speak && c.speak && canSpeak()) say(ans); });
         return;
       }
       toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut);
@@ -1639,7 +1711,7 @@
     try { out = run(bestP); } catch (e) { console.error('voice', e); return; }
     if (chatWorthy(bestP, out, cand[0]) && (woke || inWin) && chatOn()) {
       bg.awake = Date.now() + 25000;
-      chatAsk(cand[0], function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), true, out); return; } toastMsg(ans, false); if (st.speak && c.speak && canSpeak()) say(ans); });
+      chatAsk(cand[0], function (ans) { bg.awake = Date.now() + 20000; if (!ans) { toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), true, out); return; } toastMsg(ans, false, { chat: 1, emo: st.nextEmo || undefined }); if (st.speak && c.speak && canSpeak()) say(ans); });
       return;
     }
     if (out.noop) return;
@@ -1658,6 +1730,7 @@
   function toastMsg(text, warn, out) {
     ensureUI(); var t = $('#vcT'); if (!t) return;
     t.textContent = text; t.classList.toggle('warn', !!warn); t.hidden = false;
+    try { if (out && out.chat) botReact({ msg: text, say: text, chat: 1, emo: out.emo }); else if (warn) botReact({ msg: text, warn: true }); } catch (e) { /* abaikan */ }
     clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, warn ? 6000 : 4200);
   }
   function localStorageLang() { try { return localStorage.getItem('ordela_vc_lang'); } catch (e) { return null; } }
@@ -1674,7 +1747,7 @@
     ensureUI(); injectMic(); injectFab(); setInterval(supervise, 300);
     var n = 0, t = setInterval(function () { injectMic(); injectFab(); if (($('#vcMic') && $('#vcFab')) || ++n > 40) clearInterval(t); }, 500);
   }
-  root.VC = { speakTest: speakTest, canDictate: canDictate, dictate: dictate, refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, D: { interp: function (t, cb) { aiInterpret(t, function (r, m) { cb(aiInterpApply(r, m || [])); }); }, capFake: function (v) { Cap.fake = !!v; }, capFeed: function (f) { Cap.sinks.slice().forEach(function (s) { s(f); }); }, useAi: useAi, tr: function (fn) { aiTranscribe = fn; }, log: function () { return DG.slice(); }, bg: function () { return { live: !!bg.run, blocked: !!bg.blocked, fail: bg.fail, wanted: bgWanted() }; } }, L: {
+  root.VC = { emote: emote, botPoke: botPoke, bot: bot, speakTest: speakTest, canDictate: canDictate, dictate: dictate, refresh: function () { applyCfg(); if (!cfg().always) bgStop(); else { bg.blocked = false; bg.next = 0; } if (!localStorageLang()) { st.lang = pickLang(); if (st.open) paint(); } }, parse: parse, run: run, submit: submit, open: openPanel, close: closePanel, matchItem: matchItem, state: st, D: { interp: function (t, cb) { aiInterpret(t, function (r, m) { cb(aiInterpApply(r, m || [])); }); }, capFake: function (v) { Cap.fake = !!v; }, capFeed: function (f) { Cap.sinks.slice().forEach(function (s) { s(f); }); }, useAi: useAi, tr: function (fn) { aiTranscribe = fn; }, log: function () { return DG.slice(); }, bg: function () { return { live: !!bg.run, blocked: !!bg.blocked, fail: bg.fail, wanted: bgWanted() }; } }, L: {
     data: function () { var L = lload(); return JSON.parse(JSON.stringify(L)); },
     delAlias: function (k) { var L = lload(); delete L.al[k]; lsave(); },
     delMiss: function (k) { var L = lload(); delete L.miss[k]; lsave(); },

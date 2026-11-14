@@ -544,10 +544,10 @@ P2.voiceChat=async function(q){
   const now=Date.now();while(VCH.length&&now-VCH[0].t>600000)VCH.shift();
   const messages=VCH.slice(-8).map(m=>({role:m.r,content:m.c})).concat([{role:'user',content:String(q).slice(0,500)}]);
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),25000);
-  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',signal:ctrl.signal,headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q:String(q).slice(0,500)+'\n(Ini percakapan suara. Jawab seperti kasir ramah yang ngobrol santai: 1-2 kalimat pendek, bahasa lisan yang natural (boleh “ya”, “nih”, “kok”, “wah”, “hmm”, “haha”), beri emosi sesuai konteks lewat tanda seru, tanda tanya, dan jeda “…”, sesuai bahasa lawan bicara, tanpa emoji, tanpa tanda format, angka dan uang ditulis seperti diucapkan. Kamu hanya menjawab, tidak mengubah data.)',ctx:aiCtx(),messages})});
+  try{const r=await fetch(C.url+'/functions/v1/ai-chat',{method:'POST',signal:ctrl.signal,headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,q:String(q).slice(0,500)+'\n(Ini percakapan suara. Jawab seperti kasir ramah yang ngobrol santai: 1-2 kalimat pendek, bahasa lisan yang natural (boleh “ya”, “nih”, “kok”, “wah”, “hmm”, “haha”), beri emosi sesuai konteks lewat tanda seru, tanda tanya, dan jeda “…”, sesuai bahasa lawan bicara, tanpa emoji, tanpa tanda format, angka dan uang ditulis seperti diucapkan. Awali jawaban dengan SATU tag emosi sesuai perasaanmu: [senang], [kaget], [bingung], [sedih], [tertawa] atau [santai], lalu kalimatnya; bereaksilah seperti manusia (kaget bila diprank, tertawa bila lucu). Kamu hanya menjawab, tidak mengubah data.)',ctx:aiCtx(),messages})});
     const j=await r.json().catch(()=>({}));
     const a=r.ok&&typeof j.answer==='string'?j.answer.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/[*_#`>]+/g,'').replace(/\s+/g,' ').trim():'';
-    if(!a)return null;VCH.push({r:'user',c:String(q).slice(0,500),t:now},{r:'assistant',c:a.slice(0,500),t:now});return a}catch(e){return null}finally{clearTimeout(timer)}
+    if(!a)return null;VCH.push({r:'user',c:String(q).slice(0,500),t:now},{r:'assistant',c:a.replace(/^\s*\[[a-z]+\]\s*/i,'').slice(0,500),t:now});return a}catch(e){return null}finally{clearTimeout(timer)}
 };
 
 const aiTm=()=>new Date().toLocaleTimeString(dloc(),{hour:'2-digit',minute:'2-digit'});
