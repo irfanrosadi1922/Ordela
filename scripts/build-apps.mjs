@@ -2,7 +2,7 @@
 //   kasir / admin / dapur : aplikasi yang sama dengan profil terbatas (window.POS_APP) + SSO lewat pusat identitas (POS_IDP)
 //   pesan                 : halaman pelanggan (order.html menjadi index.html)
 // Hasil di dist/<app>/ lengkap dengan CNAME. Pusat identitas = aplikasi penuh di app.ordela.my.id (repo ini, tidak dibangun ulang).
-import { cpSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -17,7 +17,8 @@ const APPS = {
 };
 const SHARED = ['sw.js', 'skin.css', 'skin.js', 'viewport.js', 'sbapi.js', 'config.js', 'qr.js', 'qris.js', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-light-192.png', 'icon-light-512.png',
   'icon-ordela-dark.svg', 'icon-ordela-red.svg', 'icon-ordela-maskable.svg'];
-const STAFF = ['index.html', 'order.html', 'auth.js', 'native.js', 'pos2.js', 'voice.js', 'xlsx.js', 'sso.js', 'html5-qrcode.min.js', 'manifest.webmanifest'];
+const MODS = readdirSync(ROOT).filter((f) => /^mod-[a-z]+\.js$/.test(f));   // modul hasil pemecahan index.html (mod-*.js)
+const STAFF = ['index.html', 'order.html', 'auth.js', 'native.js', 'pos2.js', 'voice.js', 'xlsx.js', ...MODS, 'sso.js', 'html5-qrcode.min.js', 'manifest.webmanifest'];
 
 const want = process.argv.slice(2).filter((a) => APPS[a]);
 const list = want.length ? want : Object.keys(APPS);
