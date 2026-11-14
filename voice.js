@@ -744,13 +744,15 @@
     var p = document.createElement('div'); p.id = 'vcP'; p.hidden = true;
     p.setAttribute('role', 'dialog'); p.setAttribute('aria-live', 'polite');
     p.innerHTML = '<div class="vc-h"><span class="vc-ind" id="vcInd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><b id="vcSt"></b><span class="vc-sp"></span>' +
-      '<div class="vc-lg" id="vcLg" role="group"></div><button type="button" class="vc-x" id="vcX" aria-label="Tutup">✕</button></div>' +
+      '<div class="vc-lg" id="vcLg" role="group"></div><button type="button" class="vc-b" id="vcKb" aria-label="Ketik perintah">⌨</button><button type="button" class="vc-b" id="vcSp2" aria-pressed="true" aria-label="Suara balasan">🔊</button><button type="button" class="vc-x" id="vcX" aria-label="Tutup">✕</button></div>' +
       '<div class="vc-stage" id="vcStage">' + botFace('bf-l') + '</div><div class="vc-tx" id="vcTx"></div><div class="vc-res" id="vcRes"></div><div class="vc-ch" id="vcCh"></div>' +
       '<form class="vc-f" id="vcF" autocomplete="off"><input class="fi" id="vcIn" enterkeyhint="send" autocapitalize="none" spellcheck="false"><button type="button" class="vc-go" id="vcMic2" aria-label="Mikrofon">' + ICON_MIC + '</button><button class="vc-send" type="submit" id="vcSend"></button></form>' +
       '<label class="vc-sw"><input type="checkbox" id="vcSpk"><span id="vcSpkL"></span></label>';
     document.body.appendChild(p);
     var tt = document.createElement('div'); tt.id = 'vcT'; tt.hidden = true; tt.setAttribute('role', 'status'); tt.setAttribute('aria-live', 'polite'); document.body.appendChild(tt);
     $('#vcX').onclick = closePanel; $('#vcStage').onclick = botPoke; botStart();
+    $('#vcKb').onclick = function () { var pp = $('#vcP'); pp.classList.toggle('kb'); clearTimeout(bub.hide); if (pp.classList.contains('kb')) setTimeout(function () { try { $('#vcIn').focus(); } catch (e) { /* abaikan */ } }, 60); };
+    $('#vcSp2').onclick = function () { var c = $('#vcSpk'); c.checked = !c.checked; c.onchange(); paint(); };
     $('#vcF').onsubmit = function (e) { e.preventDefault(); var v = $('#vcIn').value; $('#vcIn').value = ''; submit(v); };
     $('#vcMic2').onclick = toggleListen;
     $('#vcSpk').onchange = function () { st.speak = this.checked; try { localStorage.setItem('ordela_vc_speak', this.checked ? '1' : '0'); } catch (e) { /* abaikan */ } if (!this.checked) stopSay(); };
@@ -807,6 +809,8 @@
     var fb = $('#vcFab'); if (fb) fb.classList.toggle('rec', st.listening);
     botTick();
     p.classList.toggle('on', st.listening);
+    var fab0 = $('#vcFab'); p.classList.toggle('nofab', !fab0 || fab0.hidden);
+    var sp2 = $('#vcSp2'); if (sp2) { sp2.textContent = st.speak ? '🔊' : '🔇'; sp2.setAttribute('aria-pressed', st.speak ? 'true' : 'false'); }
     $('#vcSt').textContent = st.listening ? M('listen') : st.busy ? M('proc') : (SR ? M('idle') : M('nosr'));
     $('#vcIn').placeholder = M('typeHolder'); $('#vcSend').textContent = M('send');
     $('#vcSpkL').textContent = M('speakOn'); $('#vcSpk').checked = !!st.speak;
@@ -819,10 +823,12 @@
   function showResult(r) {
     if (!st.open && root.document && !st.listening) { if ((r.chips || []).length) openPanel(false); else if (r.msg) toastMsg(r.msg, !!r.warn); }
     try { botReact(r); } catch (e) { /* abaikan */ }
-    var el = $('#vcRes'); el.textContent = r.msg || ''; el.classList.toggle('warn', !!r.warn); el.classList.toggle('big', !!r.big);
+    bub.full = r.msg || ''; bub.on = 0; bub.tok++;
+    var el = $('#vcRes'); el.textContent = r.msg || ''; el.classList.toggle('warn', !!r.warn); el.classList.toggle('big', !!r.big); popEl(el);
     var ch = $('#vcCh');
     ch.innerHTML = (r.chips || []).map(function (c) { return chipHtml(c); }).join('');
-    if (r.msg && st.speak && cfg().speak && canSpeak() && !st.listening) say(r.say || r.msg.split('\n')[0]);
+    if (r.msg && st.speak && cfg().speak && canSpeak() && !st.listening && !st.busy) say(r.say || r.msg.split('\n')[0]);   // pesan "menanyakan AI…" tidak dibacakan
+    bubIdle();
   }
   function chipHtml(c) {
     var t = c.intent === 'add' ? 'add' : c.intent === 'set' ? 'set' : 'rm';
@@ -864,16 +870,52 @@
     parts.forEach(function (p) { p = p.trim(); if (!p) return; if ((cur + ' ' + p).length > 170 && cur) { out.push(cur); cur = p; } else cur = cur ? cur + ' ' + p : p; });
     if (cur) out.push(cur); return out;
   }
+  /* ---------- gelembung bicara: teks tampil per kalimat, sinkron dengan suara ---------- */
+  var bub = { sent: [], tok: 0, idx: -1, on: 0, full: '', hide: 0 };
+  function popEl(el) { if (!el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+  function sentenceParts(t) {
+    var txt = String(t).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, ' ').replace(/[×·*_#`]/g, ' ').replace(/\s+/g, ' ').trim();
+    var raw = txt.match(/[^.!?;\n]+[.!?;]*/g) || [txt], out = [];
+    raw.forEach(function (p) {
+      p = p.trim(); if (!p) return;
+      while (p.length > 150) { var k = p.lastIndexOf(',', 140); if (k < 40) k = p.lastIndexOf(' ', 140); if (k < 20) k = 140; out.push(p.slice(0, k + 1).trim()); p = p.slice(k + 1).trim(); }
+      if (p) { if (out.length && p.length < 14 && out[out.length - 1].length + p.length < 150) out[out.length - 1] += ' ' + p; else out.push(p); }
+    });
+    return out.length ? out : [txt];
+  }
+  function bubShow(s) {
+    var p = $('#vcP');
+    if (st.open && p && !p.hidden) { var el = $('#vcRes'); if (el) { el.textContent = s; el.classList.remove('warn', 'big'); popEl(el); } return; }
+    var t = $('#vcT'); if (!t) return; t.textContent = s; t.classList.remove('warn'); t.hidden = false; popEl(t); clearTimeout(toastT); toastT = 0;
+  }
+  function bubStart(text) { bub.sent = sentenceParts(text); bub.tok++; bub.idx = -1; bub.on = 1; bubS(bub.tok, 0); return bub.tok; }
+  function bubS(tk, i) { if (tk !== bub.tok || i === bub.idx || !bub.sent[i]) return; bub.idx = i; bubShow(bub.sent[i]); }
+  function bubEnd(tk) {
+    if (tk !== bub.tok || !bub.on) return; bub.on = 0;
+    if (st.open) { var el = $('#vcRes'); if (el && bub.full) el.textContent = bub.full; }
+    else { var t = $('#vcT'); if (t && !t.hidden) { if (bub.full) t.textContent = bub.full; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 3500); } }
+    bubIdle();
+  }
+  /* gelembung hilang sendiri bila tidak ada yang perlu dijawab */
+  function bubIdle() {
+    clearTimeout(bub.hide); var p = $('#vcP'); if (!p || p.hidden || !st.open) return;
+    bub.hide = setTimeout(function () {
+      var q = $('#vcP'); if (!q || q.hidden) return;
+      if (st.speaking || st.listening || st.busy || st.pending || q.classList.contains('kb') || $('#vcCh').children.length || (document.activeElement && q.contains(document.activeElement) && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) return;
+      closePanel();
+    }, Math.max(5000, 2500 + (bub.full || '').length * 55));
+  }
   function sayLocal(t, opt) {
     try {
-      var ss = root.speechSynthesis, lang = SRLANG[st.lang] || 'id-ID', parts = speakParts(t); if (!ss || !parts.length) return false;
+      var nb = opt && opt.nobub, ss = root.speechSynthesis, lang = SRLANG[st.lang] || 'id-ID', parts = nb ? speakParts(t) : sentenceParts(t); if (!ss || !parts.length) return false;
+      var tk = nb ? 0 : bubStart(t); if (!nb) parts = bub.sent;
       var v = pickVoice(lang), total = parts.join(' ').length;
       bgStop(); st.speaking = true;
-      var done = function () { st.speaking = false; bg.pausedUntil = Date.now() + 250; }, n = 0;
+      var done = function () { st.speaking = false; bg.pausedUntil = Date.now() + 250; if (tk) bubEnd(tk); }, n = 0;
       ss.cancel();
       parts.forEach(function (p, i) {
         var u = new SpeechSynthesisUtterance(p); u.lang = v ? v.lang : lang; if (v) u.voice = v; u.rate = opt && opt.rate || 1; u.pitch = 1;
-        u.onend = function () { if (++n >= parts.length) done(); }; u.onerror = function () { n = parts.length; done(); };
+        u.onstart = function () { if (tk) bubS(tk, i); }; u.onend = function () { if (++n >= parts.length) done(); }; u.onerror = function () { n = parts.length; done(); };
         ss.speak(u);
       });
       setTimeout(function () { if (st.speaking) done(); }, Math.min(40000, 2500 + total * 85));
@@ -918,9 +960,10 @@
     } catch (e) { /* abaikan */ }
   }
   ['pointerdown', 'touchend', 'click', 'keydown'].forEach(function (ev) { try { document.addEventListener(ev, unlockAudio, { capture: true, passive: true }); } catch (e) { /* abaikan */ } });
-  function playBlob(blob, token, fallback) {
+  function playBlob(blob, token, fallback, tk) {
     var url = URL.createObjectURL(blob), a = tts.el || (tts.el = new Audio()); try { a.setAttribute('playsinline', ''); } catch (e) { /* abaikan */ } a.src = url; a.muted = false; a.volume = 1; tts.cur = a;
-    var done = function () { try { URL.revokeObjectURL(url); } catch (e) { /* abaikan */ } if (token === tts.seq) { tts.cur = null; st.speaking = false; bg.pausedUntil = Date.now() + 250; } };
+    var done = function () { try { URL.revokeObjectURL(url); } catch (e) { /* abaikan */ } a.ontimeupdate = null; if (token === tts.seq) { tts.cur = null; st.speaking = false; bg.pausedUntil = Date.now() + 250; if (tk) bubEnd(tk); } };
+    a.ontimeupdate = tk ? function () { if (tk !== bub.tok || !a.duration) return; var f = a.currentTime / a.duration, len = bub.sent.join('').length || 1, cum = 0; for (var i = 0; i < bub.sent.length; i++) { cum += bub.sent[i].length / len; if (f <= cum + 0.0001) { bubS(tk, i); break; } } } : null;
     a.onended = done; a.onerror = function () { done(); if (token === tts.seq && fallback) fallback(); };
     var pr = a.play(); if (pr && pr.catch) pr.catch(function (err) { done(); if (!tts.warned && err && err.name === 'NotAllowedError') { tts.warned = 1; try { toastMsg('🔇 Suara diblokir oleh perangkat. Ketuk layar sekali lalu coba lagi', true); } catch (e) { /* abaikan */ } } if (token === tts.seq && fallback) fallback(); });
   }
@@ -928,9 +971,9 @@
     var txt = ttsText(t); if (!txt) return false;
     var now = Date.now(); tts.hist = tts.hist.filter(function (x) { return now - x < 3600000; });
     if (!ttsOk() || tts.hist.length >= 60) return sayLocal(t, opt);
-    tts.hist.push(now); stopSay(); var token = tts.seq; bgStop(); st.speaking = true;
+    tts.hist.push(now); stopSay(); var token = tts.seq; bgStop(); st.speaking = true; var tk = bubStart(txt);
     var tryCloud = function (again) {
-      ttsFetch(txt).then(function (b) { if (token === tts.seq) playBlob(b, token, function () { sayLocal(t, opt); }); }, function (e) {
+      ttsFetch(txt).then(function (b) { if (token === tts.seq) playBlob(b, token, function () { sayLocal(t, opt); }, tk); }, function (e) {
         if (token !== tts.seq) return;
         var cs = e && e.status; if (again && (!cs || cs === 504 || cs === 429)) { setTimeout(function () { if (token === tts.seq) tryCloud(false); }, 700); return; }   // gangguan sesaat: coba sekali lagi agar suara tidak berganti
         ttsBadFor(e); st.speaking = false; sayLocal(t, opt);
@@ -947,7 +990,7 @@
         var ss = root.speechSynthesis; if (!ss) { res({ ok: false, msg: (why ? why + '. ' : '') + 'Perangkat ini tidak punya mesin suara.' }); return; }
         var v = pickVoice(SRLANG[st.lang] || 'id-ID'), n = (ss.getVoices() || []).length;
         if (!n) { res({ ok: false, msg: (why ? why + '. ' : '') + 'Tidak ada mesin suara. Aktifkan “Speech Services by Google” di pengaturan HP.' }); return; }
-        sayLocal(sample); res({ ok: !why, msg: (why ? why + '. ' : '') + 'Memakai suara perangkat' + (v ? ': ' + v.name : '') });
+        sayLocal(sample, { nobub: 1 }); res({ ok: !why, msg: (why ? why + '. ' : '') + 'Memakai suara perangkat' + (v ? ': ' + v.name : '') });
       };
       var C = root.POS_SB;
       if (!(cfg().tts && C && C.url && typeof CL !== 'undefined' && CL.on && CL.tok && root.Audio)) { local(cfg().tts ? 'Belum login' : 'Suara AI dimatikan'); return; }
@@ -965,14 +1008,14 @@
     if (!cfg().on) return;
     ensureUI();
     if (typeof S !== 'undefined' && S.view !== 'pos' && typeof go === 'function') { try { go('pos'); } catch (e) { /* abaikan */ } }
-    var p = $('#vcP'); p.hidden = false; st.open = true; $('#vcTx').textContent = ''; $('#vcRes').textContent = ''; $('#vcCh').innerHTML = '';
+    var p = $('#vcP'); p.hidden = false; p.classList.remove('kb'); clearTimeout(bub.hide); st.open = true; $('#vcTx').textContent = ''; $('#vcRes').textContent = ''; $('#vcCh').innerHTML = '';
     var mm = $('#vcMic'); if (mm) mm.setAttribute('aria-expanded', 'true');
     paint();
-    if (autoListen && SR) startListen(); else if (!SR) { setTimeout(function () { try { $('#vcIn').focus(); } catch (e) { /* abaikan */ } }, 80); showResult({ msg: M('nosr') }); }
+    if (autoListen && SR) startListen(); else if (!SR) { p.classList.add('kb'); setTimeout(function () { try { $('#vcIn').focus(); } catch (e) { /* abaikan */ } }, 80); showResult({ msg: M('nosr') }); }
   }
   function closePanel() {
-    stopListen(true); st.open = false; st.pending = null;
-    var p = $('#vcP'); if (p) p.hidden = true;
+    stopListen(true); st.open = false; st.pending = null; clearTimeout(bub.hide);
+    var p = $('#vcP'); if (p) { p.hidden = true; p.classList.remove('kb'); }
     var mm = $('#vcMic'); if (mm) { mm.setAttribute('aria-expanded', 'false'); mm.classList.remove('rec'); }
     try { stopSay(); } catch (e) { /* abaikan */ }
   }
@@ -1568,7 +1611,9 @@
     });
     var out;
     try { out = run(bestP); } catch (e) { console.error('voice', e); out = { msg: M('err'), warn: true }; }
-    st.busy = false; paint(); showResult(out);
+    st.busy = false; paint();
+    var unW = (st.unres || []).slice(), willAI = (alts.length === 1 && ((out.warn && (!bestP || bestP.intent === 'unknown' || out.msg === M('nomatch')) && aiOn() && looksLikeOrder(alts[0])) || (chatWorthy(bestP, out, alts[0]) && chatOn()))) || (unW.length && aiOn());
+    if (!willAI) showResult(out);   // bila AI akan menjawab, hasil "tidak ditemukan" tidak ditampilkan/dibacakan dulu
     if (alts.length === 1 && out.warn && (!bestP || bestP.intent === 'unknown' || out.msg === M('nomatch')) && aiOn() && looksLikeOrder(alts[0])) {
       st.busy = true; paint(); showResult({ msg: M('aiAsk') });
       aiInterpret(alts[0], function (r, menu) { st.busy = false; paint(); var ap = null; try { ap = aiInterpApply(r, menu || []); } catch (e) { console.error('voice interp', e); } showResult(ap || out); });
@@ -1749,9 +1794,10 @@
   var toastT = 0;
   function toastMsg(text, warn, out) {
     ensureUI(); var t = $('#vcT'); if (!t) return;
-    t.textContent = text; t.classList.toggle('warn', !!warn); t.hidden = false;
+    bub.full = text; bub.on = 0; bub.tok++;
+    t.textContent = text; t.classList.toggle('warn', !!warn); t.hidden = false; popEl(t);
     try { if (out && out.chat) botReact({ msg: text, say: text, chat: 1, emo: out.emo }); else if (warn) botReact({ msg: text, warn: true }); } catch (e) { /* abaikan */ }
-    clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, warn ? 6000 : 4200);
+    clearTimeout(toastT); var hideT = function () { if (st.speaking) { toastT = setTimeout(hideT, 1200); return; } t.hidden = true; }; toastT = setTimeout(hideT, warn ? 6000 : 4200);
   }
   function localStorageLang() { try { return localStorage.getItem('ordela_vc_lang'); } catch (e) { return null; } }
   /* ---------- pasang ---------- */
