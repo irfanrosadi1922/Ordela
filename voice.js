@@ -745,12 +745,13 @@
     p.setAttribute('role', 'dialog'); p.setAttribute('aria-live', 'polite');
     p.innerHTML = '<div class="vc-h"><span class="vc-ind" id="vcInd" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><b id="vcSt"></b><span class="vc-sp"></span>' +
       '<div class="vc-lg" id="vcLg" role="group"></div><button type="button" class="vc-b" id="vcKb" aria-label="Ketik perintah">⌨</button><button type="button" class="vc-b" id="vcSp2" aria-pressed="true" aria-label="Suara balasan">🔊</button><button type="button" class="vc-x" id="vcX" aria-label="Tutup">✕</button></div>' +
-      '<div class="vc-stage" id="vcStage">' + botFace('bf-l') + '</div><div class="vc-tx" id="vcTx"></div><div class="vc-res" id="vcRes"></div><div class="vc-ch" id="vcCh"></div>' +
+      '<div class="vc-stage" id="vcStage">' + botFace('bf-l') + '</div><div class="vc-bd"><div class="vc-tx" id="vcTx"></div><div class="vc-res" id="vcRes"></div><div class="vc-ch" id="vcCh"></div>' +
       '<form class="vc-f" id="vcF" autocomplete="off"><input class="fi" id="vcIn" enterkeyhint="send" autocapitalize="none" spellcheck="false"><button type="button" class="vc-go" id="vcMic2" aria-label="Mikrofon">' + ICON_MIC + '</button><button class="vc-send" type="submit" id="vcSend"></button></form>' +
-      '<label class="vc-sw"><input type="checkbox" id="vcSpk"><span id="vcSpkL"></span></label>';
+      '<label class="vc-sw"><input type="checkbox" id="vcSpk"><span id="vcSpkL"></span></label></div>';
     document.body.appendChild(p);
     var tt = document.createElement('div'); tt.id = 'vcT'; tt.hidden = true; tt.setAttribute('role', 'status'); tt.setAttribute('aria-live', 'polite'); document.body.appendChild(tt);
     $('#vcX').onclick = closePanel; $('#vcStage').onclick = botPoke; botStart();
+    p.addEventListener('click', function (e) { if (e.target === p) closePanel(); });   // ketuk di luar wajah = tutup
     $('#vcKb').onclick = function () { var pp = $('#vcP'); pp.classList.toggle('kb'); clearTimeout(bub.hide); if (pp.classList.contains('kb')) setTimeout(function () { try { $('#vcIn').focus(); } catch (e) { /* abaikan */ } }, 60); };
     $('#vcSp2').onclick = function () { var c = $('#vcSpk'); c.checked = !c.checked; c.onchange(); paint(); };
     $('#vcF').onsubmit = function (e) { e.preventDefault(); var v = $('#vcIn').value; $('#vcIn').value = ''; submit(v); };
