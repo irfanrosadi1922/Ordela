@@ -764,18 +764,19 @@ button:disabled,.btn:disabled{cursor:not-allowed}
 .vc-fab .bf-sh{display:none}
 .vc-fab .bf-bd{stroke:rgba(255,255,255,.0);stroke-width:0}
 .vc-fab .bf svg{width:40px;height:28px}
-@media (orientation:landscape) and (max-height:520px){.vc-stage{display:none}}
 @media (prefers-reduced-motion:reduce){.bf,.bf svg,.bf-mo>*,.vc-stage .bf,.vc-stage .bf::before{animation:none!important}}
 
 /* ===== AI Cashier: gelembung bicara di atas robot melayang (menggantikan kotak chat) ===== */
-#vcP{top:auto;left:auto;right:12px;margin:0;width:min(296px,calc(100vw - 24px));max-width:none;bottom:calc(max(var(--sab,0px),12px) + 224px);max-height:calc(100dvh - 300px);min-height:0;
-  padding:12px 14px 10px;border-radius:22px 22px 6px 22px;background:var(--card,#fff);-webkit-backdrop-filter:none;backdrop-filter:none;border:1px solid color-mix(in srgb,var(--ac,#e87b35) 28%,transparent);box-shadow:0 14px 40px rgba(15,23,42,.24);animation:vcBub .22s cubic-bezier(.3,1.4,.5,1) both;transform-origin:100% 100%;overflow:visible}
+#vcP{top:auto;left:auto;right:12px;margin:0;width:min(296px,calc(100vw - 24px));max-width:none;bottom:calc(max(var(--sab,0px),12px) + 150px);max-height:calc(100dvh - 190px);min-height:0;
+  padding:12px 14px 10px;border-radius:26px;background:var(--card,#fff);-webkit-backdrop-filter:none;backdrop-filter:none;border:1px solid color-mix(in srgb,var(--ac,#e87b35) 28%,transparent);box-shadow:0 14px 40px rgba(15,23,42,.24);animation:vcBub .22s cubic-bezier(.3,1.4,.5,1) both;transform-origin:100% 100%;overflow:visible}
 #vcP .vc-res{max-height:34dvh;overflow-y:auto}
-#vcP::after{content:"";position:absolute;right:25px;bottom:-9px;width:16px;height:16px;transform:rotate(45deg);background:var(--card,#fff);border-right:1px solid color-mix(in srgb,var(--ac,#e87b35) 28%,transparent);border-bottom:1px solid color-mix(in srgb,var(--ac,#e87b35) 28%,transparent);border-radius:0 0 5px 0}
 @keyframes vcBub{from{opacity:0;transform:translateY(8px) scale(.92)}to{opacity:1;transform:none}}
 @keyframes vcPop{from{opacity:.2;transform:translateY(5px)}to{opacity:1;transform:none}}
 #vcRes.pop,#vcT.pop{animation:vcPop .22s ease-out both}
-#vcP .vc-stage,#vcP .vc-lg,#vcP .vc-sw,#vcP .vc-f{display:none}
+#vcP .vc-lg,#vcP .vc-sw,#vcP .vc-f{display:none}
+#vcP .vc-stage{height:112px;margin:4px 0 0;-webkit-mask-image:radial-gradient(ellipse 62% 70% at 50% 52%,#000 62%,transparent 100%);mask-image:radial-gradient(ellipse 62% 70% at 50% 52%,#000 62%,transparent 100%)}
+#vcP .vc-stage .bf{width:128px}
+html.vc-open .vc-fab{display:none!important}   /* saat panel terbuka, tombol AI diganti wajah besar di panel */
 #vcP.kb .vc-f{display:flex}
 .vc-b{width:30px;height:30px;border:0;border-radius:50%;background:rgba(127,127,127,.14);color:inherit;font-size:14px;line-height:1;cursor:pointer;flex:none;display:grid;place-items:center;padding:0}
 .vc-x{width:30px;height:30px}
@@ -790,12 +791,11 @@ button:disabled,.btn:disabled{cursor:not-allowed}
 /* tanpa tombol melayang (mik di kolom cari) atau sedang mengetik: kartu di atas layar */
 #vcP.nofab,#vcP.kb{left:12px;right:12px;margin:0 auto;width:auto;max-width:420px;top:calc(env(safe-area-inset-top,0px) + 74px);bottom:auto;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 96px);border-radius:22px;transform-origin:50% 0}
 #vcP.nofab,#vcP.kb{overflow-y:auto}
-#vcP.nofab::after,#vcP.kb::after{display:none}
 /* pesan singkat (tanpa panel) memakai gelembung yang sama */
 #vcT{left:auto;right:12px;transform:none;top:auto;bottom:calc(max(var(--sab,0px),12px) + 224px);width:max-content;max-width:min(296px,calc(100vw - 24px));text-align:left;padding:11px 14px;border-radius:20px 20px 6px 20px;font-size:15px;font-weight:600;background:var(--card,#fff);-webkit-backdrop-filter:none;backdrop-filter:none;border:1px solid color-mix(in srgb,var(--ac,#e87b35) 28%,transparent);box-shadow:0 12px 32px rgba(15,23,42,.22)}
 #vcT::after{content:"";position:absolute;right:25px;bottom:-8px;width:14px;height:14px;transform:rotate(45deg);background:var(--card,#fff);border-right:1px solid color-mix(in srgb,var(--ac,#e87b35) 28%,transparent);border-bottom:1px solid color-mix(in srgb,var(--ac,#e87b35) 28%,transparent);border-radius:0 0 4px 0}
-@media (min-width:701px){#vcP,#vcT{right:24px;bottom:98px}#vcP::after,#vcT::after{right:21px}#vcP.nofab,#vcP.kb{right:24px;left:auto;margin:0;bottom:auto}}
-@media (orientation:landscape) and (max-height:520px){#vcP,#vcT{bottom:calc(max(var(--sab,0px),8px) + 80px);max-height:calc(100dvh - 100px)}#vcP.nofab,#vcP.kb{bottom:auto}}
+@media (min-width:701px){#vcT{right:24px;bottom:98px}#vcP{right:24px;bottom:24px}#vcT::after{right:21px}#vcP.nofab,#vcP.kb{right:24px;left:auto;margin:0;bottom:auto}}
+@media (orientation:landscape) and (max-height:520px){#vcT{bottom:calc(max(var(--sab,0px),8px) + 80px)}#vcP{bottom:calc(max(var(--sab,0px),8px) + 12px);max-height:calc(100dvh - 40px)}#vcP .vc-stage{height:84px}#vcP .vc-stage .bf{width:96px}#vcP.nofab,#vcP.kb{bottom:auto}}
 @media (prefers-reduced-motion:reduce){#vcP,#vcRes.pop,#vcT.pop{animation:none}}
 /* robot melayang sedikit lebih besar agar jadi "karakter" */
 .vc-fab .bf{width:44px}.vc-fab .bf svg{width:44px;height:31px}
