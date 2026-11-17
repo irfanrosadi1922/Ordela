@@ -837,3 +837,9 @@ html[data-skin]:not([data-theme=dark]) .tag.low{color:#92400e}
 html[data-skin]:not([data-theme=dark]) .tag.out{color:#b91c1c}
 .stk.low,.stk.out{font-weight:700}
 .stk.low{color:#b45309}.stk.out{color:#b91c1c}
+
+/* UX: navigasi bawah — latar lebih pekat agar foto menu di belakang tidak mengganggu, label lebih besar dan kontras >=4.5:1 */
+html[data-skin]:not([data-theme=dark]) .bnav{background:linear-gradient(180deg,rgba(255,255,255,.93),rgba(246,249,255,.88))!important}
+html[data-skin]:not([data-theme=dark]) .bnav button{color:#4a5775;font-size:12px}
+html[data-skin]:not([data-theme=dark]) .bnav button.on{color:var(--ad2)}
+html[data-skin] .bnav button.on span{font-weight:800}
