@@ -806,3 +806,14 @@ html.vc-open .vc-fab{display:none!important}   /* saat panel terbuka, tombol AI 
 .qty button::after{content:"";position:absolute;inset:-9px}
 .cats.cats{padding:6px 12px 22px;margin:-6px -12px -12px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* UX: area sentuh >=44px untuk kontrol kecil (tampilan tidak berubah) */
+.tag,.ib,.alert .go,button.go,#stp button,#aiSug button,#invTabs button,.itabs button{position:relative}
+/* chip di wadah gulir terpotong oleh overflow, jadi tinggi dinaikkan langsung */
+.tag,#aiSug button,#invTabs button,.itabs button{min-height:44px}
+.p .sub,.stk{font-size:max(11px,clamp(9px,6.2cqw,12px))}
+.ib::after{content:"";position:absolute;inset:-9px -2px}
+button.go::after{content:"";position:absolute;inset:-14px -6px}
+#stp button::after{content:"";position:absolute;inset:-8px}
+/* tombol + mengambang tidak menutupi tombol Hapus di baris terakhir */
+#v-inv{padding-bottom:96px}
