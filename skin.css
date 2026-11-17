@@ -800,3 +800,9 @@ html.vc-open .vc-fab{display:none!important}   /* saat panel terbuka, tombol AI 
 @media (prefers-reduced-motion:reduce){#vcP,#vcP .vc-bd,#vcRes.pop,#vcT.pop{animation:none}}
 /* robot melayang sedikit lebih besar agar jadi "karakter" */
 .vc-fab .bf{width:44px}.vc-fab .bf svg{width:44px;height:31px}
+
+/* UX: area sentuh tombol jumlah >=42px tanpa mengubah tampilan; bayangan kategori aktif tidak terpotong */
+.qty button{position:relative}
+.qty button::after{content:"";position:absolute;inset:-9px}
+.cats.cats{padding:6px 12px 22px;margin:-6px -12px -12px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
