@@ -826,7 +826,9 @@ html[data-skin]:not([data-theme=dark]) :is(.pl,.btn.sec,.ibtn){color:var(--ad2)}
 html[data-skin]:not([data-theme=dark]) .ib.d{color:#b91c1c}
 
 /* UX: ikon +/- digambar CSS agar tepat di tengah lingkaran (glyph teks selalu sedikit bergeser) */
-.qty button{font-size:0}
+.qty button,.p .qty button,.pop-q .qty button{font-size:0!important;line-height:0;-webkit-text-fill-color:transparent;text-shadow:none}
+.pop-q .qty button::before{width:15px;height:15px;background-size:15px 2px,2px 15px}
+.pop-q .qty button:first-child::before{background:linear-gradient(currentColor,currentColor) center/15px 2px no-repeat}
 .qty button::before{content:"";position:absolute;left:50%;top:50%;width:11px;height:11px;transform:translate(-50%,-50%);
   background:linear-gradient(currentColor,currentColor) center/11px 2px no-repeat}
 .qty button:last-child::before{background:linear-gradient(currentColor,currentColor) center/11px 2px no-repeat,linear-gradient(currentColor,currentColor) center/2px 11px no-repeat}
