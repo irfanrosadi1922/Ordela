@@ -810,7 +810,7 @@ html.vc-open .vc-fab{display:none!important}   /* saat panel terbuka, tombol AI 
 /* UX: area sentuh >=44px untuk kontrol kecil (tampilan tidak berubah) */
 .tag,.ib,.alert .go,button.go,#stp button,#aiSug button,#invTabs button,.itabs button{position:relative}
 /* chip di wadah gulir terpotong oleh overflow, jadi tinggi dinaikkan langsung */
-.tag,#aiSug button,#invTabs button,.itabs button{min-height:44px}
+button.tag,#aiSug button,#invTabs button,.itabs button{min-height:44px}
 .p .sub,.stk{font-size:max(11px,clamp(9px,6.2cqw,12px))}
 .ib::after{content:"";position:absolute;inset:-9px -2px}
 button.go::after{content:"";position:absolute;inset:-14px -6px}
@@ -824,3 +824,16 @@ html[data-skin]:not([data-theme=dark]) .tag.ok{color:#166534}
 html[data-skin]:not([data-theme=dark]) .ib:not(.d){color:var(--ad2)}
 html[data-skin]:not([data-theme=dark]) :is(.pl,.btn.sec,.ibtn){color:var(--ad2)}
 html[data-skin]:not([data-theme=dark]) .ib.d{color:#b91c1c}
+
+/* UX: ikon +/- digambar CSS agar tepat di tengah lingkaran (glyph teks selalu sedikit bergeser) */
+.qty button{font-size:0}
+.qty button::before{content:"";position:absolute;left:50%;top:50%;width:11px;height:11px;transform:translate(-50%,-50%);
+  background:linear-gradient(currentColor,currentColor) center/11px 2px no-repeat}
+.qty button:last-child::before{background:linear-gradient(currentColor,currentColor) center/11px 2px no-repeat,linear-gradient(currentColor,currentColor) center/2px 11px no-repeat}
+/* UX: status stok = pil dengan titik (arti tidak hanya lewat warna) */
+.tag.ok,.tag.low,.tag.out{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.2;white-space:nowrap}
+.tag.ok::before,.tag.low::before,.tag.out::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+html[data-skin]:not([data-theme=dark]) .tag.low{color:#92400e}
+html[data-skin]:not([data-theme=dark]) .tag.out{color:#b91c1c}
+.stk.low,.stk.out{font-weight:700}
+.stk.low{color:#b45309}.stk.out{color:#b91c1c}
