@@ -457,7 +457,7 @@ html[data-skin] #v-riw .tag.pos{background:var(--ad);color:#fff;border-color:var
 html[data-skin] #v-riw #riwQ{height:48px;border-radius:999px;background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237b88a6' stroke-width='2.2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M20 20l-3.5-3.5'/></svg>") no-repeat 16px center/20px;padding-left:46px;border:1px solid var(--ln);box-shadow:0 6px 18px -12px color-mix(in srgb,var(--ad) 45%,transparent)}
 html[data-skin] #v-riw .hp{border-radius:24px}
 html[data-skin] #v-riw .ph h3{font-size:18px;font-weight:800}
-html[data-skin] #v-riw .ph .pl{background:var(--adt);color:var(--ad);padding:4px 10px;border-radius:999px;font-weight:700}
+html[data-skin] #v-riw .ph .pl{background:var(--adt);color:var(--ad2);padding:4px 10px;border-radius:999px;font-weight:700}
 html[data-skin] #v-riw .dhd{background:var(--adt);color:var(--ad2);border-radius:12px;padding:8px 12px;margin:10px 0 6px;font-size:12px}
 html[data-skin] #v-riw .li{border-radius:16px;padding:12px 14px;background:#fff;border:1px solid var(--ln);margin-bottom:6px}
 html[data-skin] #v-riw .li:active{background:var(--peach)}
@@ -817,3 +817,10 @@ button.go::after{content:"";position:absolute;inset:-14px -6px}
 #stp button::after{content:"";position:absolute;inset:-8px}
 /* tombol + mengambang tidak menutupi tombol Hapus di baris terakhir */
 #v-inv{padding-bottom:96px}
+
+/* UX: kontras teks >=4.5:1 pada tema terang */
+html[data-skin]:not([data-theme=dark]){--mu:color-mix(in srgb,var(--ad) 28%,#59606e)}
+html[data-skin]:not([data-theme=dark]) .tag.ok{color:#166534}
+html[data-skin]:not([data-theme=dark]) .ib:not(.d){color:var(--ad2)}
+html[data-skin]:not([data-theme=dark]) :is(.pl,.btn.sec,.ibtn){color:var(--ad2)}
+html[data-skin]:not([data-theme=dark]) .ib.d{color:#b91c1c}
