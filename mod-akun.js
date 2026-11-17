@@ -224,9 +224,9 @@ function renderAccPage(){
       <div class="pfrow">${pfi('check',20)}<div class="tx"><small>Status Akun</small><b class="${vs.k}">${esc(vs.t)}</b></div></div>
     </div>
     <button class="pfbtn" type="button" onclick="go('editacc')">${pfi('pencil',18)}Edit Profil</button>
-    <button class="pfbtn out" type="button" onclick="go('accset')">${pfi('user',20)}Pengaturan Akun<span class="chev">${pfi('chev',18)}</span></button>
+    <div id="accSetList"></div>
   </div>`;
-  accAvDraw();
+  accAvDraw();accSetList();
 }
 /* ----- Pengaturan Akun ----- */
 function accSetItems(){
