@@ -886,3 +886,19 @@ html[data-skin] .p .im .qov{border-radius:18px}
 html[data-skin] .tbc{border-width:2px;border-radius:16px}
 html[data-skin] .al .ai{border-radius:11px}
 html[data-skin] .tgl{border-radius:99px}
+
+/* Halaman Menu: kisi ikon seperti layar aplikasi (bukan daftar ke bawah); satu warna aksen, tanpa pelangi */
+#v-menu .adl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 2px;background:none;box-shadow:none;padding:2px 0 0}
+#v-menu .adr{flex-direction:column;justify-content:flex-start;align-items:center;gap:7px;padding:6px 2px;text-align:center;border-radius:16px;min-height:96px}
+#v-menu .adr+.adr:before{display:none}
+#v-menu .adr .ti{width:58px;height:58px;border-radius:18px;background:var(--adt)}
+#v-menu .adr .ti .ic,#v-menu .adr .ti .ico{width:26px;height:26px;color:var(--ad2)}
+#v-menu .adr .tx{flex:none;width:100%}
+#v-menu .adr .tx b{font-size:12px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+#v-menu .adr .tx span,#v-menu .adr .go,#v-menu .adr .tier{display:none}
+#v-menu .adr .lksv{position:absolute;top:2px;left:calc(50% + 14px);width:18px;height:18px;padding:3px;border-radius:50%;background:#fff;stroke:var(--ad2);fill:none;stroke-width:2.4;box-shadow:0 1px 3px rgba(15,23,42,.25)}
+#v-menu .adgt{margin:20px 4px 10px}
+#v-menu .adr .ti{background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.12)}
+#v-menu .adr:active .ti{background:var(--adt)}
+#v-menu .adh{background:var(--ad2)}
+#v-menu .adh::before,#v-menu .adh::after{display:none}
