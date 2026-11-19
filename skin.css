@@ -945,3 +945,7 @@ html[data-skin] .tgl{border-radius:99px}
 #payForm .pq-d{margin-top:12px}#payForm .pq-d summary{font-weight:600;cursor:pointer;min-height:40px;display:flex;align-items:center}
 #payForm .pq-d .mu{margin:8px 0 0;font-size:13px}
 #payForm .pq-s{display:block;margin-top:4px;font-size:13px;color:var(--mu);font-weight:400}
+
+#payForm .pq-ch{display:flex;flex-wrap:wrap;gap:10px}
+#payForm .pq-chip{min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--ln);background:#fff;font:600 14px inherit;color:var(--tx)}
+#payForm .pq-chip.on{background:var(--ad);border-color:var(--ad);color:var(--adt,#fff)}

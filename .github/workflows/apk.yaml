@@ -102,11 +102,11 @@ jobs:
           add = "".join('\n    <uses-permission android:name="%s" />' % x for x in perms if 'android:name="%s"' % x not in s)
           s = s.replace(anchor, anchor + add, 1)
           if ".OrdelaService" not in s:
-              svc = '    <service android:name=".OrdelaService" android:exported="false" android:foregroundServiceType="specialUse">\n        <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="pos_background_running" />\n    </service>\n'
+              svc = '    <service android:name=".OrdelaService" android:exported="false" android:foregroundServiceType="specialUse">\n        <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="pos_background_running" />\n    </service>\n    <service android:name=".PayNotifListener" android:exported="true" android:label="Ordela" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">\n        <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>\n    </service>\n'
               if "</application>" not in s: raise SystemExit("application tag not found")
               s = s.replace("</application>", svc + "</application>", 1)
           p.write_text(s)
-          for x in perms + [".OrdelaService"]:
+          for x in perms + [".OrdelaService", ".PayNotifListener"]:
               if x not in s: raise SystemExit("manifest patch failed: " + x)
           print("Manifest layanan latar OK")
           PY2
@@ -714,6 +714,38 @@ jobs:
               }
           }
           JAVAEOF
+          cat > $D/PayNotifListener.java <<'JAVAEOF'
+          package com.ordela.app;
+
+          import android.app.Notification;
+          import android.content.SharedPreferences;
+          import android.os.Bundle;
+          import android.service.notification.NotificationListenerService;
+          import android.service.notification.StatusBarNotification;
+
+          // Membaca notifikasi hanya dari aplikasi e-wallet yang dipilih kasir; teks disimpan lokal dan tidak dikirim ke server.
+          public class PayNotifListener extends NotificationListenerService {
+              @Override
+              public void onNotificationPosted(StatusBarNotification sbn) {
+                  try {
+                      SharedPreferences p = getSharedPreferences("ordela", MODE_PRIVATE);
+                      String pk = sbn.getPackageName();
+                      if (!("," + p.getString("pay_pkgs", "") + ",").contains("," + pk + ",")) return;
+                      Bundle e = sbn.getNotification().extras;
+                      CharSequence t = e.getCharSequence(Notification.EXTRA_TITLE);
+                      CharSequence b = e.getCharSequence(Notification.EXTRA_BIG_TEXT);
+                      CharSequence x = e.getCharSequence(Notification.EXTRA_TEXT);
+                      String txt = ((t == null ? "" : t) + " " + (b != null ? b : (x == null ? "" : x))).replace("\n", " ").replace("\t", " ");
+                      synchronized (PayNotifListener.class) {
+                          String q = p.getString("pay_q", "");
+                          if (q.length() > 6000) q = "";
+                          q = q + (q.isEmpty() ? "" : "\n") + sbn.getPostTime() + "\t" + pk + "\t" + txt;
+                          p.edit().putString("pay_q", q).apply();
+                      }
+                  } catch (Exception ex) { }
+              }
+          }
+          JAVAEOF
           cat > $D/OrdelaBgPlugin.java <<'JAVAEOF'
           package com.ordela.app;
 
@@ -768,6 +800,40 @@ jobs:
                   Context c = getContext();
                   if (on) OrdelaService.start(c); else c.stopService(new Intent(c, OrdelaService.class));
                   call.resolve(info());
+              }
+
+              @PluginMethod
+              public void payAccess(PluginCall call) {
+                  String s = Settings.Secure.getString(getContext().getContentResolver(), "enabled_notification_listeners");
+                  JSObject o = new JSObject();
+                  o.put("on", s != null && s.contains(getContext().getPackageName()));
+                  call.resolve(o);
+              }
+
+              @PluginMethod
+              public void payOpen(PluginCall call) {
+                  try {
+                      Intent i = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+                      i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                      getContext().startActivity(i);
+                  } catch (Exception e) { }
+                  call.resolve();
+              }
+
+              @PluginMethod
+              public void paySet(PluginCall call) {
+                  prefs().edit().putString("pay_pkgs", call.getString("pkgs", "")).apply();
+                  call.resolve();
+              }
+
+              @PluginMethod
+              public void payDrain(PluginCall call) {
+                  JSObject o = new JSObject();
+                  synchronized (PayNotifListener.class) {
+                      o.put("q", prefs().getString("pay_q", ""));
+                      prefs().edit().remove("pay_q").apply();
+                  }
+                  call.resolve(o);
               }
 
               @PluginMethod

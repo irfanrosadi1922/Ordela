@@ -502,7 +502,29 @@ function coDet(id){coSpotEnd();
   <button class="btn sec" onclick="coPrint(${o.id});closeModal()"><i class="ic" data-ic="print"></i>Cetak ulang tiket</button>
   <button class="btn sec" onclick="closeModal()">Tutup</button>`);
 }
-function setPay(k,v){db.set.pay[k]=v;save();renderPay()}
+function setPay(k,v){db.set.pay[k]=v;save();renderPay();paySync()}
+/* deteksi pembayaran otomatis (hanya APK): notifikasi "uang masuk" dari e-wallet dicocokkan dengan pesanan online yang nominalnya sama */
+const WAL={ID:[['dana','DANA','id.dana'],['gopay','GoPay','com.gojek.app'],['ovo','OVO','ovo.id'],['shopeepay','ShopeePay','com.shopee.id'],['linkaja','LinkAja','com.telkom.mwallet']],
+ MY:[['tng',"Touch 'n Go",'my.com.tngdigital.ewallet'],['boost','Boost','my.com.myboost'],['grabpay','GrabPay','com.grabtaxi.passenger'],['shopeepay','ShopeePay','com.shopee.my'],['mae','MAE','com.maybank2u.life']]};
+const walList=()=>WAL[db.set.cur==='RM'?'MY':'ID'];
+function paySync(){const y=db.set.pay;if(window.OrdelaPay)OrdelaPay.pkgs(y.auto?walList().filter(w=>(y.apps||[]).includes(w[0])).map(w=>w[2]):[])}
+function payApp(k){const y=db.set.pay,a=y.apps||[];setPay('apps',a.includes(k)?a.filter(x=>x!==k):a.concat(k))}
+async function payAcc(){const e=$('#payAcc');if(!e||!window.OrdelaPay)return;const on=await OrdelaPay.access();
+  e.innerHTML=on?'<span class="pq-ok"><i class="ic" data-ic="check"></i>Akses notifikasi aktif</span>':'<button class="btn sm" onclick="OrdelaPay.open()">Beri akses notifikasi</button><p class="mu" style="margin:8px 0 0;font-size:13px">Nyalakan Ordela di daftar, lalu kembali ke aplikasi.</p>'}
+async function payDetect(){
+  const y=db.set.pay;if(!window.OrdelaPay||!y.auto)return;
+  const q=await OrdelaPay.drain();if(!q)return;
+  for(const ln of q.split('\n')){
+    const[t,,txt]=ln.split('\t');
+    if(!txt||Date.now()-(+t)>15*60e3||!/nerima|terima|masuk|received|credited|money in/i.test(txt)||/dikirim|kirim ke|sent to|paid to/i.test(txt))continue;
+    const m=txt.match(/(?:Rp|RM)\s?([\d.,]+)/i);if(!m)continue;
+    const n=db.set.cur==='RM'?parseFloat(m[1].replace(/,/g,'')):parseInt(m[1].replace(/,\d{1,2}$/,'').replace(/[.,]/g,''),10);
+    const hit=CO.list.filter(o=>isOnl(o)&&(o.status==='new'||o.status==='accepted')&&o.pst!==2&&Math.abs(o.total-n)<.005);
+    // shortcut: bila 2 pesanan punya nominal sama, tidak ditandai otomatis; kasir konfirmasi manual
+    if(hit.length>1){toast('Pembayaran '+money(n)+' cocok dengan lebih dari satu pesanan, konfirmasi manual');continue}
+    if(hit.length===1&&await coAct(hit[0].id,'paid')){toast('Pembayaran '+money(n)+' terdeteksi · '+hit[0].num+' lunas');renderCo(false)}
+  }
+}
 /* simpan kode QRIS statis toko (teks). Diperiksa dulu: format, CRC, dan harus QRIS Indonesia. */
 function payQrisSave(txt){
   txt=String(txt||'').replace(/[\r\n\t]+/g,'').trim();
@@ -545,12 +567,18 @@ function renderPay(){
         <p class="mu">Pindai stiker QRIS toko Anda dengan aplikasi pemindai QR, lalu salin teksnya. Pakai QRIS <b>statis</b> milik toko sendiri; QRIS yang sudah ada nominalnya ditolak.</p></details></div>
     <div class="pq-c"><div class="pq-t"><i class="ic" data-ic="card"></i>Bayar online</div>
       <label class="tgl"><input type="checkbox" ${y.on&&ok?'checked':''} ${ok?'':'disabled'} onchange="setPay('on',this.checked)"><span><b>Tawarkan ke pelanggan</b><small class="pq-s">Saat memesan lewat QR. Nominal pesanan terisi otomatis di aplikasi bank pelanggan (QRIS dinamis). Pembayaran tetap Anda konfirmasi lewat bukti bayar atau mutasi.</small></span></label></div>
+    <div class="pq-c"><div class="pq-t"><i class="ic" data-ic="bolt"></i>Deteksi pembayaran</div>
+      <label class="tgl"><input type="checkbox" ${y.auto?'checked':''} ${window.OrdelaPay?'':'disabled'} onchange="setPay('auto',this.checked)"><span><b>Otomatis</b><small class="pq-s">${window.OrdelaPay?'Pesanan online ditandai lunas saat notifikasi uang masuk dari e-wallet cocok dengan nominalnya.':'Hanya tersedia di aplikasi Android (APK).'}</small></span></label>
+      ${y.auto&&window.OrdelaPay?'<div id="payAcc" style="margin-top:12px"></div>':''}</div>
+    <div class="pq-c"><div class="pq-t"><i class="ic" data-ic="bank"></i>Aplikasi pembayaran</div>
+      <div class="pq-ch">${walList().map(w=>`<button class="pq-chip${(y.apps||[]).includes(w[0])?' on':''}" onclick="payApp('${w[0]}')">${esc(w[1])}</button>`).join('')}</div></div>
     <div class="pq-c"><div class="pq-t"><i class="ic" data-ic="users"></i>Tampilan ke pelanggan</div>
       <label class="fl">Nama penerima</label>
       <input class="fi" value="${esc(y.name||'')}" maxlength="60" placeholder="mis. Ordela" onchange="setPay('name',this.value.trim())">
       <label class="fl">Petunjuk tambahan (opsional)</label>
       <textarea class="fi" rows="2" maxlength="300" placeholder="mis. Tulis nomor pesanan di kolom catatan" onchange="setPay('note',this.value.trim())">${esc(y.note||'')}</textarea></div>
 `;
+  payAcc();
 }
 function renderCoSet(){
   const p=$('#coForm');if(!p)return;
@@ -567,11 +595,11 @@ function coStart(){
   if(!CL.on)return;
   CO.title=document.title;
   try{CO.pend=JSON.parse(localStorage.getItem('pos_co_pend')||'[]')}catch(e){CO.pend=[]}
-  coBadge();coLoop();coWake();coPushSync();
+  coBadge();coLoop();coWake();coPushSync();paySync();document.addEventListener('visibilitychange',payAcc);
   setInterval(()=>{
     if(!CL.tok||!can('co'))return;
     if(S.view==='co')renderCo(false);
-    coAutoPrint();coFlush();
+    coAutoPrint();coFlush();payDetect();
     if(CO.ring<3&&S.view!=='co'&&coNew().length){CO.ring++;coBeep()}
   },10000);
 }

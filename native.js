@@ -29,6 +29,8 @@
   }
   /* notifikasi native (FCM) — aktif bila APK dibuat dengan google-services.json (window.POS_FCM) */
   if(P.OrdelaBg)window.OrdelaBg={status:function(){return P.OrdelaBg.status()},set:function(on){return P.OrdelaBg.setEnabled({on:!!on})},overlay:function(){return P.OrdelaBg.requestOverlay()},battery:function(){return P.OrdelaBg.requestBattery()},info:function(){return P.OrdelaBg.openAppInfo()}};   /* layanan latar belakang + gelembung (APK) */
+  /* deteksi pembayaran: baca notifikasi aplikasi e-wallet (izin Akses Notifikasi) */
+  if(P.OrdelaBg&&P.OrdelaBg.payAccess)window.OrdelaPay={access:function(){return P.OrdelaBg.payAccess().then(function(r){return !!r.on}).catch(function(){return false})},open:function(){return P.OrdelaBg.payOpen()},pkgs:function(l){return P.OrdelaBg.paySet({pkgs:l.join(',')})},drain:function(){return P.OrdelaBg.payDrain().then(function(r){return r.q||''}).catch(function(){return ''})}};
   /* unduhan file (blob:/data:) tidak jalan di WebView: simpan lewat plugin ke folder Unduhan/Ordela */
   if(P.OrdelaBg&&P.OrdelaBg.saveFile){
     var dlSave=function(a){
