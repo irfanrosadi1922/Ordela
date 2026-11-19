@@ -910,3 +910,9 @@ html[data-skin] .tgl{border-radius:99px}
 #v-menu .adr .tx b{font-weight:600}
 #v-menu .adgt{margin:16px 4px 8px}
 #v-menu .adr .ti .ic,#v-menu .adr .ti .ico{width:29px;height:29px}
+/* Menu: ubin ikon bergradasi aksen dengan ikon putih, lebih besar */
+#v-menu .adr .ti{width:68px;height:68px;border-radius:22px;background:linear-gradient(150deg,color-mix(in srgb,var(--ad) 82%,#fff),var(--ad2));box-shadow:0 8px 14px -8px var(--ad2),inset 0 1px 0 rgba(255,255,255,.35)}
+#v-menu .adr .ti .ic,#v-menu .adr .ti .ico{width:32px;height:32px;color:#fff}
+#v-menu .adr:active .ti{background:var(--ad2);transform:scale(.96)}
+#v-menu .adr .tx b{font-size:12.5px;font-weight:600}
+#v-menu .adl{gap:14px 0;padding:18px 4px 10px}
