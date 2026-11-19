@@ -926,3 +926,22 @@ html[data-skin] .tgl{border-radius:99px}
 #v-menu .adr:active .ti{background:color-mix(in srgb,var(--c) 26%,#fff);transform:scale(.96)}
 #v-menu .adr .tx b{font-size:12px;font-weight:500}
 #v-menu .adl{gap:10px 0;padding:16px 4px 8px}
+
+/* Pengaturan Pembayaran Online: kartu per bagian (QRIS merchant, bayar online, tampilan pelanggan) */
+#payForm .pq-c{background:#fff;border-radius:20px;padding:16px;margin-top:12px;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+#payForm .pq-t{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;margin-bottom:14px}
+#payForm .pq-t .ic{width:22px;height:22px;color:var(--ad)}
+#payForm .pq-b{display:flex;gap:16px;align-items:center}
+#payForm .pq-qr{width:112px;height:112px;flex:none;border:1px solid var(--ln);border-radius:14px;padding:6px;background:#fff;display:grid;place-items:center;color:var(--mu)}
+#payForm .pq-qr svg{width:100%;height:100%;max-width:none}
+#payForm .pq-i{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:0}
+#payForm .pq-i span:first-child{font-size:13px;color:var(--mu)}
+#payForm .pq-i b{font-size:16px;overflow-wrap:anywhere}
+#payForm .pq-ok,#payForm .pq-no,#payForm .pq-bad{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+#payForm .pq-ok{background:#dcfce7;color:#166534}#payForm .pq-no{background:#eef0f4;color:#4b5563}#payForm .pq-bad{background:#fee2e2;color:#b91c1c}
+#payForm .pq-ok .ic{width:14px;height:14px}
+#payForm .pq-a{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+#payForm .pq-a .btn{min-height:46px;border-radius:14px;justify-content:center}
+#payForm .pq-d{margin-top:12px}#payForm .pq-d summary{font-weight:600;cursor:pointer;min-height:40px;display:flex;align-items:center}
+#payForm .pq-d .mu{margin:8px 0 0;font-size:13px}
+#payForm .pq-s{display:block;margin-top:4px;font-size:13px;color:var(--mu);font-weight:400}

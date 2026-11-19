@@ -531,20 +531,25 @@ function renderPay(){
   const p=$('#payForm');if(!p)return;
   if(!(CL.on&&can('co')&&can('set'))){p.hidden=true;applySetTab();return}
   p.hidden=false;const y=db.set.pay,c=y.qris?QRIS.check(y.qris):null,ok=!!(c&&c.ok);
-  p.innerHTML=`<h3>Pembayaran Online (QRIS dinamis)</h3>
-    <label class="tgl"><input type="checkbox" ${y.on&&ok?'checked':''} ${ok?'':'disabled'} onchange="setPay('on',this.checked)"><span>Tawarkan bayar online saat pelanggan memesan lewat QR</span></label>
-    <p class="mu" style="margin:6px 0 10px">Aplikasi mengubah QRIS statis toko Anda menjadi <b>QRIS dinamis</b>: nominal pesanan terisi otomatis di aplikasi bank pelanggan. Pembayaran tetap Anda konfirmasi lewat bukti bayar atau mutasi.</p>
-    <label class="fl">Kode QRIS statis toko</label>
-    <textarea class="fi" rows="3" maxlength="520" spellcheck="false" placeholder="Tempel kode QRIS yang diawali 000201…" onchange="payQrisSave(this.value)">${esc(y.qris||'')}</textarea>
-    ${y.qris?(ok?`<div class="chg" style="margin:8px 0"><span><i class="ic" data-ic="check"></i>QRIS valid · ${esc(c.name||'merchant')}</span></div>`:`<div class="chg neg" style="margin:8px 0"><span>${esc((c&&c.err)||'Kode tidak valid')}</span></div>`):''}
-    <div class="cob"><button class="btn sm sec" onclick="$('#pqF').click()"><i class="ic" data-ic="image"></i>Baca dari foto QRIS</button>
-    ${ok?`<button class="btn sm" onclick="payQrisTest()"><i class="ic" data-ic="qr"></i>Uji QR dinamis</button><button class="mini" style="color:var(--bt)" onclick="if(confirm('Hapus QRIS toko?'))payQrisSave('')">Hapus</button>`:''}
-    <input type="file" id="pqF" accept="image/*" hidden onchange="payQrisImg(this)"></div>
-    <details style="margin:8px 0"><summary>Cara mendapatkan kode QRIS</summary><p class="mu" style="margin:6px 0">Pindai stiker QRIS toko Anda dengan aplikasi pemindai QR apa pun (atau tombol baca foto di atas pada Chrome Android), lalu salin teks hasilnya. Teks itu panjang dan diawali <code>000201</code>. Gunakan QRIS <b>statis</b> milik toko Anda sendiri; QRIS dari pelanggan atau yang sudah ada nominalnya akan ditolak.</p></details>
-    <label class="fl">Nama penerima (tampil ke pelanggan)</label>
-    <input class="fi" value="${esc(y.name||'')}" maxlength="60" placeholder="mis. Ordela" onchange="setPay('name',this.value.trim())">
-    <label class="fl">Petunjuk tambahan (opsional)</label>
-    <textarea class="fi" rows="2" maxlength="300" placeholder="mis. Tulis nomor pesanan di kolom catatan" onchange="setPay('note',this.value.trim())">${esc(y.note||'')}</textarea>
+  const nm=(c&&c.name)||y.name||'';
+  const bd=!y.qris?'<span class="pq-no">Belum dipasang</span>':ok?'<span class="pq-ok"><i class="ic" data-ic="check"></i>QRIS terpasang</span>':`<span class="pq-bad">${esc((c&&c.err)||'Kode tidak valid')}</span>`;
+  p.innerHTML=`<h3>Pembayaran Online</h3>
+    <div class="pq-c"><div class="pq-t"><i class="ic" data-ic="qr"></i>QRIS merchant</div>
+      <div class="pq-b"><div class="pq-qr">${ok?qrSvg(y.qris,120):'<i class="ic" data-ic="qr"></i>'}</div>
+        <div class="pq-i"><span>Nama merchant</span><b>${esc(nm||'-')}</b>${bd}</div></div>
+      <div class="pq-a"><button class="btn sm sec" onclick="$('#pqF').click()"><i class="ic" data-ic="image"></i>Upload</button><button class="btn sm sec" onclick="P2.scan(payQrisSave,{once:1})"><i class="ic" data-ic="qr"></i>Scan</button></div>
+      <input type="file" id="pqF" accept="image/*" hidden onchange="payQrisImg(this)">
+      ${ok?`<div class="pq-a"><button class="btn sm" onclick="payQrisTest()"><i class="ic" data-ic="qr"></i>Uji QR dinamis</button><button class="btn sm sec" style="color:var(--bt)" onclick="if(confirm('Hapus QRIS toko?'))payQrisSave('')">Hapus</button></div>`:''}
+      <details class="pq-d"><summary>Tempel kode QRIS</summary>
+        <textarea class="fi" rows="3" maxlength="520" spellcheck="false" placeholder="Kode QRIS yang diawali 000201…" onchange="payQrisSave(this.value)">${esc(y.qris||'')}</textarea>
+        <p class="mu">Pindai stiker QRIS toko Anda dengan aplikasi pemindai QR, lalu salin teksnya. Pakai QRIS <b>statis</b> milik toko sendiri; QRIS yang sudah ada nominalnya ditolak.</p></details></div>
+    <div class="pq-c"><div class="pq-t"><i class="ic" data-ic="card"></i>Bayar online</div>
+      <label class="tgl"><input type="checkbox" ${y.on&&ok?'checked':''} ${ok?'':'disabled'} onchange="setPay('on',this.checked)"><span><b>Tawarkan ke pelanggan</b><small class="pq-s">Saat memesan lewat QR. Nominal pesanan terisi otomatis di aplikasi bank pelanggan (QRIS dinamis). Pembayaran tetap Anda konfirmasi lewat bukti bayar atau mutasi.</small></span></label></div>
+    <div class="pq-c"><div class="pq-t"><i class="ic" data-ic="users"></i>Tampilan ke pelanggan</div>
+      <label class="fl">Nama penerima</label>
+      <input class="fi" value="${esc(y.name||'')}" maxlength="60" placeholder="mis. Ordela" onchange="setPay('name',this.value.trim())">
+      <label class="fl">Petunjuk tambahan (opsional)</label>
+      <textarea class="fi" rows="2" maxlength="300" placeholder="mis. Tulis nomor pesanan di kolom catatan" onchange="setPay('note',this.value.trim())">${esc(y.note||'')}</textarea></div>
 `;
 }
 function renderCoSet(){
