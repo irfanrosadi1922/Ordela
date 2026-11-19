@@ -880,7 +880,8 @@ html[data-skin] .kc .ki{display:none}
 html[data-skin] .kc{border-radius:16px}
 
 /* Rapikan gaya generik: foto menu persegi bersudut halus (bukan cakram bulat berbayang), garis meja tipis, ikon notifikasi tidak bulat penuh */
-html[data-skin] .p .im{border-radius:18px;width:78%;box-shadow:none}
+html[data-skin] .p .im{border-radius:18px;box-shadow:none}
+html[data-skin] .grid:not(.list):not(.fd) .p .im{width:78%}
 html[data-skin] .p .im .qov{border-radius:18px}
 html[data-skin] .tbc{border-width:2px;border-radius:16px}
 html[data-skin] .al .ai{border-radius:11px}
