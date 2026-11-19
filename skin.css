@@ -873,3 +873,8 @@ html[data-color=oranye]{--ad:#c2570c;--ad2:#9a4308}
 html[data-color=teal]{--ad:#0f766e;--ad2:#0a5a54}
 html[data-skin] .p .sub,html[data-skin] .grid.list .sub{color:#667085}
 html[data-skin] .pfrow .warn{color:#b45309}
+
+/* Rapikan tampilan "generik": tanpa cahaya berpendar di tombol, tanpa ikon bulat warna-warni di kartu angka (ikon X merah untuk Dine In menyesatkan), sudut kartu lebih tegas */
+html[data-skin] .btn,html[data-skin] .go{box-shadow:0 1px 2px rgba(15,23,42,.16)!important}
+html[data-skin] .kc .ki{display:none}
+html[data-skin] .kc{border-radius:16px}
