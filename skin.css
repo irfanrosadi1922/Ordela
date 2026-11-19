@@ -1,7 +1,7 @@
 /* Ordela Skin — gaya tampilan bersama untuk semua aplikasi (kasir, admin, dapur, app utama, pesan).
    Latar lembut, kartu putih bersudut bulat, hero berwarna, daftar bergrup berikon, tab bawah kaca cair, notifikasi Dynamic Island.
    Warna aksen dipilih lewat html[data-color] (lihat palet di bawah); tema gelap sudah dihapus. */
-html[data-skin]{--ad:#2f6bff;--ad2:#1f4fd8;--adt:#e6eeff;--bg:#eaf1ff;--card:#fff;--ln:#e3eaf8;--mu:color-mix(in srgb,var(--ad) 26%,#7a808e);--sh:color-mix(in srgb,var(--ad2) 55%,#0e1018);
+html[data-skin]{--ad:#2a64f5;--ad2:#1f4fd8;--adt:#e6eeff;--bg:#eaf1ff;--card:#fff;--ln:#e3eaf8;--mu:color-mix(in srgb,var(--ad) 26%,#7a808e);--sh:color-mix(in srgb,var(--ad2) 55%,#0e1018);
   --ac:var(--ad);--acx:#fff;--b:var(--ad);--bd:var(--ad);--pr:var(--ad);--b2:var(--ad2);--bt:var(--ad);--peach:color-mix(in srgb,var(--ad) 6%,#fff);--peach2:var(--adt);--peach3:color-mix(in srgb,var(--ad) 20%,#fff);--cat1:var(--adt);--cat2:color-mix(in srgb,var(--ad) 6%,#fff);--pe:var(--adt);--cr:color-mix(in srgb,var(--ad) 6%,#fff);color-scheme:only light}
 html[data-color=hijau]{--ad:#16a34a;--ad2:#0f7a37;--adt:#dcf5e5;--bg:#e9f7ee;--ln:#d9eadf}
 html[data-color=ungu]{--ad:#7c3aed;--ad2:#5b21b6;--adt:#ece4ff;--bg:#f1ebff;--ln:#e4dcf6}
@@ -866,3 +866,10 @@ html:has(#v-acc:not([hidden])) #adav{display:none}
 #accPage .pfgrp .tx small{display:none}
 #accPage .pfgl{margin:18px 6px 8px}
 #accPage .pfw{padding-bottom:110px}
+
+/* UX: warna tema terang (hijau, oranye, teal) digelapkan agar teks putih di atas aksen >=4.5:1 */
+html[data-color=hijau]{--ad:#15803d;--ad2:#0f6a31}
+html[data-color=oranye]{--ad:#c2570c;--ad2:#9a4308}
+html[data-color=teal]{--ad:#0f766e;--ad2:#0a5a54}
+html[data-skin] .p .sub,html[data-skin] .grid.list .sub{color:#667085}
+html[data-skin] .pfrow .warn{color:#b45309}

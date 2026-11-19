@@ -231,6 +231,7 @@ const STATIC = {
   '/qr.js': ['text/javascript', 'no-cache'],
   '/qris.js': ['text/javascript', 'no-cache'],
   '/auth.js': ['text/javascript', 'no-cache'],
+  '/PlusJakartaSans.ttf': ['font/ttf', 'public, max-age=31536000, immutable'],
   '/icon-192.png': ['image/png', 'public, max-age=86400'],
   '/icon-512.png': ['image/png', 'public, max-age=86400'],
 };

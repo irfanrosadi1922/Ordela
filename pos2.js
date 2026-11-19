@@ -567,7 +567,7 @@ async function aiHistoryLoad(uid){
   }catch(e){AI.msgs=[]}
   AI.loaded=true;AI.loading=false;
   const log=$('#aiLog');if(log){
-    log.innerHTML=AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten toko Ordela. Selain menjawab soal penjualan dan stok, saya bisa membantu mengubah stok, harga, menu, kategori, mencatat pengeluaran, memproses pesanan online, dan membuka halaman. Setiap perubahan saya minta konfirmasi dulu.',ts:aiTm()});
+    log.innerHTML=AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! Saya asisten toko Ordela. Selain menjawab soal penjualan dan stok, saya bisa membantu mengubah stok, harga, menu, kategori, mencatat pengeluaran, memproses pesanan online, dan membuka halaman. Setiap perubahan saya minta konfirmasi dulu.',ts:aiTm()});
     aiScroll();
   }
   const input=$('#aiIn'),go=$('#aiGo');if(input)input.disabled=false;if(go)go.disabled=false;
@@ -584,7 +584,7 @@ V.ai=function(){
   const mic=!!(window.VC&&VC.canDictate&&VC.canDictate());
   const svg=(p,w)=>`<svg viewBox="0 0 24 24" width="${w||22}" height="${w||22}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   el.innerHTML=`<div class="chat gx" id="aiChat"><div class="chh"><button class="cbk" type="button" onclick="go('pos')" aria-label="Kembali">${svg('<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>')}</button><b class="ctt">Asisten Ordela</b><button class="cclr" type="button" onclick="P2.aiClear()" aria-label="Hapus percakapan" title="Hapus percakapan">${svg('<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',22)}</button></div>
-  <div class="clog" id="aiLog" onscroll="P2.aiOnScroll()">${AI.loading?'<p class="hint">Memuat riwayat percakapan…</p>':AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! 👋 Saya asisten toko Ordela. Selain menjawab soal penjualan dan stok, saya bisa membantu mengubah stok, harga, menu, kategori, mencatat pengeluaran, memproses pesanan online, dan membuka halaman. Setiap perubahan saya minta konfirmasi dulu.',ts:aiTm()})}</div>
+  <div class="clog" id="aiLog" onscroll="P2.aiOnScroll()">${AI.loading?'<p class="hint">Memuat riwayat percakapan…</p>':AI.msgs.length?AI.msgs.map(aiBub).join(''):aiBub({t:'Halo! Saya asisten toko Ordela. Selain menjawab soal penjualan dan stok, saya bisa membantu mengubah stok, harga, menu, kategori, mencatat pengeluaran, memproses pesanan online, dan membuka halaman. Setiap perubahan saya minta konfirmasi dulu.',ts:aiTm()})}</div>
   <button class="cdn" id="aiDn" type="button" hidden onclick="P2.aiDown()" aria-label="Ke pesan terbaru">${svg('<path d="M12 5v14"/><path d="M5 12l7 7 7-7"/>',20)}</button>
   <div class="csg" id="aiSug">${AISUG.map(x=>`<button type="button" onclick="P2.aiAsk(this.textContent)">${x}</button>`).join('')}</div>
   <form class="cin" id="aiForm" onsubmit="event.preventDefault();P2.aiSend();return false"><input id="aiIn" ${AI.loading?'disabled':''} placeholder="Tulis balasan…" autocomplete="off" maxlength="200" enterkeyhint="send" oninput="P2.aiTgl()"><button class="csend cmic" id="aiMic" type="button" ${mic?'':'hidden'} onclick="P2.aiMic()" aria-label="Bicara">${svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>',22)}</button><button class="csend" id="aiGo" ${AI.loading?'disabled':''} type="submit" aria-label="Kirim" ${mic?'hidden':''}>${svg('<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',20)}</button></form>
