@@ -902,3 +902,11 @@ html[data-skin] .tgl{border-radius:99px}
 #v-menu .adr:active .ti{background:var(--adt)}
 #v-menu .adh{background:var(--ad2)}
 #v-menu .adh::before,#v-menu .adh::after{display:none}
+/* Menu: tiap kelompok satu kartu putih, ikon lebih rapat dan berwarna aksen lembut */
+#v-menu .adl{background:#fff;border-radius:22px;padding:16px 4px 8px;gap:12px 0;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+#v-menu .adr{min-height:0;padding:0 2px 6px;gap:6px}
+#v-menu .adr .ti{width:60px;height:60px;border-radius:19px;background:var(--adt);box-shadow:none}
+#v-menu .adr:active .ti{background:color-mix(in srgb,var(--ad) 25%,#fff)}
+#v-menu .adr .tx b{font-weight:600}
+#v-menu .adgt{margin:16px 4px 8px}
+#v-menu .adr .ti .ic,#v-menu .adr .ti .ico{width:29px;height:29px}
