@@ -916,3 +916,6 @@ html[data-skin] .tgl{border-radius:99px}
 #v-menu .adr:active .ti{background:var(--ad2);transform:scale(.96)}
 #v-menu .adr .tx b{font-size:12.5px;font-weight:600}
 #v-menu .adl{gap:14px 0;padding:18px 4px 10px}
+/* Menu: warna tiap ikon dikembalikan (pelangi) — warna membantu mengenali menu */
+#v-menu .adr .ti{background:linear-gradient(150deg,color-mix(in srgb,var(--c) 78%,#fff),color-mix(in srgb,var(--c) 88%,#000));box-shadow:0 8px 14px -9px var(--c),inset 0 1px 0 rgba(255,255,255,.4)}
+#v-menu .adr:active .ti{background:color-mix(in srgb,var(--c) 85%,#000)}
