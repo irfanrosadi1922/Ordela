@@ -878,3 +878,10 @@ html[data-skin] .pfrow .warn{color:#b45309}
 html[data-skin] .btn,html[data-skin] .go{box-shadow:0 1px 2px rgba(15,23,42,.16)!important}
 html[data-skin] .kc .ki{display:none}
 html[data-skin] .kc{border-radius:16px}
+
+/* Rapikan gaya generik: foto menu persegi bersudut halus (bukan cakram bulat berbayang), garis meja tipis, ikon notifikasi tidak bulat penuh */
+html[data-skin] .p .im{border-radius:18px;width:78%;box-shadow:none}
+html[data-skin] .p .im .qov{border-radius:18px}
+html[data-skin] .tbc{border-width:2px;border-radius:16px}
+html[data-skin] .al .ai{border-radius:11px}
+html[data-skin] .tgl{border-radius:99px}
