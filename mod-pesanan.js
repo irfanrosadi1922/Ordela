@@ -504,8 +504,8 @@ function coDet(id){coSpotEnd();
 }
 function setPay(k,v){db.set.pay[k]=v;save();renderPay();paySync()}
 /* deteksi pembayaran otomatis (hanya APK): notifikasi "uang masuk" dari e-wallet dicocokkan dengan pesanan online yang nominalnya sama */
-const WAL={ID:[['dana','DANA','id.dana'],['gopay','GoPay','com.gojek.app'],['ovo','OVO','ovo.id'],['shopeepay','ShopeePay','com.shopee.id'],['linkaja','LinkAja','com.telkom.mwallet']],
- MY:[['tng',"Touch 'n Go",'my.com.tngdigital.ewallet'],['boost','Boost','my.com.myboost'],['grabpay','GrabPay','com.grabtaxi.passenger'],['shopeepay','ShopeePay','com.shopee.my'],['mae','MAE','com.maybank2u.life']]};
+const WAL={ID:[['dana','DANA','id.dana','#118EEA','D'],['gopay','GoPay','com.gojek.app','#00AED6','G'],['ovo','OVO','ovo.id','#4C2A86','O'],['shopeepay','ShopeePay','com.shopee.id','#EE4D2D','S'],['linkaja','LinkAja','com.telkom.mwallet','#E82529','L']],
+ MY:[['tng',"Touch 'n Go",'my.com.tngdigital.ewallet','#005EB8','TnG'],['boost','Boost','my.com.myboost','#E8212A','B'],['grabpay','GrabPay','com.grabtaxi.passenger','#00B14F','G'],['shopeepay','ShopeePay','com.shopee.my','#EE4D2D','S'],['mae','MAE','com.maybank2u.life','#F7B500','M']]};
 const walList=()=>WAL[db.set.cur==='RM'?'MY':'ID'];
 function paySync(){const y=db.set.pay;if(window.OrdelaPay)OrdelaPay.pkgs(y.auto?walList().filter(w=>(y.apps||[]).includes(w[0])).map(w=>w[2]):[])}
 function payApp(k){const y=db.set.pay,a=y.apps||[];setPay('apps',a.includes(k)?a.filter(x=>x!==k):a.concat(k))}
@@ -541,7 +541,7 @@ async function payQrisImg(inp){
     const t=await QRIS.decodeImage(f);
     if(!t){toast('QR tidak terbaca dari foto itu. Coba foto yang lebih jelas, atau tempel kodenya.');return}
     payQrisSave(t);
-  }catch(e){toast(e&&e.message==='nosupport'?'Browser ini belum bisa membaca QR dari foto. Tempel kode QRIS-nya (lihat petunjuk).':'Foto tidak bisa dibaca')}
+  }catch(e){toast(e&&e.message==='nosupport'?'Tidak bisa membaca foto, tempel kode QRIS':'Foto QR tidak terbaca, coba foto lain')}
 }
 /* uji coba: tampilkan QRIS dinamis Rp 1.000 supaya owner bisa memindainya dengan aplikasi bank sendiri */
 function payQrisTest(){
@@ -571,7 +571,7 @@ function renderPay(){
       <label class="tgl"><input type="checkbox" ${y.auto?'checked':''} ${window.OrdelaPay?'':'disabled'} onchange="setPay('auto',this.checked)"><span><b>Otomatis</b><small class="pq-s">${window.OrdelaPay?'Pesanan online ditandai lunas saat notifikasi uang masuk dari e-wallet cocok dengan nominalnya.':'Hanya tersedia di aplikasi Android (APK).'}</small></span></label>
       ${y.auto&&window.OrdelaPay?'<div id="payAcc" style="margin-top:12px"></div>':''}</div>
     <div class="pq-c"><div class="pq-t"><i class="ic" data-ic="bank"></i>Aplikasi pembayaran</div>
-      <div class="pq-ch">${walList().map(w=>`<button class="pq-chip${(y.apps||[]).includes(w[0])?' on':''}" onclick="payApp('${w[0]}')">${esc(w[1])}</button>`).join('')}</div></div>
+      <div class="pq-ch">${walList().map(w=>`<button class="pq-w${(y.apps||[]).includes(w[0])?' on':''}" aria-pressed="${(y.apps||[]).includes(w[0])}" aria-label="${esc(w[1])}" onclick="payApp('${w[0]}')"><i style="background:${w[3]};${w[0]==='mae'?'color:#111':''}">${w[4]}<img src="wallet/${w[0]}.png" alt="" onload="this.parentNode.style.background='#fff';this.parentNode.firstChild.textContent=''" onerror="this.remove()"></i><span>${esc(w[1])}</span></button>`).join('')}</div></div>
     <div class="pq-c"><div class="pq-t"><i class="ic" data-ic="users"></i>Tampilan ke pelanggan</div>
       <label class="fl">Nama penerima</label>
       <input class="fi" value="${esc(y.name||'')}" maxlength="60" placeholder="mis. Ordela" onchange="setPay('name',this.value.trim())">

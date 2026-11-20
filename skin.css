@@ -946,6 +946,10 @@ html[data-skin] .tgl{border-radius:99px}
 #payForm .pq-d .mu{margin:8px 0 0;font-size:13px}
 #payForm .pq-s{display:block;margin-top:4px;font-size:13px;color:var(--mu);font-weight:400}
 
-#payForm .pq-ch{display:flex;flex-wrap:wrap;gap:10px}
-#payForm .pq-chip{min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--ln);background:#fff;font:600 14px inherit;color:var(--tx)}
-#payForm .pq-chip.on{background:var(--ad);border-color:var(--ad);color:var(--adt,#fff)}
+#payForm .pq-ch{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:12px 8px}
+#payForm .pq-w{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 0;background:none;border:0;font:600 12px inherit;color:var(--tx);min-height:44px}
+#payForm .pq-w i{position:relative;width:56px;height:56px;border-radius:18px;display:grid;place-items:center;color:#fff;font:800 18px/1 inherit;font-style:normal;opacity:.45;filter:grayscale(.6);transition:.15s}
+#payForm .pq-w.on i{opacity:1;filter:none;box-shadow:0 0 0 3px #fff,0 0 0 5px var(--ad)}
+#payForm .pq-w.on i::after{content:"";position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:50%;background:var(--ad) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/12px no-repeat}
+#payForm .pq-w:active i{transform:scale(.94)}
+#payForm .pq-w i img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:6px;box-sizing:border-box}

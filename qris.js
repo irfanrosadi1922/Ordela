@@ -45,9 +45,17 @@
     var body = t.map(function (x) { return x[0] + String(x[1].length).padStart(2, '0') + x[1]; }).join('') + '6304';
     return body + crc16(body);
   }
-  /* baca QR dari foto (Chrome/Android; iPhone belum mendukung, pakai tempel kode) */
+  /* baca QR dari foto: BarcodeDetector (Chrome/Android), cadangan html5-qrcode (iPhone) */
+  function viaH5(file) {
+    var ld = window.Html5Qrcode ? Promise.resolve() : new Promise(function (ok, no) { var s = document.createElement('script'); s.src = 'html5-qrcode.min.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+    return ld.then(function () {
+      var d = document.createElement('div'); d.id = 'qrisH5'; d.hidden = true; document.body.appendChild(d);
+      var h = new window.Html5Qrcode('qrisH5');
+      return h.scanFile(file, false).catch(function () { return ''; }).then(function (t) { try { h.clear(); } catch (e) { } d.remove(); return t; });
+    }, function () { throw new Error('nosupport'); });
+  }
   function decodeImage(file) {
-    if (!('BarcodeDetector' in window)) return Promise.reject(new Error('nosupport'));
+    if (!('BarcodeDetector' in window)) return viaH5(file);
     return createImageBitmap(file).then(function (bmp) {
       return new window.BarcodeDetector({ formats: ['qr_code'] }).detect(bmp).then(function (r) { return r && r[0] ? r[0].rawValue : ''; });
     });
