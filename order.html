@@ -156,19 +156,25 @@ label.fl i{color:var(--bad);font-style:normal}
 .brand h1{font-size:20px;font-weight:800}
 .cat{min-height:44px;padding:0 18px;display:inline-flex;align-items:center}
 .grid{gap:14px}
-.p{display:grid;grid-template-columns:100%;grid-auto-rows:min-content;align-content:start;padding:8px 8px 14px;border-radius:24px;text-align:left;box-shadow:0 1px 3px rgba(16,24,40,.06)}
-.p .im{grid-area:1/1;width:100%!important;max-width:none;border-radius:18px;box-shadow:none}
+.p{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-auto-rows:min-content;align-content:start;align-items:center;padding:8px 8px 12px;border-radius:24px;text-align:left;box-shadow:0 1px 3px rgba(16,24,40,.06)}
+.p .im{grid-column:1/-1;width:100%!important;max-width:none;border-radius:18px;box-shadow:none}
 .p .im .qov{border-radius:18px}
-.p .ac{grid-area:1/1;align-self:end;justify-self:end;margin:0;padding:8px;min-height:0;z-index:2}
+.p b,.p small{grid-column:1/-1}
 .p b{margin:10px 6px 0;font-size:14px;font-weight:700}
 .p small{margin:2px 6px 0}
-.p .pr{margin:4px 6px 0;font-size:15px;font-weight:800}
-.add{width:44px;height:44px;box-shadow:0 4px 12px rgba(16,24,40,.25)}
-.add,.step button.pl{color:#fff!important}
-.step{background:rgba(255,255,255,.96);box-shadow:0 4px 12px rgba(16,24,40,.18)}
-.step button{width:40px;height:40px;background:transparent}
+.p .pr{grid-column:1;margin:6px 0 0 6px;font-size:15px;font-weight:800}
+.p .ac{grid-column:2;margin:6px 2px 0 0;min-height:0;justify-self:end}
+.add,.step button{position:relative;font-size:0!important;-webkit-text-fill-color:transparent;line-height:0}
+.add{width:38px;height:38px;box-shadow:0 4px 10px rgba(16,24,40,.22)}
+.step{padding:2px}.step button{width:34px;height:34px;background:transparent;color:var(--tx)}
+.step span{min-width:24px}
 .step button.pl{background:var(--ad)}
-.p .ac .tag{box-shadow:0 2px 8px rgba(16,24,40,.12);background:#fff}
+.add,.step button.pl{color:#fff!important}
+/* ikon − dan + digambar dengan garis agar tepat di tengah (huruf font cenderung turun) */
+.add::before,.step button::before{content:"";position:absolute;left:50%;top:50%;width:14px;height:2.4px;border-radius:2px;background:currentColor;transform:translate(-50%,-50%)}
+.add::after,.step button.pl::after{content:"";position:absolute;left:50%;top:50%;width:2.4px;height:14px;border-radius:2px;background:currentColor;transform:translate(-50%,-50%)}
+.p .ac .tag{padding:5px 10px;font-size:11px}
+@media(max-width:350px){.p .pr{grid-column:1/-1}.p .ac{grid-column:1/-1;justify-self:start;margin-left:4px}}
 .ln .th{border-radius:14px}
 </style>
 </head>
