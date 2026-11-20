@@ -149,6 +149,28 @@ label.fl i{color:var(--bad);font-style:normal}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 <link rel="stylesheet" href="skin.css">
+<style>
+/* tampilan pesan online: foto penuh per kartu, tombol tambah di pojok foto (khusus halaman ini; skin.css dipakai kasir juga) */
+.langbar{padding:8px 0 0}.langbar select{height:36px;font-size:13px}
+.brand img:not([src]),.brand img[src=""]{display:none}
+.brand h1{font-size:20px;font-weight:800}
+.cat{min-height:44px;padding:0 18px;display:inline-flex;align-items:center}
+.grid{gap:14px}
+.p{display:grid;grid-template-columns:100%;grid-auto-rows:min-content;align-content:start;padding:8px 8px 14px;border-radius:24px;text-align:left;box-shadow:0 1px 3px rgba(16,24,40,.06)}
+.p .im{grid-area:1/1;width:100%!important;max-width:none;border-radius:18px;box-shadow:none}
+.p .im .qov{border-radius:18px}
+.p .ac{grid-area:1/1;align-self:end;justify-self:end;margin:0;padding:8px;min-height:0;z-index:2}
+.p b{margin:10px 6px 0;font-size:14px;font-weight:700}
+.p small{margin:2px 6px 0}
+.p .pr{margin:4px 6px 0;font-size:15px;font-weight:800}
+.add{width:44px;height:44px;box-shadow:0 4px 12px rgba(16,24,40,.25)}
+.add,.step button.pl{color:#fff!important}
+.step{background:rgba(255,255,255,.96);box-shadow:0 4px 12px rgba(16,24,40,.18)}
+.step button{width:40px;height:40px;background:transparent}
+.step button.pl{background:var(--ad)}
+.p .ac .tag{box-shadow:0 2px 8px rgba(16,24,40,.12);background:#fff}
+.ln .th{border-radius:14px}
+</style>
 </head>
 <body>
 <div class="wrap">
