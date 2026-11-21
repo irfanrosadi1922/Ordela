@@ -118,9 +118,12 @@ alter table pos.stores add column if not exists grp bigint;   -- toko pusat (gru
 -- Preferensi tampilan milik pemilik akun, dipakai bersama seluruh toko dan cabangnya.
 create table if not exists pos.owner_theme(
   owner_id bigint primary key references pos.t_users(id) on delete cascade,
-  color text not null default 'biru' check (color in ('biru','hijau','ungu','oranye','mawar','teal','slate')),
+  color text not null default 'biru' check (color in ('biru','hijau','ungu','oranye','mawar','teal','slate','pastel')),
   updated_at timestamptz not null default now()
 );
+-- tema baru 'pastel': perluas batasan pada tabel yang sudah ada
+alter table pos.owner_theme drop constraint if exists owner_theme_color_check;
+alter table pos.owner_theme add constraint owner_theme_color_check check (color in ('biru','hijau','ungu','oranye','mawar','teal','slate','pastel'));
 alter table pos.owner_theme enable row level security;
 alter table pos.sessions add column if not exists act_sid bigint;   -- cabang yang sedang dibuka sesi owner
 alter table pos.t_users add column if not exists store_id bigint references pos.stores(id);
@@ -914,7 +917,7 @@ begin
   if u = '/api/theme' and m = 'PUT' then
     if not own then return pos.r(403, '{"error":"Hanya owner yang boleh mengubah warna tampilan"}'); end if;
     nm := lower(btrim(coalesce(b ->> 'color', '')));
-    if nm not in ('biru','hijau','ungu','oranye','mawar','teal','slate') then
+    if nm not in ('biru','hijau','ungu','oranye','mawar','teal','slate','pastel') then
       return pos.r(400, '{"error":"Warna tampilan tidak valid"}');
     end if;
     if not exists (select 1 from pos.stores st where st.id = me.store_id and st.owner_id = me.id) then
