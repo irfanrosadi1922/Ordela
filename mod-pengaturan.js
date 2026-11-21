@@ -107,6 +107,7 @@ function renderSet(){
   $('#setForm').innerHTML=`<h3>Toko</h3>
   <label class="fl">Nama toko</label><input class="fi" id="sN" value="${esc(s.store)}">
   <label class="fl">Alamat / telepon (tampil di struk)</label><input class="fi" id="sA" value="${esc(s.addr)}">
+  <label class="fl">Nomor WhatsApp toko (penerima laporan harian)</label><input class="fi" id="sW" inputmode="tel" placeholder="628123456789" value="${esc(s.wa||'')}">
   <div class="chips" style="margin:6px 0 2px"><button class="chip" type="button" onclick="addrGps()">📍 Isi alamat dari GPS</button></div>
   <div class="two"><div><label class="fl">Pajak (%)</label><input class="fi" id="sT" type="number" min="0" step="0.1" value="${s.tax}"></div>
   <div></div></div>
@@ -147,7 +148,7 @@ function addrGps(){
   },er=>toast(er&&er.code===1?'Izin lokasi ditolak. Aktifkan di pengaturan browser.':'Lokasi tidak ditemukan'),{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
 }
 function saveSet(){
-  Object.assign(db.set,{store:$('#sN').value.trim()||'Toko',addr:$('#sA').value,tax:Math.max(0,+$('#sT').value||0),low:Math.max(0,+$('#sL').value||0)});
+  Object.assign(db.set,{store:$('#sN').value.trim()||'Toko',addr:$('#sA').value,wa:$('#sW').value.trim(),tax:Math.max(0,+$('#sT').value||0),low:Math.max(0,+$('#sL').value||0)});
   save();applyBrand();toast('Pengaturan disimpan');render();
 }
 function addCat(){const v=$('#newCat').value.trim();if(!v)return;if(!db.cats.includes(v))db.cats.push(v);$('#newCat').value='';save();renderSet()}

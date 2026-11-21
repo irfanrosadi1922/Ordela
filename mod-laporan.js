@@ -1,6 +1,6 @@
 /* ---------- Laporan harian ke WhatsApp (ringkasan teks + Excel) lewat Edge Function daily-report ---------- */
 const RPT={busy:0};
-const rptCfg=()=>Object.assign({on:false,phone:'',time:'22:00',last:''},db.set.rpt||{});
+const rptCfg=()=>Object.assign({on:false,time:'22:00',last:''},db.set.rpt||{},{phone:db.set.wa||''});
 function rptSet(k,v){db.set.rpt=Object.assign(rptCfg(),{[k]:v});save();if(k==='on')rptDraw()}
 /* data satu hari: ringkasan, rincian pesanan, produk terlaris, stok menipis */
 function rptData(day){
@@ -29,7 +29,7 @@ const rptB64=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(String(f
 async function rptSend(auto){
   const c=rptCfg(),C=window.POS_SB;
   if(RPT.busy)return;
-  if(!/^\+?\d{8,15}$/.test(c.phone.replace(/[\s-]/g,''))){if(!auto)toast('Isi nomor WhatsApp dulu');return}
+  if(!/^\+?\d{8,15}$/.test(c.phone.replace(/[\s-]/g,''))){if(!auto)toast('Isi Nomor WhatsApp toko dulu');return}
   if(!(C&&C.url&&CL.on&&CL.tok)){if(!auto)toast('Perlu login online');return}
   RPT.busy=1;const day=dkey(new Date());
   try{
@@ -47,7 +47,7 @@ function rptDraw(){
   const b=document.getElementById('rptBox');if(!b)return;const c=rptCfg();
   b.innerHTML=`<h3 style="margin-top:18px">Laporan WhatsApp</h3>
   <label class="tgl"><input type="checkbox" ${c.on?'checked':''} onchange="rptSet('on',this.checked)"><span>Kirim otomatis setelah jam tutup</span></label>
-  <div class="two"><div><label class="fl">Nomor WhatsApp</label><input class="fi" inputmode="tel" placeholder="628123456789" value="${esc(c.phone)}" onchange="rptSet('phone',this.value.trim())"></div>
-  <div><label class="fl">Jam tutup</label><input class="fi" type="time" value="${esc(c.time)}" onchange="rptSet('time',this.value)"></div></div>
+  <p class="hint">Dikirim ke: ${c.phone?esc(c.phone):'isi Nomor WhatsApp toko di atas lalu Simpan'}</p>
+  <label class="fl">Jam tutup</label><input class="fi" type="time" value="${esc(c.time)}" onchange="rptSet('time',this.value)">
   <button class="btn sec" type="button" onclick="rptSend()">Kirim sekarang</button>${c.last?`<p class="hint">Terakhir terkirim: ${esc(c.last)}</p>`:''}`;
 }
