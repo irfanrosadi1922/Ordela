@@ -308,17 +308,17 @@
       added: 'Ditambah', removed: 'Dikurangi', removedAll: 'Dihapus', set: 'Jumlah diubah', notfound: 'Menu tidak ditemukan', ambiguous: 'Maksud Anda yang mana?', total: 'Total pesanan', empty: 'Keranjang kosong', cart: 'Keranjang dibuka',
       stock: 'Stok tidak cukup', nomatch: 'Perintah belum dipahami. Contoh: “tambah dua nasi goreng”', notInCart: 'Menu itu belum ada di keranjang', noLast: 'Sebut nama menu yang diubah', mods: 'Menu ini punya pilihan, lengkapi di layar',
       clearAsk: 'Kosongkan keranjang? Ucapkan “ya”.', payOff: 'Pembayaran lewat suara dinonaktifkan di pengaturan', confirmOff: 'Selesaikan pembayaran dengan tombol Bayar. Suara dinonaktifkan di pengaturan.', cleared: 'Keranjang dikosongkan', cancelled: 'Dibatalkan', pay: 'Pembayaran dibuka', payNeed: 'Keranjang masih kosong', confirmNo: 'Buka layar pembayaran dulu', exact: 'Uang pas diisi', noted: 'Catatan disimpan',
-      denied: 'Izin mikrofon ditolak. Izinkan di pengaturan peramban.', nospeech: 'Tidak ada suara terdengar. Coba lagi.', neterr: 'Pengenalan suara perlu koneksi internet.', err: 'Pengenalan suara gagal. Coba lagi atau ketik perintah.', each: 'item', hint: 'Coba: “tambah dua nasi goreng”, “berapa total?”', speakOn: 'Suara balasan', typeHolder: 'Ketik perintah…', send: 'Kirim', close: 'Tutup', mic: 'Perintah suara', heard: 'Terdengar', unsold: 'Menu tidak dijual' },
+      denied: 'Izin mikrofon ditolak. Izinkan di pengaturan peramban.', nospeech: 'Tidak ada suara terdengar. Coba lagi.', micdies: 'Mikrofon berhenti sendiri di perangkat ini. Nyalakan "Pengenalan suara AI" di Pengaturan > Voice Cashier.', neterr: 'Pengenalan suara perlu koneksi internet.', err: 'Pengenalan suara gagal. Coba lagi atau ketik perintah.', each: 'item', hint: 'Coba: “tambah dua nasi goreng”, “berapa total?”', speakOn: 'Suara balasan', typeHolder: 'Ketik perintah…', send: 'Kirim', close: 'Tutup', mic: 'Perintah suara', heard: 'Terdengar', unsold: 'Menu tidak dijual' },
     en: { listen: 'Listening…', proc: 'Processing…', idle: 'Tap the mic, then speak', nosr: 'Speech recognition is not supported on this device. Type a command below, or use the keyboard microphone.',
       added: 'Added', removed: 'Reduced', removedAll: 'Removed', set: 'Quantity changed', notfound: 'Item not found', ambiguous: 'Which one did you mean?', total: 'Order total', empty: 'Cart is empty', cart: 'Cart opened',
       stock: 'Not enough stock', nomatch: 'Command not understood. Example: “add two fried rice”', notInCart: 'That item is not in the cart', noLast: 'Say which item to change', mods: 'This item has options, finish on screen',
       clearAsk: 'Clear the cart? Say “yes”.', payOff: 'Voice payment is turned off in settings', confirmOff: 'Finish payment with the Pay button. Voice is turned off in settings.', cleared: 'Cart cleared', cancelled: 'Cancelled', pay: 'Payment opened', payNeed: 'The cart is empty', confirmNo: 'Open the payment screen first', exact: 'Exact amount filled', noted: 'Note saved',
-      denied: 'Microphone permission denied. Allow it in browser settings.', nospeech: 'No speech heard. Try again.', neterr: 'Speech recognition needs an internet connection.', err: 'Speech recognition failed. Try again or type the command.', each: 'items', hint: 'Try: “add two fried rice”, “what is the total?”', speakOn: 'Spoken replies', typeHolder: 'Type a command…', send: 'Send', close: 'Close', mic: 'Voice command', heard: 'Heard', unsold: 'Item not for sale' },
+      denied: 'Microphone permission denied. Allow it in browser settings.', nospeech: 'No speech heard. Try again.', micdies: 'The microphone keeps stopping on this device. Turn on "AI speech recognition" in Settings > Voice Cashier.', neterr: 'Speech recognition needs an internet connection.', err: 'Speech recognition failed. Try again or type the command.', each: 'items', hint: 'Try: “add two fried rice”, “what is the total?”', speakOn: 'Spoken replies', typeHolder: 'Type a command…', send: 'Send', close: 'Close', mic: 'Voice command', heard: 'Heard', unsold: 'Item not for sale' },
     ms: { listen: 'Mendengar…', proc: 'Memproses…', idle: 'Ketik mikrofon, kemudian cakap', nosr: 'Peranti ini tidak menyokong pengecaman suara. Taip arahan di bawah, atau guna mikrofon papan kekunci.',
       added: 'Ditambah', removed: 'Dikurangkan', removedAll: 'Dipadam', set: 'Kuantiti diubah', notfound: 'Menu tidak dijumpai', ambiguous: 'Yang mana satu?', total: 'Jumlah pesanan', empty: 'Bakul kosong', cart: 'Bakul dibuka',
       stock: 'Stok tidak mencukupi', nomatch: 'Arahan tidak difahami. Contoh: “tambah dua nasi goreng”', notInCart: 'Menu itu belum ada dalam bakul', noLast: 'Sebut nama menu yang hendak diubah', mods: 'Menu ini ada pilihan, lengkapkan di skrin',
       clearAsk: 'Kosongkan bakul? Sebut “ya”.', payOff: 'Pembayaran melalui suara dimatikan dalam tetapan', confirmOff: 'Selesaikan pembayaran dengan butang Bayar. Suara dimatikan dalam tetapan.', cleared: 'Bakul dikosongkan', cancelled: 'Dibatalkan', pay: 'Pembayaran dibuka', payNeed: 'Bakul masih kosong', confirmNo: 'Buka skrin pembayaran dahulu', exact: 'Wang pas diisi', noted: 'Catatan disimpan',
-      denied: 'Kebenaran mikrofon ditolak. Benarkan dalam tetapan pelayar.', nospeech: 'Tiada suara didengar. Cuba lagi.', neterr: 'Pengecaman suara memerlukan sambungan internet.', err: 'Pengecaman suara gagal. Cuba lagi atau taip arahan.', each: 'item', hint: 'Cuba: “tambah dua nasi goreng”, “berapa jumlah?”', speakOn: 'Suara balasan', typeHolder: 'Taip arahan…', send: 'Hantar', close: 'Tutup', mic: 'Arahan suara', heard: 'Didengar', unsold: 'Menu tidak dijual' }
+      denied: 'Kebenaran mikrofon ditolak. Benarkan dalam tetapan pelayar.', nospeech: 'Tiada suara didengar. Cuba lagi.', micdies: 'Mikrofon berhenti sendiri pada peranti ini. Hidupkan "Pengecaman suara AI" di Tetapan > Voice Cashier.', neterr: 'Pengecaman suara memerlukan sambungan internet.', err: 'Pengecaman suara gagal. Cuba lagi atau taip arahan.', each: 'item', hint: 'Cuba: “tambah dua nasi goreng”, “berapa jumlah?”', speakOn: 'Suara balasan', typeHolder: 'Taip arahan…', send: 'Hantar', close: 'Tutup', mic: 'Arahan suara', heard: 'Didengar', unsold: 'Menu tidak dijual' }
   };
   var EXTRA = {
     id: { bigAsk: 'jumlah besar, ucapkan “ya” untuk menambah', short: 'Uang kurang', paid: 'Lunas', change: 'Kembalian', received: 'Diterima', wakeNeed: 'Sebut “Ordela” di awal kalimat untuk membayar', seqStop: 'Periksa pesanan dulu, belum dibayar', permNeed: 'Ketuk layar sekali untuk mengaktifkan mikrofon', ready: 'Ya, silakan', live: 'Selalu mendengarkan' },
@@ -1028,7 +1028,9 @@
      Berperan sebagai pengganti SpeechRecognition (AiRec) sehingga tahan-bicara, ketuk, dan mode selalu mendengarkan tetap sama. */
   var Cap = { stream: null, ctx: null, node: null, src: null, sinks: [], opening: false, queue: [], rel: 0, fake: false };
   function capSupported() { return !!(root.navigator && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && (root.AudioContext || root.webkitAudioContext)); }
-  function useAi() { return !SRN || !!cfg().stt; }
+  /* iPhone: SpeechRecognition bawaan Safari (terutama dari layar utama) sering berhenti sendiri tanpa hasil; pakai mesin AI bila tersedia */
+  var IOS = /iPad|iPhone|iPod/.test((root.navigator && navigator.userAgent) || '') || (root.navigator && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function useAi() { return !SRN || !!cfg().stt || (IOS && aiSttReady()); }
   function newRec() { return (useAi() && capSupported()) ? new AiRec() : new SRN(); }
   function aiSttReady() { var C = root.POS_SB; return !!(cfg().ai && C && C.url && typeof CL !== 'undefined' && CL.on && CL.tok && root.navigator && navigator.onLine !== false); }
   function capAttach(sink, cb) {
@@ -1173,9 +1175,10 @@
     try { rec = newRec(); } catch (e) { showResult({ msg: M('err'), warn: true }); return; }
     rec.manual = !!st.ptt;
     rec.lang = SRLANG[st.lang] || 'id-ID'; rec.continuous = !!st.ptt; rec.interimResults = true; rec.maxAlternatives = 3;
-    var finalAlts = null, gotErr = false, acc = st.ptt ? (st.pttAcc = st.pttAcc || []) : [];
+    var finalAlts = null, gotErr = false, gotRes = false, t0 = Date.now(), acc = st.ptt ? (st.pttAcc = st.pttAcc || []) : [];
     rec.onstart = function () { st.listening = true; st.heard = ''; $('#vcTx').textContent = ''; paint(); };
     rec.onresult = function (ev) {
+      gotRes = true; st.fastEnd = 0;
       var interim = '', fin = null;
       for (var i = ev.resultIndex; i < ev.results.length; i++) {
         var r = ev.results[i];
@@ -1197,6 +1200,9 @@
       else if (e !== 'aborted') showResult({ msg: M('err'), warn: true });
     };
     rec.onend = function () {
+      var fast = !gotRes && !gotErr && Date.now() - t0 < 1500;       // sesi mati sendiri hampir seketika tanpa hasil: mesin suara perangkat bermasalah
+      st.fastEnd = fast ? (st.fastEnd || 0) + 1 : 0;
+      if (st.fastEnd >= 3) { st.fastEnd = 0; st.pttHeld = false; }   // hentikan sambung ulang agar tidak berputar terus
       if (st.ptt && st.pttHeld && !gotErr) {                         // peramban menghentikan sesi sendiri (jeda/batas waktu) padahal tombol masih ditahan: sambung lagi
         st.listening = false; st.rec = null; var keep = finalAlts; finalAlts = null; setTimeout(function () { if (st.ptt && st.pttHeld) startListen(); }, 60); return;
       }
@@ -1205,7 +1211,7 @@
       st.listening = false; st.rec = null; paint();
       if (wasPtt && ptAcc && ptAcc[0]) finalAlts = [ptAcc[0]];
       if (finalAlts) { var alts = finalAlts; finalAlts = null; submit(alts); }
-      else if (!gotErr && st.open && !$('#vcTx').textContent) showResult({ msg: M('nospeech'), warn: true });
+      else if (!gotErr && (fast || (st.open && !$('#vcTx').textContent))) showResult({ msg: fast ? M('micdies') : M('nospeech'), warn: true });
     };
     st.rec = rec;
     try { rec.start(); } catch (e) { st.rec = null; showResult({ msg: M('err'), warn: true }); }
