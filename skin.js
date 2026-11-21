@@ -351,15 +351,15 @@
         var secs = G.map(function (gr) {
           var rows = gr[2].filter(function (r) { return r[0] === 'upd' ? !!window.OrdelaUpdate : r[0] === 'voice' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.voiceSet) : r[0] === 'invset' ? ((isOwn() || (typeof can === 'function' && can('set'))) && !!window.P2 && !!P2.invSet) : r[0] === 'plan' ? (isOwn() && typeof CL !== 'undefined' && CL.on && !!window.P2 && !!P2.plan) : show(r[0]); });
           if (!rows.length) return '';
-          return '<div class="adgt"><h3>' + gr[0] + '</h3><span>' + gr[1] + '</span></div><div class="adl">' + rows.map(function (r) {
+          return rows.map(function (r) {
             var act = r[0] === 'branch' ? 'P2.branch()' : r[0] === 'voice' ? 'P2.voiceSet()' : r[0] === 'invset' ? 'P2.invSet()' : r[0] === 'plan' ? 'P2.plan()' : r[0] === 'upd' ? 'OrdelaUpdate.open()' : "go('" + r[0] + "')";
             var lk = lockOf(r[0]);
             return '<button class="adr' + (lk ? ' lkd' : '') + '" onclick="' + act + '"><span class="ti" style="--c:' + r[4] + '">' + ico(r[3]) + (r[0] === 'co' && nb ? '<b class="nb">' + nb + '</b>' : '') + '</span><span class="tx"><b>' + esc(r[1]) + tierBadge(VIEW_LOCK[r[0]] || '') + '</b><span>' + esc(lk ? 'Mulai paket ' + lk : r[2]) + '</span></span>' + (lk ? LOCKSVG : CHEV) + '</button>';
-          }).join('') + '</div>';
+          }).join('');
         }).join('');
         var aiLk = lockOf('ai');
-        var ai = show('ai') ? '<div class="adgt"><h3>Asisten</h3><span>Tanya data toko</span></div><div class="adl"><button class="adr' + (aiLk ? ' lkd' : '') + '" onclick="go(\'ai\')"><span class="ti" style="--c:#7c3aed">' + ico('spark') + '</span><span class="tx"><b>Asisten Ordela' + tierBadge('ai') + '</b><span>' + esc(aiLk ? 'Mulai paket ' + aiLk : 'Tanya omzet, menu terlaris, stok menipis') + '</span></span>' + (aiLk ? LOCKSVG : CHEV) + '</button></div>' : '';
-        el.innerHTML = hero + stats + ai + secs;
+        var ai = show('ai') ? '<button class="adr' + (aiLk ? ' lkd' : '') + '" onclick="go(\'ai\')"><span class="ti" style="--c:#7c3aed">' + ico('spark') + '</span><span class="tx"><b>Asisten Ordela' + tierBadge('ai') + '</b><span>' + esc(aiLk ? 'Mulai paket ' + aiLk : 'Tanya omzet, menu terlaris, stok menipis') + '</span></span>' + (aiLk ? LOCKSVG : CHEV) + '</button>' : '';
+        el.innerHTML = hero + stats + '<div class="adgt"><h3>Semua menu</h3></div><div class="adl">' + ai + secs + '</div>';
       } catch (e) { /* biarkan tampilan lama bila data belum siap */ }
     }
 
