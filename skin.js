@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var H = document.documentElement;
-  var PAL = [['biru', 'Biru', '#2f6bff', '#eaf1ff'], ['hijau', 'Hijau', '#16a34a', '#e9f7ee'], ['ungu', 'Ungu', '#7c3aed', '#f1ebff'], ['oranye', 'Oranye', '#f97316', '#fff1e5'], ['mawar', 'Mawar', '#e11d48', '#ffeaef'], ['teal', 'Teal', '#0d9488', '#e5f6f4'], ['slate', 'Abu Gelap', '#334155', '#eef1f5']];
+  var PAL = [['biru', 'Biru', '#2f6bff', '#eaf1ff'], ['hijau', 'Hijau', '#16a34a', '#e9f7ee'], ['ungu', 'Ungu', '#7c3aed', '#f1ebff'], ['oranye', 'Oranye', '#f97316', '#fff1e5'], ['mawar', 'Mawar', '#e11d48', '#ffeaef'], ['teal', 'Teal', '#0d9488', '#e5f6f4'], ['slate', 'Abu Gelap', '#334155', '#eef1f5'], ['pastel', 'Pastel Hitam', '#111111', '#ffffff']];
   function getColor() { var c = 'biru'; try { c = localStorage.getItem('pos_color') || 'biru'; } catch (e) {} return PAL.some(function (p) { return p[0] === c; }) ? c : 'biru'; }
   function applyColor(c) {
     H.setAttribute('data-skin', '1'); H.setAttribute('data-theme', 'light'); H.setAttribute('data-color', c);

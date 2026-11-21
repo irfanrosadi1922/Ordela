@@ -953,3 +953,37 @@ html[data-skin] .tgl{border-radius:99px}
 #payForm .pq-w.on i::after{content:"";position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:50%;background:var(--ad) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/12px no-repeat}
 #payForm .pq-w:active i{transform:scale(.94)}
 #payForm .pq-w i img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:6px;box-sizing:border-box}
+
+/* ---------- tema "Pastel Hitam": latar putih, garis hitam tegas, isi pastel, aktif = pil hitam ---------- */
+html[data-color=pastel]{--ad:#111;--ad2:#000;--adt:#f1f1f4;--bg:#fff;--ln:#e6e6ec;--mu:#6b6b76;--pv:#9b9bff;--pk:#eaa9ff;--pg:#5fd36c;--po:#f4b84f}
+html[data-color=pastel] .panel,html[data-color=pastel] .mgc{border:1.5px solid #111;border-radius:20px;box-shadow:none}
+html[data-color=pastel] #bnav{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border:1.5px solid #111;box-shadow:none!important}
+html[data-color=pastel] #bnav:before{display:none}
+html[data-color=pastel] #bnav button.on{background:#111;color:#fff;border-radius:999px;flex:1.5;flex-direction:row;gap:8px}
+html[data-color=pastel] #bnav button.on .bi{background:none;box-shadow:none;width:auto;height:auto}
+html[data-color=pastel] .icon-btn,html[data-color=pastel] .pill{background:#fff;border:1.5px solid #111;box-shadow:none}
+html[data-color=pastel] .pill.search{background:#fff}
+html[data-color=pastel] .cat,html[data-color=pastel] .cat:nth-child(even){background:#fff;border:1.5px solid #111;border-radius:999px;box-shadow:none;color:#111}
+html[data-color=pastel] .cat.on{background:#111;color:#fff;box-shadow:none}
+html[data-color=pastel] .p{border:1.5px solid #111;border-radius:20px;box-shadow:none;background:#fff}
+html[data-color=pastel] #bnav button{color:#6b6b76}
+html[data-color=pastel] #bnav button.on{color:#fff;background:#111;transition:none}
+html[data-color=pastel] #bnav button.on .bi{background:none!important;box-shadow:none!important;width:auto;height:auto}
+html[data-color=pastel] #bnav button.on svg{color:#fff}
+html[data-color=pastel] #bnav{background:#fff!important;border:1.5px solid #111!important;box-shadow:none!important}
+html[data-color=pastel] #bnav .lens{background:#111!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html[data-color=pastel] #bnav .lens:after{display:none}
+html[data-color=pastel] #bnav button.on{background:none!important;color:#fff!important}
+html[data-color=pastel] .adh{background:var(--pv)!important;color:#111;border:1.5px solid #111;box-shadow:none}
+html[data-color=pastel] .adh:before{display:none}
+html[data-color=pastel] .adh small,html[data-color=pastel] .adh h2,html[data-color=pastel] .adh .sub{color:#111}
+html[data-color=pastel] .adh .adplan,html[data-color=pastel] .adh .adchip{background:#fff;color:#111;border:1.5px solid #111}
+html[data-color=pastel] .adh .adbtn{background:#111;color:#fff;box-shadow:none}
+html[data-color=pastel] .adc{background:var(--pk);border:1.5px solid #111;border-radius:20px;box-shadow:none}
+html[data-color=pastel] .adc.w{background:var(--po)}html[data-color=pastel] .adc.w.ok{background:var(--pg)}
+html[data-color=pastel] .icon-btn,html[data-color=pastel] #coBell{box-shadow:none}
+html[data-color=pastel] .adav{border:1.5px solid #111;box-shadow:none;background:#fff}
+html[data-color=pastel] .cotabs{border-bottom:0;gap:8px}
+html[data-color=pastel] .cotabs button{min-height:44px;border:1.5px solid #111;border-radius:999px;border-bottom-width:1.5px;color:#111;background:#fff}
+html[data-color=pastel] .cotabs button.on{background:#111;color:#fff;border-color:#111}
+html[data-color=pastel] .cotabs .cnt{background:var(--pg);color:#111}
