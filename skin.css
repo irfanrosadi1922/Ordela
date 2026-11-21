@@ -994,3 +994,15 @@ html[data-color=pastel] #bnav button .ico{width:26px;height:26px}
 html[data-color=pastel] #bnav button.on{flex:2.1 1 0;flex-direction:row;gap:8px;font-size:13px;font-weight:600}
 html[data-color=pastel] #bnav button.on .bi{width:34px;height:34px;border-radius:50%;background:#fff!important;box-shadow:none!important}
 html[data-color=pastel] #bnav button.on .bi svg{color:#111;width:20px;height:20px}
+/* Pastel Hitam: kartu, baris, input, dan tab di semua halaman mengikuti kontur hitam */
+html[data-color=pastel] :is(.coc,.kc,.tbc,.rrow,.kdc,.pc,.st,.invoice,.pfcard,.pyc,.opr,.upbox,.modal,#accPage .pfgrp){border:1.5px solid #111;border-radius:20px;box-shadow:none;background:#fff}
+html[data-color=pastel] :is(.fi,.logsel,select,textarea,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file])){border:1.5px solid #111;border-radius:14px;box-shadow:none}
+html[data-color=pastel] :is(.stabs,.itabs) button{border:1.5px solid #111;border-radius:999px;background:#fff;color:#111;box-shadow:none}
+html[data-color=pastel] :is(.stabs,.itabs) button.on{background:#111;color:#fff}
+html[data-color=pastel] .btn.sec,html[data-color=pastel] .mini{border:1.5px solid #111;background:#fff;color:#111}
+html[data-color=pastel] .chip{border:1.5px solid #111;border-radius:999px;background:#fff;color:#111;box-shadow:none}
+html[data-color=pastel] .chip.on{background:#111;color:#fff}
+html[data-color=pastel] :is(.pill,.search) input{border:0;border-radius:0;box-shadow:none}
+html[data-color=pastel] #v-riw button.tag{border:1.5px solid #111;border-radius:999px;background:#fff;color:#111;box-shadow:none}
+html[data-color=pastel] #v-riw button.tag.on,html[data-color=pastel] #v-riw button.tag.act{background:#111;color:#fff}
+html[data-color=pastel] #v-riw input.fi,html[data-color=pastel] .stp button{border:1.5px solid #111!important;background:#fff;box-shadow:none}
