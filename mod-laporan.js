@@ -38,7 +38,7 @@ async function rptSend(auto){
     const j=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(j.error||'Gagal mengirim');
     rptSet('last',day);if(!auto)toast('Laporan terkirim ke WhatsApp');
-  }catch(e){if(!auto)toast(e.message||'Gagal mengirim')}
+  }catch(e){if(!auto)toast(e instanceof TypeError?'Fungsi daily-report belum di-deploy atau tidak ada koneksi':e.message||'Gagal mengirim')}
   RPT.busy=0;rptDraw();
 }
 /* kirim otomatis sekali per hari setelah jam tutup, selama aplikasi terbuka (shortcut: tidak jalan saat aplikasi ditutup, upgrade: pg_cron di server) */
