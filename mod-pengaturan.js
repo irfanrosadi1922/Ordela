@@ -111,7 +111,9 @@ function renderSet(){
   <div class="two"><div><label class="fl">Pajak (%)</label><input class="fi" id="sT" type="number" min="0" step="0.1" value="${s.tax}"></div>
   <div></div></div>
   <div class="two"><div><label class="fl">Batas stok menipis (default)</label><input class="fi" id="sL" type="number" min="0" value="${s.low}"></div><div></div></div>
+  <div id="rptBox"></div>
   <button class="btn" onclick="saveSet()">Simpan Pengaturan</button>`;
+  rptDraw();
   renderTheme();
   renderLogo();
   renderDb();
