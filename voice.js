@@ -1020,6 +1020,8 @@
     var mm = $('#vcMic'); if (mm) { mm.setAttribute('aria-expanded', 'false'); mm.classList.remove('rec'); }
     try { stopSay(); } catch (e) { /* abaikan */ }
   }
+  /* keterangan teknis singkat bila mesin AI tidak menangkap suara (untuk dilaporkan): jumlah bingkai, level puncak, status audio */
+  function diagAi(r) { return (r && r.manual !== undefined && r._n !== undefined) ? ' [' + r._n + ' frm, puncak ' + (r._peak || 0).toFixed(3) + ', ' + (Cap.ctx ? Cap.ctx.state : '-') + ']' : ''; }
   function toggleListen() { if (st.listening) stopListen(false); else startListen(); }
 
   /* ---------- pengenalan suara ---------- */
@@ -1040,15 +1042,17 @@
     if (Cap.stream && Cap.ctx && Cap.ctx.state !== 'closed') { try { if (Cap.ctx.state === 'suspended') Cap.ctx.resume(); } catch (e) { /* abaikan */ } add(sink); return cb(null); }
     if (Cap.opening) { Cap.queue.push([sink, cb]); return; }
     Cap.opening = true;
+    var AC0 = root.AudioContext || root.webkitAudioContext, ctx0 = null;
+    try { ctx0 = new AC0(); if (ctx0.state === 'suspended') ctx0.resume(); } catch (e) { ctx0 = null; }   // iOS: harus dibuat dan dilanjutkan di dalam gestur pengguna
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).then(function (stream) {
-      var AC = root.AudioContext || root.webkitAudioContext, ctx = new AC(), src = ctx.createMediaStreamSource(stream), node = ctx.createScriptProcessor(2048, 1, 1);
+      var AC = root.AudioContext || root.webkitAudioContext, ctx = ctx0 || new AC(), src = ctx.createMediaStreamSource(stream), node = ctx.createScriptProcessor(2048, 1, 1);
       node.onaudioprocess = function (e) { capFrame(e.inputBuffer.getChannelData(0), ctx.sampleRate); };
       src.connect(node); node.connect(ctx.destination);
       Cap.stream = stream; Cap.ctx = ctx; Cap.node = node; Cap.src = src; Cap.opening = false;
       try { if (ctx.state === 'suspended') ctx.resume(); } catch (e) { /* abaikan */ }
       add(sink); cb(null);
       Cap.queue.splice(0).forEach(function (x) { add(x[0]); x[1](null); });
-    }).catch(function (err) { Cap.opening = false; cb(err || new Error('mic')); Cap.queue.splice(0).forEach(function (x) { x[1](err); }); });
+    }).catch(function (err) { Cap.opening = false; try { if (ctx0) ctx0.close(); } catch (e2) { /* abaikan */ } cb(err || new Error('mic')); Cap.queue.splice(0).forEach(function (x) { x[1](err); }); });
   }
   function capDetach(sink) { var i = Cap.sinks.indexOf(sink); if (i > -1) Cap.sinks.splice(i, 1); if (!Cap.sinks.length && !Cap.fake) { clearTimeout(Cap.rel); Cap.rel = setTimeout(capClose, 6000); } }
   function capClose() {
@@ -1115,7 +1119,7 @@
   };
   AiRec.prototype._frame = function (f) {
     if (!this._live || this._stopping) return;
-    var rms = rmsOf(f), ms = f.length / 16;
+    var rms = rmsOf(f), ms = f.length / 16; this._n = (this._n || 0) + 1; if (rms > (this._peak || 0)) this._peak = rms;
     if (this.manual) { if (this._seg) { this._seg.push(f); this._segMs += ms; if (this._segMs >= 25000) this._cut(); } return; }
     var thr = Math.max(0.018, this._noise * 3);
     if (!this._seg) {
@@ -1194,7 +1198,7 @@
       if (st.ptt && st.pttHeld && (e === 'no-speech' || e === 'aborted')) { gotErr = false; return; }   // ditahan: jeda sunyi bukan galat
       st.listening = false; paint();
       if (e === 'not-allowed' || e === 'service-not-allowed') showResult({ msg: M('denied'), warn: true });
-      else if (e === 'no-speech') showResult({ msg: M('nospeech'), warn: true });
+      else if (e === 'no-speech') showResult({ msg: M('nospeech') + diagAi(rec), warn: true });
       else if (e === 'network') showResult({ msg: M('neterr'), warn: true });
       else if (e === 'ai-fatal') showResult({ msg: (ev && ev.message) || M('err'), warn: true });
       else if (e !== 'aborted') showResult({ msg: M('err'), warn: true });
@@ -1211,7 +1215,7 @@
       st.listening = false; st.rec = null; paint();
       if (wasPtt && ptAcc && ptAcc[0]) finalAlts = [ptAcc[0]];
       if (finalAlts) { var alts = finalAlts; finalAlts = null; submit(alts); }
-      else if (!gotErr && (fast || (st.open && !$('#vcTx').textContent))) showResult({ msg: fast ? M('micdies') : M('nospeech'), warn: true });
+      else if (!gotErr && (fast || (st.open && !$('#vcTx').textContent))) showResult({ msg: fast ? M('micdies') : M('nospeech') + diagAi(rec), warn: true });
     };
     st.rec = rec;
     try { rec.start(); } catch (e) { st.rec = null; showResult({ msg: M('err'), warn: true }); }
