@@ -23,7 +23,8 @@ function rptXlsx(day){
   const sales=[['No','Waktu','Tipe','Pelanggan','Kasir','Metode','Total']].concat(d.l.map(o=>[o.no,new Date(o.t).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}),o.type||'',o.cust||'',o.cashier||'',o.method||'',n(o.total)]));
   const top=[['Menu','Jumlah','Penjualan']].concat(d.top.map(x=>[x[0],n(x[1]),n(x[2])]));
   const stok=[['Nama','Kategori','Stok','Minimum']].concat(db.items.filter(i=>!isB(i)).map(i=>[i.name,i.cat||'',n(i.stock),n(i.min)]));
-  return xlsxBuild([{name:'Penjualan',rows:H(sales),head:1,w:[12,9,10,18,14,12,14]},{name:'Terlaris',rows:top,head:1,w:[30,10,14]},{name:'Stok',rows:stok,head:1,w:[30,16,10,10]}],dec());
+  const X=(nm,rows,w)=>[nm,xlsxBuild([{name:nm,rows,head:1,w}],dec())];
+  return[X('penjualan',H(sales),[12,9,10,18,14,12,14]),X('terlaris',top,[30,10,14]),X('stok',stok,[30,16,10,10])];
 }
 const rptB64=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(String(f.result).split(',')[1]||'');f.readAsDataURL(b)});
 async function rptSend(auto){
@@ -33,8 +34,8 @@ async function rptSend(auto){
   if(!(C&&C.url&&CL.on&&CL.tok)){if(!auto)toast('Perlu login online');return}
   RPT.busy=1;const day=dkey(new Date());
   try{
-    const file=await rptB64(rptXlsx(day));
-    const r=await fetch(C.url+'/functions/v1/daily-report',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,phone:c.phone,text:rptText(day),file,name:'laporan-'+day+'.xlsx'})});
+    const files=[];for(const x of rptXlsx(day))files.push({name:x[0]+'-'+day+'.xlsx',file:await rptB64(x[1])});
+    const r=await fetch(C.url+'/functions/v1/daily-report',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.key||''},body:JSON.stringify({t:CL.tok,phone:c.phone,text:rptText(day),files})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(j.error||'Gagal mengirim');
     rptSet('last',day);if(!auto)toast('Laporan terkirim ke WhatsApp');

@@ -13,11 +13,12 @@ Deno.serve(async (req: Request) => {
   let b: any;
   try { b = await req.json(); } catch { return out({ error: "JSON tidak valid" }, 400); }
   const t = String(b.t ?? ""), phone = String(b.phone ?? "").replace(/[\s-]/g, "").replace(/^\+/, "");
-  const text = String(b.text ?? "").slice(0, 3000), file = String(b.file ?? ""), name = String(b.name ?? "laporan.xlsx").replace(/[^\w.\-]/g, "_").slice(0, 60);
+  const text = String(b.text ?? "").slice(0, 3000);
+  const files = (Array.isArray(b.files) ? b.files : []).slice(0, 5).map((x: any) => ({ file: String(x?.file ?? ""), name: String(x?.name ?? "laporan.xlsx").replace(/[^\w.\-]/g, "_").slice(0, 60) })).filter((x: any) => x.file);
   if (!t) return out({ error: "token kosong" }, 400);
   if (!/^\d{8,15}$/.test(phone)) return out({ error: "nomor WhatsApp tidak valid" }, 400);
   if (!text) return out({ error: "isi laporan kosong" }, 400);
-  if (file.length > 5_300_000) return out({ error: "file terlalu besar (maks 4 MB)" }, 400);
+  if (files.some((x: any) => x.file.length > 5_300_000)) return out({ error: "file terlalu besar (maks 4 MB)" }, 400);
 
   const token = Deno.env.get("FONNTE_TOKEN");
   if (!token) return out({ error: "FONNTE_TOKEN belum diatur di Supabase" }, 500);
@@ -31,15 +32,21 @@ Deno.serve(async (req: Request) => {
   const role = String(me.b?.role ?? "");
   if (role !== "owner") return out({ error: "Hanya pemilik yang boleh mengirim laporan" }, 403);
 
-  const f = new FormData();
-  f.append("target", phone); f.append("message", text);
-  if (file) {
-    const bytes = Uint8Array.from(atob(file), (c) => c.charCodeAt(0));
-    f.append("file", new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), name);
-    f.append("filename", name);
-  }
-  const r = await fetch("https://api.fonnte.com/send", { method: "POST", headers: { Authorization: token }, body: f });
-  const j: any = await r.json().catch(() => ({}));
-  if (!r.ok || j.status === false) return out({ error: String(j.reason ?? "Penyedia WhatsApp menolak (" + r.status + ")").slice(0, 160) }, 502);
+  // satu pesan teks lalu satu pesan per file (Fonnte hanya menerima satu file per permintaan)
+  const send = async (message: string, x?: { file: string; name: string }) => {
+    const f = new FormData();
+    f.append("target", phone); f.append("message", message);
+    if (x) {
+      const bytes = Uint8Array.from(atob(x.file), (c) => c.charCodeAt(0));
+      f.append("file", new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), x.name);
+      f.append("filename", x.name);
+    }
+    const r = await fetch("https://api.fonnte.com/send", { method: "POST", headers: { Authorization: token }, body: f });
+    const j: any = await r.json().catch(() => ({}));
+    return !r.ok || j.status === false ? String(j.reason ?? "Penyedia WhatsApp menolak (" + r.status + ")").slice(0, 160) : "";
+  };
+  let err = await send(text);
+  for (const x of files) { if (err) break; err = await send(x.name, x); }
+  if (err) return out({ error: err }, 502);
   return out({ ok: true });
 });
