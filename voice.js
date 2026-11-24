@@ -828,7 +828,7 @@
     var el = $('#vcRes'); el.textContent = r.msg || ''; el.classList.toggle('warn', !!r.warn); el.classList.toggle('big', !!r.big); popEl(el);
     var ch = $('#vcCh');
     ch.innerHTML = (r.chips || []).map(function (c) { return chipHtml(c); }).join('');
-    if (r.msg && st.speak && cfg().speak && canSpeak() && !st.listening && !st.busy) say(r.say || r.msg.split('\n')[0]);   // pesan "menanyakan AI…" tidak dibacakan
+    if (r.msg && st.speak && cfg().speak && canSpeak() && !st.listening && !st.busy) say(sayOf(r));   // pesan "menanyakan AI…" tidak dibacakan
     bubIdle();
   }
   function chipHtml(c) {
@@ -968,6 +968,8 @@
     a.onended = done; a.onerror = function () { done(); if (token === tts.seq && fallback) fallback(); };
     var pr = a.play(); if (pr && pr.catch) pr.catch(function (err) { done(); if (!tts.warned && err && err.name === 'NotAllowedError') { tts.warned = 1; try { toastMsg('🔇 Suara diblokir oleh perangkat. Ketuk layar sekali lalu coba lagi', true); } catch (e) { /* abaikan */ } } if (token === tts.seq && fallback) fallback(); });
   }
+  /* semua baris balasan dibacakan (dulu hanya baris pertama, jadi item ke-2 dst tidak terbaca) */
+  function sayOf(r) { return r.say || String(r.msg).split('\n').map(function (x) { return x.trim(); }).filter(Boolean).join('. '); }
   function say(t, opt) {
     var txt = ttsText(t); if (!txt) return false;
     var now = Date.now(); tts.hist = tts.hist.filter(function (x) { return now - x < 3600000; });
@@ -1776,7 +1778,7 @@
         return;
       }
       toastMsg(('“' + naturalText + '”\n' + (naturalOut.msg || '')).trim(), !!naturalOut.warn, naturalOut);
-      if (naturalOut.msg && st.speak && c.speak && canSpeak() && !st.listening) say(naturalOut.say || String(naturalOut.msg).split('\n')[0]);
+      if (naturalOut.msg && st.speak && c.speak && canSpeak() && !st.listening) say(sayOf(naturalOut));
       return;
     }
 
@@ -1800,7 +1802,7 @@
     toastMsg(((cand[0] ? '“' + cand[0] + '”\n' : '') + (out.msg || '')).trim(), !!out.warn, out);
     var un = (st.unres || []).slice();
     if (un.length && aiOn()) aiResolve(un, function (res) { if (res.length) { var m = aiApply(res); toastMsg(m.join('\n'), false); } });
-    if (out.msg && st.speak && c.speak && canSpeak() && !st.listening) say(out.say || String(out.msg).split('\n')[0]);
+    if (out.msg && st.speak && c.speak && canSpeak() && !st.listening) say(sayOf(out));
   }
   var toastT = 0;
   function toastMsg(text, warn, out) {
