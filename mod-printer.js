@@ -16,11 +16,12 @@ function wrapTxt(t,n){
   });
   return out;
 }
+/* kolom kiri yang panjang dibungkus ke baris berikut (tidak dipotong); harga tetap di baris pertama */
 function rowTxt(l,r,n){
   l=ascii(l);r=ascii(r);
-  const max=n-r.length-1;
-  if(l.length>max)l=l.slice(0,Math.max(0,max));
-  return l+' '.repeat(Math.max(1,n-l.length-r.length))+r;
+  const max=Math.max(1,n-r.length-1),w=wrapTxt(l,max);
+  const first=w[0]||'';
+  return[first+' '.repeat(Math.max(1,n-first.length-r.length))+r].concat(w.slice(1).map(x=>'  '+x.slice(0,n-2)));
 }
 function imgToRaster(src,dots,w){
   return new Promise(res=>{
@@ -90,13 +91,18 @@ async function buildEscPos(o,pr){
       align('center');mode(0x08);add([0x1d,0x21,((k-1)<<4)|(k-1)]);
       wrapTxt(t,Math.max(1,Math.floor(cols/k))).forEach(line);
       add([0x1d,0x21,0]);
+    }else if(e.t==='text'&&e.hl){
+      // catatan: tebal, tinggi ganda, dibalik (putih di atas hitam) supaya tidak terlewat
+      align('left');mode(0x18);add([0x1d,0x42,1]);
+      wrapTxt(ascii(e.x),cols).forEach(line);
+      add([0x1d,0x42,0]);
     }else if(e.t==='text'){
       const n=e.big?Math.floor(cols/2):cols;
       align(e.a);mode((e.b?0x08:0)|(e.big?0x30:0));
       wrapTxt(ascii(e.x),n).forEach(line);
     }else{
       align('left');mode((e.b?0x08:0)|(e.big?0x10:0));
-      line(rowTxt(e.l,e.r,cols));
+      rowTxt(e.l,e.r,cols).forEach(line);
     }
   }
   align('left');mode(0);

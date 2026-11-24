@@ -360,7 +360,7 @@ function receiptModel(o){
     else{m.push({t:'text',x:l.name,a:'left'});m.push({t:'row',l:'  '+l.qty+' x '+n(l.price),r:n(l.qty*l.price)})}
   });
   hr();
-  if(o.note&&invCfg().noteRc){m.push({t:'text',x:tr('Catatan')+': '+o.note,a:'left'});hr()}
+  if(o.note&&invCfg().noteRc){m.push({t:'text',x:tr('Catatan')+': '+o.note,a:'left',b:true,hl:true});hr()}
   m.push({t:'row',l:tr('Subtotal'),r:money(o.sub)});
   if(r.showDisc&&o.disc)m.push({t:'row',l:tr('Diskon'),r:'-'+money(o.disc)});
   if(r.showTax)m.push({t:'row',l:tr('Pajak ('+o.taxRate+'%)'),r:money(o.tax)});
@@ -383,6 +383,7 @@ function receiptHTML(o,prev){
     if(e.t==='hr')return`<hr class="${r.divider==='equal'?'equal':''}">`;
     if(e.t==='qr')return`<div class="rq">${e.cap?`<div class="rqc">${esc(e.cap)}</div>`:''}${qrSvg(e.x,150)}</div>`;
     if(e.t==='text'&&e.huge){const em=Math.min(e.huge===3?3.4:2.3,Math.max(1.3,(e.huge===3?26:17)/Math.max(6,String(e.x).length)));return`<div class="rtb" style="font-size:${em.toFixed(2)}em">${esc(e.x)}</div>`}
+    if(e.t==='text'&&e.hl)return`<div class="rnote">${esc(e.x)}</div>`;
     if(e.t==='text')return`<div style="text-align:${e.a||'left'};${e.b?'font-weight:700;':''}${e.big?'font-size:1.3em;':''}">${esc(e.x)}</div>`;
     return`<div class="r${e.b?' b':''}${e.big?' big':''}"><span>${esc(e.l)}</span><span>${esc(e.r)}</span></div>`;
   }).join('');

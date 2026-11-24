@@ -176,7 +176,7 @@ function ticketModel(o){
   if(o.stn)m.splice(2,0,{t:'text',x:'== '+o.stn.toUpperCase()+' ==',a:'center',b:true,big:true});
   {const g={};o.lines.forEach(l=>{const k=(find(l.id)||{}).stn||'';(g[k]=g[k]||[]).push(l)});const ks=Object.keys(g);
    ks.forEach(k=>{if(ks.length>1&&!o.stn)m.push({t:'text',x:'['+(k||'Umum')+']',a:'left',b:true});g[k].forEach(l=>m.push({t:'text',x:l.qty+'x '+l.name,a:'left',b:true}))})}
-  if(o.note){hr();m.push({t:'text',x:'Catatan: '+o.note,a:'left'})}
+  if(o.note){hr();m.push({t:'text',x:'Catatan: '+o.note,a:'left',b:true,hl:true})}
   if(!o.kt){hr();
   m.push({t:'row',l:'TOTAL',r:money(o.total),b:true});
   m.push({t:'text',x:'BELUM DIBAYAR',a:'center',b:true})}
