@@ -92,10 +92,9 @@ async function buildEscPos(o,pr){
       wrapTxt(t,Math.max(1,Math.floor(cols/k))).forEach(line);
       add([0x1d,0x21,0]);
     }else if(e.t==='text'&&e.hl){
-      // catatan: tebal, tinggi ganda, dibalik (putih di atas hitam) supaya tidak terlewat
-      align('left');mode(0x18);add([0x1d,0x42,1]);
+      // catatan: tebal + tinggi ganda saja; perintah "reverse" (GS B) membuat sebagian printer macet
+      align('left');mode(0x18);
       wrapTxt(ascii(e.x),cols).forEach(line);
-      add([0x1d,0x42,0]);
     }else if(e.t==='text'){
       const n=e.big?Math.floor(cols/2):cols;
       align(e.a);mode((e.b?0x08:0)|(e.big?0x30:0));
